@@ -1,7 +1,7 @@
 import { useGameState } from './game/useGameState'
 
 function App() {
-  const { game, setGame } = useGameState()
+  const { game, setGame, rollDice } = useGameState()
 
   function advanceTurn() {
     setGame(prev => ({
@@ -15,6 +15,11 @@ function App() {
       <h1>Conscious Coupling – Web</h1>
 
       <p>Current player: {game.currentPlayer}</p>
+      <p>Last roll: {game.lastRoll ? game.lastRoll.category : 'none'}</p>
+
+      <button onClick={rollDice}>
+        Roll Dice
+      </button>
 
       <button onClick={advanceTurn}>
         Advance Turn
