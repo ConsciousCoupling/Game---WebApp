@@ -1,0 +1,67 @@
+.onboarding-container {
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(to bottom right, #1b0f14, #2e1a22);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  color: #fbe9e7;
+}
+
+.onboarding-card {
+  width: 90%;
+  max-width: 480px;
+  background: rgba(255, 230, 225, 0.1);
+  padding: 32px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(255, 140, 160, 0.25);
+  text-align: center;
+}
+
+.onboarding-card h2 {
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+  color: #ffd0d8;
+}
+
+.onboarding-card p {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.onboarding-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+.next-btn, .back-btn {
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: 0.25s ease;
+}
+
+.next-btn {
+  background: #ff5f76;
+  color: white;
+}
+.next-btn:hover {
+  background: #ff8294;
+  transform: scale(1.05);
+}
+
+.back-btn {
+  background: transparent;
+  border: 2px solid #ff8294;
+  color: #ffb3c0;
+}
+.back-btn:hover {
+  background: rgba(255, 150, 170, 0.1);
+  transform: scale(1.05);
+}
