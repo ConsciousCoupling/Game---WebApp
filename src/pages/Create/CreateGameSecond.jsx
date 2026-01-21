@@ -1,4 +1,6 @@
-import { useState } from "react";
+// src/pages/Create/CreateGameSecond.jsx
+
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateGameSecond.css";
 import { getRandomAuraColor } from "../../utils/auraColors";
@@ -6,7 +8,16 @@ import { getRandomAuraColor } from "../../utils/auraColors";
 export default function CreateGameSecond() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Pull data from navigation state
   const { playerOneName, playerOneColor } = location.state || {};
+
+  // If accessed incorrectly → redirect back
+  useEffect(() => {
+    if (!playerOneName || !playerOneColor) {
+      navigate("/create/player-one");
+    }
+  }, [playerOneName, playerOneColor, navigate]);
 
   const [name, setName] = useState("");
   const [auraColor, setAuraColor] = useState(null);
@@ -14,6 +25,7 @@ export default function CreateGameSecond() {
   const handleContinue = () => {
     if (!name.trim()) return;
 
+    // Ensure second player receives a DIFFERENT color
     const assignedColor = getRandomAuraColor(playerOneColor);
     setAuraColor(assignedColor);
 
@@ -33,7 +45,7 @@ export default function CreateGameSecond() {
     <div
       className="create-second-container"
       style={{
-        "--aura-color": auraColor || "transparent"
+        "--aura-color": auraColor || "transparent",
       }}
     >
       <div className="create-second-card">

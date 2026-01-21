@@ -1,89 +1,129 @@
-import { useEffect, useState } from "react";
+// src/game/useGameState.js
+import { useEffect, useState, useRef } from "react";
 import { initialGameState } from "./initialGameState";
+import DiceEngine from "./dice/DiceEngine";
+
+/*
+  useGameState.js
+  ------------------------------------
+  MASTER GAME LOGIC LAYER
+  Handles:
+  ✓ loading & saving game
+  ✓ dice engine integration
+  ✓ phases
+  ✓ prompts
+  ✓ awarding
+  ✓ turn switching
+  ✓ movement toward final game structure
+*/
 
 export function useGameState(gameId) {
   const [state, setState] = useState(null);
 
-  // Load game state (localStorage for now — later upgraded to backend)
+  // 3D Dice Engine instance
+  const engineRef = useRef(null);
+  if (!engineRef.current) {
+    engineRef.current = new DiceEngine(onRollComplete);
+  }
+  const engine = engineRef.current;
+
+  // ----------------------------
+  // LOAD GAME ON FIRST MOUNT
+  // ----------------------------
   useEffect(() => {
-    const saved = localStorage.getItem(`game-${gameId}`);
+    const saved = localStorage.getItem(`intimadate-game-${gameId}`);
 
     if (saved) {
       setState(JSON.parse(saved));
     } else {
-      // Create NEW game
       const newState = {
         ...initialGameState,
         gameId,
       };
       setState(newState);
-      localStorage.setItem(`game-${gameId}`, JSON.stringify(newState));
+      localStorage.setItem(`intimadate-game-${gameId}`, JSON.stringify(newState));
     }
   }, [gameId]);
 
-  // Auto-save to localStorage on change
+  // ----------------------------
+  // AUTO-SAVE WHEN STATE CHANGES
+  // ----------------------------
   useEffect(() => {
-    if (state) {
-      localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
-    }
+    if (!state) return;
+    localStorage.setItem(`intimadate-game-${gameId}`, JSON.stringify(state));
   }, [state, gameId]);
 
-  // --------------------------
-  //        GAME ACTIONS
-  // --------------------------
+  // ----------------------------------------------------
+  // DICE → WHEN ROLL FINISHES (DiceEngine callback)
+  // ----------------------------------------------------
+  function onRollComplete({ value, category }) {
+    setState((prev) => {
+      // CATEGORY 1–4 → draw a prompt
+      if (category >= 1 && category <= 4) {
+        const deck = prev.promptDecks[category];
+        const prompt = deck.length ? deck[0] : null;
 
-  const actions = {
-    // --- ROLL THE DIE ---
-    rollDice: () => {
-      const roll = Math.ceil(Math.random() * 6);
-
-      // Enter rolling phase
-      setState((prev) => ({
-        ...prev,
-        phase: "ROLLING",
-        activeRoll: roll,
-      }));
-
-      // Resolve after 1s animation delay
-      setTimeout(() => {
-        setState((prev) => {
-          // CATEGORY 1–4 → PROMPT
-          if (roll >= 1 && roll <= 4) {
-            const deck = prev.promptDecks[roll];
-            const prompt = deck.length > 0 ? deck[0] : null;
-
-            if (!prompt) {
-              // Deck empty → skip for now
-              return {
-                ...prev,
-                phase: "TURN_START",
-                activeRoll: null,
-              };
-            }
-
-            const updatedDecks = { ...prev.promptDecks };
-            updatedDecks[roll] = deck.slice(1);
-
-            return {
-              ...prev,
-              phase: "PROMPT",
-              activePrompt: prompt,
-              activeRoll: roll,
-              promptDecks: updatedDecks,
-            };
-          }
-
-          // CATEGORY 5 or 6 (not yet implemented)
+        if (!prompt) {
+          // no prompt available
           return {
             ...prev,
+            lastDieFace: value,
+            lastCategory: category,
+            activePrompt: null,
             phase: "TURN_START",
-            activeRoll: roll,
           };
-        });
-      }, 1000);
+        }
+
+        const updatedDecks = { ...prev.promptDecks };
+        updatedDecks[category] = deck.slice(1);
+
+        return {
+          ...prev,
+          lastDieFace: value,
+          lastCategory: category,
+          activePrompt: prompt,
+          promptDecks: updatedDecks,
+          phase: "PROMPT",
+        };
+      }
+
+      // CATEGORY 5 — placeholder until movement cards coded
+      if (category === 5) {
+        return {
+          ...prev,
+          lastDieFace: value,
+          lastCategory: category,
+          phase: "TURN_START",
+        };
+      }
+
+      // CATEGORY 6 — placeholder until activity shop coded
+      if (category === 6) {
+        return {
+          ...prev,
+          lastDieFace: value,
+          lastCategory: category,
+          phase: "TURN_START",
+        };
+      }
+
+      return prev;
+    });
+  }
+
+  // ----------------------------------------------------
+  // ACTIONS
+  // ----------------------------------------------------
+  const actions = {
+    // Start turn → Roll
+    rollDice: () => {
+      if (!state) return;
+      setState((prev) => ({ ...prev, phase: "ROLLING" }));
+
+      engine.roll(); // triggers 3D animation + callback
     },
 
-    // --- ENTER AWARD PHASE ---
+    // Prompt → Award phase
     beginAwardPhase: () => {
       setState((prev) => ({
         ...prev,
@@ -91,7 +131,7 @@ export function useGameState(gameId) {
       }));
     },
 
-    // --- AWARD TOKENS & END TURN ---
+    // Award → End turn
     awardTokens: (amount) => {
       setState((prev) => {
         const players = [...prev.players];
@@ -102,6 +142,7 @@ export function useGameState(gameId) {
           players,
           activePrompt: null,
           activeRoll: null,
+          lastCategory: null,
           phase: "TURN_START",
           currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
         };
@@ -109,7 +150,11 @@ export function useGameState(gameId) {
     },
   };
 
-  return { state, actions };
+  return {
+    state,
+    actions,
+    engine,
+  };
 }
 
 export default useGameState;

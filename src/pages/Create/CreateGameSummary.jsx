@@ -25,9 +25,11 @@ export default function CreateGameSummary() {
   const handleStartGame = () => {
     const gameId = uuidv4();
 
+    // Full future-proof game scaffold
     const gameState = {
       gameId,
       createdAt: Date.now(),
+
       players: [
         {
           id: 0,
@@ -44,12 +46,26 @@ export default function CreateGameSummary() {
           inventory: [],
         }
       ],
+
       currentPlayerId: 0,
       turnNumber: 1,
-      phase: "TURN_START",
+
+      // Initial game phase
+      phase: "turn_start",
+
+      // Placeholder for future decks, movement cards, activities
+      promptDecks: {
+        1: [],
+        2: [],
+        3: [],
+        4: [],
+      },
+
+      lastDieFace: null,
+      lastCategory: null,
+      activePrompt: null,
     };
 
-    // For now, save locally. Later this becomes a DB call.
     localStorage.setItem(`game-${gameId}`, JSON.stringify(gameState));
 
     navigate(`/game/${gameId}`);

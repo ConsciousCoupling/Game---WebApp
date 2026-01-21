@@ -1,0 +1,72 @@
+.create-join-page {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 182, 193, 0.45),
+    rgba(0, 0, 0, 0.85)
+  );
+  backdrop-filter: blur(8px);
+}
+
+.create-join-card {
+  width: 90%;
+  max-width: 420px;
+  padding: 32px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.cj-title {
+  color: #fff;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.cj-subtitle {
+  color: #eee;
+  font-size: 1rem;
+  margin-bottom: 24px;
+}
+
+.cj-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cj-btn {
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+  font-weight: 600;
+}
+
+.cj-btn.primary {
+  background: #ff6fa0;
+  color: white;
+}
+
+.cj-btn.primary:hover {
+  background: #ff4c88;
+}
+
+.cj-btn.secondary {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.cj-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

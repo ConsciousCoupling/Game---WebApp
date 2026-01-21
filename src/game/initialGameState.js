@@ -1,19 +1,50 @@
+// src/game/initialGameState.js
+
 export const initialGameState = {
-  phase: 'setup', // setup | rolling | prompt | resolution | paused (we can add more later without breaking saved games)
-  subphase: null, // optional finer-grain step within a phase (e.g., coinFlip, shop, award)
-  currentPlayer: 0,
-  players: [
-    { id: 0, name: '', tokens: 0, inventory: [] },
-    { id: 1, name: '', tokens: 0, inventory: [] }
-  ],
-  lastRoll: null,
-  activeCategory: null,
+  gameId: null,
+
+  // ------------ TURN / FLOW CONTROL ------------
+  phase: "TURN_START",        // TURN_START | ROLLING | PROMPT | AWARD
+  currentPlayerId: 0,         // 0 or 1
+
+  // ------------ DICE RESULTS ------------
+  lastDieFace: null,          // Integer 1–6
+  lastCategory: null,         // Integer 1–6
+
+  // ------------ PROMPTS ------------
   activePrompt: null,
+  promptDecks: {
+    1: [],   // Strengths
+    2: [],   // Vulnerabilities
+    3: [],   // Top Three
+    4: [],   // Playfulness
+  },
+
+  // ------------ PLAYERS ------------
+  players: [
+    {
+      id: 0,
+      name: "",
+      tokens: 10,
+      inventory: [],
+      color: "#ffda79",       // Player A default color
+    },
+    {
+      id: 1,
+      name: "",
+      tokens: 10,
+      inventory: [],
+      color: "#7fd1ff",       // Player B default color
+    },
+  ],
+
+  // ------------ EFFECTS / TIMERS ------------
   pendingEffect: null,
   timers: { pausedUntil: null },
+
+  // ------------ META ------------
   meta: {
-    gameId: null,
     roundsPlayed: 0,
-    startedAt: null
-  }
-}
+    startedAt: Date.now(),
+  },
+};
