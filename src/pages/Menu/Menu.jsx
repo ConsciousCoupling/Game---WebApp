@@ -10,20 +10,24 @@ export default function Menu() {
         <h1 className="menu-title">Intima-Date</h1>
 
         <div className="menu-buttons">
+          
+          {/* ✔ Correct route for starting a new game */}
           <button
             className="menu-btn"
-            onClick={() => navigate("/create")}
+            onClick={() => navigate("/create/player-one")}
           >
             Start a New Game
           </button>
 
+          {/* 🚧 Load game not implemented yet — disabled for now */}
           <button
-            className="menu-btn"
-            onClick={() => navigate("/load")}
+            className="menu-btn disabled"
+            onClick={() => alert("Load Game coming soon")}
           >
             Load Existing Game
           </button>
 
+          {/* ✔ Goes to existing pages */}
           <button
             className="menu-btn secondary"
             onClick={() => navigate("/instructions")}
