@@ -1,15 +1,15 @@
 import { Routes, Route } from "react-router-dom";
-import Portal from "../pages/Portal/Portal";
-import Consent from "../pages/Consent/Consent";
-import Menu from "../pages/Menu/Menu";
-import CreateGameStart from "../pages/Create/CreateGameStart";
-import CreateGameSecond from "../pages/Create/CreateGameSecond";
-import CreateGameSummary from "../pages/Create/CreateGameSummary";
-import GameBoard from "../pages/Game/GameBoard";
+import Portal from "../pages/Portal/Portal.jsx";
+import Consent from "../pages/Consent/Consent.jsx";
+import Menu from "../pages/Menu/Menu.jsx";
+import CreateGameStart from "../pages/Create/CreateGameStart.jsx";
+import CreateGameSecond from "../pages/Create/CreateGameSecond.jsx";
+import CreateGameSummary from "../pages/Create/CreateGameSummary.jsx";
+import GameBoard from "../pages/Game/GameBoard.jsx";
 import Onboarding from "../pages/Onboarding/Onboarding.jsx";
 
 // ⭐ Add this
-import TestDie from "../pages/TestDie";
+import TestDie from "../pages/TestDie.jsx";
 
 export default function AppRoutes() {
   return (

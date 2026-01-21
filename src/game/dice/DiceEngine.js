@@ -26,7 +26,7 @@ export class DiceEngine {
     this.isRolling = false;
 
     // How slow the die must get before we consider it "landed"
-    this.stableThreshold = 0.08;
+    this.stableThreshold = 0.2;
   }
 
   /* ----------------------------------------------------------
@@ -58,7 +58,7 @@ export class DiceEngine {
     this.currentRotation[2] += this.angularVelocity[2] * delta;
 
     // Apply friction / slow down
-    const friction = 0.92;
+    const friction = 0.99;
     this.angularVelocity = this.angularVelocity.map((v) => v * friction);
 
     // Check if stable enough to stop

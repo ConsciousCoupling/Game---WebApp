@@ -1,10 +1,8 @@
-// src/pages/TestDie.jsx
-
 import React, { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 
-import DiceEngine from "../game/dice/DiceEngine.js";
+import { DiceEngine } from "../game/dice/DiceEngine.js";
 import DieMesh from "../components/gameboard/dice/DieMesh.jsx";
 
 export default function TestDie() {
