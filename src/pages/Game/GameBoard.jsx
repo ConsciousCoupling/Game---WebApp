@@ -3,7 +3,14 @@
 import { useParams } from "react-router-dom";
 import useGameState from "../../game/useGameState";
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
+import PhaseBanner from "../../components/gameboard/phase/PhaseBanner";
+import PhaseGlow from "../../components/gameboard/phase/PhaseGlow";
 import "./GameBoard.css";
+import "../../components/gameboard/styles/actionButtons.css";
+import "../../components/gameboard/styles/diceArea.css";
+import "../../components/gameboard/styles/inventoryPanel.css";
+import "../../components/gameboard/styles/playerPanel.css";
+import "../../components/gameboard/styles/promptDisplay.css";
 
 export default function GameBoard() {
   const { gameId } = useParams();
@@ -24,6 +31,11 @@ export default function GameBoard() {
 
   return (
     <div className="gameboard-container">
+
+      {/* GLOBAL PHASE EFFECTS */}
+      <PhaseGlow phase={state.phase} />
+      <PhaseBanner phase={state.phase} />
+
       {/* ============= TOP BAR ============= */}
       <div className="gameboard-topbar">
         <div className="game-id">Game ID: {gameId}</div>
@@ -58,16 +70,13 @@ export default function GameBoard() {
       {/* ============= CENTER AREA ============= */}
       <div className="gameboard-center">
 
-        {/* ---- DIE DISPLAY (3D + RESULT) ---- */}
+        {/* ---- DIE DISPLAY ---- */}
         <div className="die-wrapper">
-
           <DiceCanvas engine={engine} game={state} />
 
           {state.lastDieFace && (
             <div className="final-face-display">
-              <div className="face-label">
-                Rolled: {state.lastDieFace}
-              </div>
+              <div className="face-label">Rolled: {state.lastDieFace}</div>
               <div className="face-category">
                 Category {state.lastCategory}
               </div>
@@ -84,9 +93,7 @@ export default function GameBoard() {
           )}
 
           {state.phase === "ROLLING" && (
-            <p className="placeholder-text">
-              Rolling the die… 🎲
-            </p>
+            <p className="placeholder-text">Rolling the die… 🎲</p>
           )}
 
           {state.phase === "PROMPT" && state.activePrompt && (
@@ -107,15 +114,12 @@ export default function GameBoard() {
 
         {/* ---- ACTION BAR ---- */}
         <div className="action-bar">
-
-          {/* ROLL BUTTON */}
           {state.phase === "TURN_START" && (
             <button className="big-action-btn" onClick={actions.rollDice}>
               Roll the Die 🎲
             </button>
           )}
 
-          {/* READY TO RATE */}
           {state.phase === "PROMPT" && state.activePrompt && (
             <button
               className="big-action-btn"
@@ -125,7 +129,6 @@ export default function GameBoard() {
             </button>
           )}
 
-          {/* RATING BUTTONS */}
           {state.phase === "AWARD" && (
             <div className="rating-row">
               {[0, 1, 2, 3].map((val) => (
