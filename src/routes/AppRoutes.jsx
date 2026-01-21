@@ -11,6 +11,7 @@ import Onboarding from "../pages/Onboarding/Onboarding.jsx";
 import CreateGameStart from "../pages/Create/CreateGameStart.jsx";
 import CreateGameSecond from "../pages/Create/CreateGameSecond.jsx";
 import CreateGameSummary from "../pages/Create/CreateGameSummary.jsx";
+import CreateJoin from "../pages/Create/CreateJoin.jsx";
 
 // EXTRA PAGES
 import Components from "../pages/Components/Components.jsx";
@@ -35,6 +36,7 @@ export default function AppRoutes() {
       <Route path="/create/player-one" element={<CreateGameStart />} />
       <Route path="/create/player-two" element={<CreateGameSecond />} />
       <Route path="/create/summary" element={<CreateGameSummary />} />
+      <Route path="/create" element={<CreateJoin />} />
 
       {/* STATIC PAGES */}
       <Route path="/components" element={<Components />} />

@@ -1,3 +1,5 @@
+// src/pages/Create/CreateGameSummary.jsx
+
 import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateGameSummary.css";
 import { v4 as uuidv4 } from "uuid";
@@ -25,7 +27,6 @@ export default function CreateGameSummary() {
   const handleStartGame = () => {
     const gameId = uuidv4();
 
-    // Full future-proof game scaffold
     const gameState = {
       gameId,
       createdAt: Date.now(),
@@ -50,10 +51,9 @@ export default function CreateGameSummary() {
       currentPlayerId: 0,
       turnNumber: 1,
 
-      // Initial game phase
-      phase: "turn_start",
+      // MUST be uppercase to match GameBoard + useGameState
+      phase: "TURN_START",
 
-      // Placeholder for future decks, movement cards, activities
       promptDecks: {
         1: [],
         2: [],
@@ -74,7 +74,6 @@ export default function CreateGameSummary() {
   return (
     <div className="summary-container">
       <div className="summary-card">
-
         <h2 className="summary-title">Your Intima-Date is Ready</h2>
 
         <div className="summary-player-row">
