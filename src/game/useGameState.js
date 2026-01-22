@@ -1,7 +1,7 @@
 // src/game/useGameState.js
 import { useEffect, useState, useRef } from "react";
 import { initialGameState } from "./initialGameState";
-import DiceEngine from "./dice/DiceEngine";
+import { DiceEngine } from "./dice/DiceEngine";
 
 /*
   useGameState.js
