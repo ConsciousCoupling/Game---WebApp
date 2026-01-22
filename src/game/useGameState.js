@@ -26,12 +26,10 @@ function getRandomMovementCard() {
 
 export default function useGameState(gameId) {
   const [state, setState] = useState(null);
-
-  // DiceEngine persists through the session
   const engineRef = useRef(null);
 
   // --------------------------------------------
-  // Load from localStorage or start new game
+  // Load or create new game (DEEP CLONE FIX APPLIED)
   // --------------------------------------------
   useEffect(() => {
     const saved = localStorage.getItem(`game-${gameId}`);
@@ -39,17 +37,16 @@ export default function useGameState(gameId) {
     if (saved) {
       setState(JSON.parse(saved));
     } else {
-      const fresh = {
-        ...initialGameState,
-        gameId,
-      };
+      const fresh = JSON.parse(JSON.stringify(initialGameState)); // deep copy
+      fresh.gameId = gameId;
+
       setState(fresh);
       localStorage.setItem(`game-${gameId}`, JSON.stringify(fresh));
     }
   }, [gameId]);
 
   // --------------------------------------------
-  // Auto-save any time state changes
+  // Auto-save on every state change
   // --------------------------------------------
   useEffect(() => {
     if (state) {
@@ -58,11 +55,9 @@ export default function useGameState(gameId) {
   }, [state, gameId]);
 
   // =======================================================
-  // DICE ENGINE CALLBACK — final result AFTER physics stops
+  // HANDLE FINAL DIE RESULT
   // =======================================================
-  function handleEngineRollComplete(result) {
-    const { value, category } = result;
-
+  function handleEngineRollComplete({ value, category }) {
     setState((prev) => {
       let newState = {
         ...prev,
@@ -74,11 +69,11 @@ export default function useGameState(gameId) {
       // CATEGORY 1–4 → PROMPT
       // --------------------------------------
       if (category >= 1 && category <= 4) {
-        const deck = prev.promptDecks[category];
-        const prompt = deck.length > 0 ? deck[0] : null;
+        const deck = prev.promptDecks?.[category] ?? [];
+        const prompt = deck[0] ?? null;
 
         const updatedDecks = { ...prev.promptDecks };
-        if (prompt) updatedDecks[category] = deck.slice(1);
+        updatedDecks[category] = deck.slice(1);
 
         return {
           ...newState,
@@ -88,37 +83,37 @@ export default function useGameState(gameId) {
         };
       }
 
-     // --------------------------------------
-// CATEGORY 5 → MOVEMENT CARD
-// --------------------------------------
-if (category === 5) {
-  const movementCard = getRandomMovementCard();
+      // --------------------------------------
+      // CATEGORY 5 → MOVEMENT CARD
+      // --------------------------------------
+      if (category === 5) {
+        const movementCard = getRandomMovementCard();
 
-  const players = [...prev.players];
-  const current = players[prev.currentPlayerId];
+        const players = [...prev.players];
+        const current = players[prev.currentPlayerId];
 
-  // Add exactly ONE movement card
-  current.inventory = [...current.inventory, movementCard];
+        // Add exactly one card
+        current.inventory = [...current.inventory, movementCard];
 
-  return {
-    ...newState,
-    players,
-    activePrompt: null,
-    phase: "TURN_START"
-  };
-}
+        return {
+          ...newState,
+          players,
+          activePrompt: null,
+          phase: "TURN_START",
+        };
+      }
 
       // --------------------------------------
-      // CATEGORY 6 → ACTIVITY SHOP (no prompt yet)
+      // CATEGORY 6 → ACTIVITY SHOP
       // --------------------------------------
       if (category === 6) {
         return {
           ...newState,
           phase: "ACTIVITY_SHOP",
-    activityShop: {
-      canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
-      message: "Would you like to purchase an activity for 5 tokens?",
-    },
+          activityShop: {
+            canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
+            message: "Would you like to purchase an activity for 5 tokens?",
+          },
         };
       }
 
@@ -127,14 +122,14 @@ if (category === 5) {
   }
 
   // --------------------------------------------------------
-  // Create DiceEngine exactly once
+  // Initialize DiceEngine once
   // --------------------------------------------------------
   if (!engineRef.current) {
     engineRef.current = new DiceEngine(handleEngineRollComplete);
   }
 
   // =======================================================
-  // ACTIONS — Triggered by UI elements
+  // ACTIONS — CALLED FROM UI
   // =======================================================
   const actions = {
     rollDice: () => {
@@ -160,18 +155,6 @@ if (category === 5) {
       setState((prev) => {
         const players = [...prev.players];
         players[prev.currentPlayerId].tokens += amount;
-        // Special rule: After receiving a movement card (Cat 5)
-// the turn should immediately pass to the other player
-if (prev.lastCategory === 5) {
-  return {
-    ...prev,
-    currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
-    lastDieFace: null,
-    lastCategory: null,
-    activePrompt: null,
-    phase: "TURN_START",
-  };
-}
 
         return {
           ...prev,
@@ -184,72 +167,71 @@ if (prev.lastCategory === 5) {
         };
       });
     },
-    openActivityShop: () => {
-  setState(prev => ({
-    ...prev,
-    phase: "ACTIVITY_SHOP",
-    activityShop: {
-      canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
-      message: "Would you like to purchase an activity for 5 tokens?"
-    }
-  }));
-},
 
-declineActivity: () => {
-  setState(prev => ({
-    ...prev,
-    phase: "TURN_START",
-    lastDieFace: null,
-    lastCategory: null,
-    activePrompt: null
-  }));
-},
-
-purchaseActivity: () => {
-  setState(prev => {
-    const players = [...prev.players];
-    const current = players[prev.currentPlayerId];
-
-    if (current.tokens < 5) {
-      return {
+    // ---------------------------
+    // ACTIVITY SHOP ACTIONS
+    // ---------------------------
+    openActivityShop: () =>
+      setState((prev) => ({
         ...prev,
+        phase: "ACTIVITY_SHOP",
         activityShop: {
-          ...prev.activityShop,
-          message: "Not enough tokens."
+          canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
+          message: "Would you like to purchase an activity for 5 tokens?",
+        },
+      })),
+
+    declineActivity: () =>
+      setState((prev) => ({
+        ...prev,
+        phase: "TURN_START",
+        lastDieFace: null,
+        lastCategory: null,
+        activePrompt: null,
+      })),
+
+    purchaseActivity: () =>
+      setState((prev) => {
+        const players = [...prev.players];
+        const current = players[prev.currentPlayerId];
+
+        if (current.tokens < 5) {
+          return {
+            ...prev,
+            activityShop: {
+              ...prev.activityShop,
+              message: "Not enough tokens.",
+            },
+          };
         }
-      };
-    }
 
-    current.tokens -= 5;
+        current.tokens -= 5;
 
-    // coin flip → Favor or Challenge
-    const result = Math.random() < 0.5 ? "Favor" : "Challenge";
+        const result = Math.random() < 0.5 ? "Favor ❤️" : "Challenge 🔥";
 
-    return {
-      ...prev,
-      players,
-      phase: "ACTIVITY_RESULT",
-      activityResult: {
-        outcome: result,
-        message:
-          result === "Favor"
-            ? "Your partner owes you a Favor ❤️"
-            : "You received a Challenge 🔥",
-      }
-    };
-  });
-},
+        return {
+          ...prev,
+          players,
+          phase: "ACTIVITY_RESULT",
+          activityResult: {
+            outcome: result,
+            message:
+              result === "Favor ❤️"
+                ? "Your partner owes you a Favor ❤️"
+                : "You received a Challenge 🔥",
+          },
+        };
+      }),
 
-finishActivityResult: () => {
-  setState(prev => ({
-    ...prev,
-    phase: "TURN_START",
-    activityShop: null,
-    activityResult: null,
-    lastDieFace: null,
-    lastCategory: null,
-  }));
-},
+    finishActivityResult: () =>
+      setState((prev) => ({
+        ...prev,
+        phase: "TURN_START",
+        activityShop: null,
+        activityResult: null,
+        lastDieFace: null,
+        lastCategory: null,
+      })),
   };
 
   return {
