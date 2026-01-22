@@ -61,6 +61,9 @@ export default function Components() {
               and players advance through the game.
             </p>
           </div>
+          <button className="components-back" onClick={() => navigate("/menu")}>
+  Back to Menu
+</button>
         </div>
       </div>
     </div>

@@ -58,3 +58,18 @@
   line-height: 1.4;
   opacity: 0.9;
 }
+
+.components-back {
+  margin-top: 20px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.components-back:hover {
+  background: rgba(255,255,255,0.2);
+}
