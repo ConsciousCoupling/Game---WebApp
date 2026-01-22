@@ -71,7 +71,7 @@ export default function Components() {
           className="components-back"
           onClick={() => navigate("/menu")}
         >
-          Back to Menu
+          Return to Menu
         </button>
       </div>
     </div>
