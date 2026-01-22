@@ -1,129 +1,150 @@
 // src/game/useGameState.js
+
 import { useEffect, useState, useRef } from "react";
 import { initialGameState } from "./initialGameState";
 import { DiceEngine } from "./dice/DiceEngine";
 
-/*
-  useGameState.js
-  ------------------------------------
-  MASTER GAME LOGIC LAYER
-  Handles:
-  ✓ loading & saving game
-  ✓ dice engine integration
-  ✓ phases
-  ✓ prompts
-  ✓ awarding
-  ✓ turn switching
-  ✓ movement toward final game structure
-*/
+// -----------------------------------------------
+// UNIQUE MOVEMENT CARDS
+// -----------------------------------------------
+const MOVEMENT_CARDS = [
+  { name: "Free Pass", effect: "skip_prompt" },
+  { name: "Do-Over", effect: "reroll" },
+  { name: "Go On", effect: "double_reward" },
+  { name: "Turn It Around", effect: "reverse_prompt" },
+  { name: "Ask Me Anything", effect: "ama_bonus" },
+  { name: "Reset", effect: "pause" },
+];
 
-export function useGameState(gameId) {
+function getRandomMovementCard() {
+  return MOVEMENT_CARDS[Math.floor(Math.random() * MOVEMENT_CARDS.length)];
+}
+
+// =======================================================
+// useGameState — CENTRAL GAME STATE CONTROLLER
+// =======================================================
+
+export default function useGameState(gameId) {
   const [state, setState] = useState(null);
 
-  // 3D Dice Engine instance
+  // DiceEngine persists through the session
   const engineRef = useRef(null);
-  if (!engineRef.current) {
-    engineRef.current = new DiceEngine(onRollComplete);
-  }
-  const engine = engineRef.current;
 
-  // ----------------------------
-  // LOAD GAME ON FIRST MOUNT
-  // ----------------------------
+  // --------------------------------------------
+  // Load from localStorage or start new game
+  // --------------------------------------------
   useEffect(() => {
-    const saved = localStorage.getItem(`intimadate-game-${gameId}`);
+    const saved = localStorage.getItem(`game-${gameId}`);
 
     if (saved) {
       setState(JSON.parse(saved));
     } else {
-      const newState = {
+      const fresh = {
         ...initialGameState,
         gameId,
       };
-      setState(newState);
-      localStorage.setItem(`intimadate-game-${gameId}`, JSON.stringify(newState));
+      setState(fresh);
+      localStorage.setItem(`game-${gameId}`, JSON.stringify(fresh));
     }
   }, [gameId]);
 
-  // ----------------------------
-  // AUTO-SAVE WHEN STATE CHANGES
-  // ----------------------------
+  // --------------------------------------------
+  // Auto-save any time state changes
+  // --------------------------------------------
   useEffect(() => {
-    if (!state) return;
-    localStorage.setItem(`intimadate-game-${gameId}`, JSON.stringify(state));
+    if (state) {
+      localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
+    }
   }, [state, gameId]);
 
-  // ----------------------------------------------------
-  // DICE → WHEN ROLL FINISHES (DiceEngine callback)
-  // ----------------------------------------------------
-  function onRollComplete({ value, category }) {
+  // =======================================================
+  // DICE ENGINE CALLBACK — final result AFTER physics stops
+  // =======================================================
+  function handleEngineRollComplete(result) {
+    const { value, category } = result;
+
     setState((prev) => {
-      // CATEGORY 1–4 → draw a prompt
+      let newState = {
+        ...prev,
+        lastDieFace: value,
+        lastCategory: category,
+      };
+
+      // --------------------------------------
+      // CATEGORY 1–4 → PROMPT
+      // --------------------------------------
       if (category >= 1 && category <= 4) {
         const deck = prev.promptDecks[category];
-        const prompt = deck.length ? deck[0] : null;
-
-        if (!prompt) {
-          // no prompt available
-          return {
-            ...prev,
-            lastDieFace: value,
-            lastCategory: category,
-            activePrompt: null,
-            phase: "TURN_START",
-          };
-        }
+        const prompt = deck.length > 0 ? deck[0] : null;
 
         const updatedDecks = { ...prev.promptDecks };
-        updatedDecks[category] = deck.slice(1);
+        if (prompt) updatedDecks[category] = deck.slice(1);
 
         return {
-          ...prev,
-          lastDieFace: value,
-          lastCategory: category,
+          ...newState,
           activePrompt: prompt,
           promptDecks: updatedDecks,
           phase: "PROMPT",
         };
       }
 
-      // CATEGORY 5 — placeholder until movement cards coded
+      // --------------------------------------
+      // CATEGORY 5 → MOVEMENT CARD
+      // --------------------------------------
       if (category === 5) {
+        const movementCard = getRandomMovementCard();
+
+        const players = [...prev.players];
+        players[prev.currentPlayerId].inventory.push(movementCard);
+
         return {
-          ...prev,
-          lastDieFace: value,
-          lastCategory: category,
+          ...newState,
+          players,
           phase: "TURN_START",
         };
       }
 
-      // CATEGORY 6 — placeholder until activity shop coded
+      // --------------------------------------
+      // CATEGORY 6 → ACTIVITY SHOP (no prompt yet)
+      // --------------------------------------
       if (category === 6) {
         return {
-          ...prev,
-          lastDieFace: value,
-          lastCategory: category,
-          phase: "TURN_START",
+          ...newState,
+          phase: "ACTIVITY_SHOP",
+    activityShop: {
+      canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
+      message: "Would you like to purchase an activity for 5 tokens?",
+    },
         };
       }
 
-      return prev;
+      return newState;
     });
   }
 
-  // ----------------------------------------------------
-  // ACTIONS
-  // ----------------------------------------------------
-  const actions = {
-    // Start turn → Roll
-    rollDice: () => {
-      if (!state) return;
-      setState((prev) => ({ ...prev, phase: "ROLLING" }));
+  // --------------------------------------------------------
+  // Create DiceEngine exactly once
+  // --------------------------------------------------------
+  if (!engineRef.current) {
+    engineRef.current = new DiceEngine(handleEngineRollComplete);
+  }
 
-      engine.roll(); // triggers 3D animation + callback
+  // =======================================================
+  // ACTIONS — Triggered by UI elements
+  // =======================================================
+  const actions = {
+    rollDice: () => {
+      setState((prev) => ({
+        ...prev,
+        phase: "ROLLING",
+        lastDieFace: null,
+        lastCategory: null,
+        activePrompt: null,
+      }));
+
+      engineRef.current.roll();
     },
 
-    // Prompt → Award phase
     beginAwardPhase: () => {
       setState((prev) => ({
         ...prev,
@@ -131,7 +152,6 @@ export function useGameState(gameId) {
       }));
     },
 
-    // Award → End turn
     awardTokens: (amount) => {
       setState((prev) => {
         const players = [...prev.players];
@@ -140,21 +160,85 @@ export function useGameState(gameId) {
         return {
           ...prev,
           players,
+          currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
           activePrompt: null,
-          activeRoll: null,
+          lastDieFace: null,
           lastCategory: null,
           phase: "TURN_START",
-          currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
         };
       });
     },
+    openActivityShop: () => {
+  setState(prev => ({
+    ...prev,
+    phase: "ACTIVITY_SHOP",
+    activityShop: {
+      canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
+      message: "Would you like to purchase an activity for 5 tokens?"
+    }
+  }));
+},
+
+declineActivity: () => {
+  setState(prev => ({
+    ...prev,
+    phase: "TURN_START",
+    lastDieFace: null,
+    lastCategory: null,
+    activePrompt: null
+  }));
+},
+
+purchaseActivity: () => {
+  setState(prev => {
+    const players = [...prev.players];
+    const current = players[prev.currentPlayerId];
+
+    if (current.tokens < 5) {
+      return {
+        ...prev,
+        activityShop: {
+          ...prev.activityShop,
+          message: "Not enough tokens."
+        }
+      };
+    }
+
+    current.tokens -= 5;
+
+    // coin flip → Favor or Challenge
+    const result = Math.random() < 0.5 ? "Favor" : "Challenge";
+
+    return {
+      ...prev,
+      players,
+      phase: "ACTIVITY_RESULT",
+      activityResult: {
+        outcome: result,
+        message:
+          result === "Favor"
+            ? "Your partner owes you a Favor ❤️"
+            : "You received a Challenge 🔥",
+      }
+    };
+  });
+},
+
+finishActivityResult: () => {
+  setState(prev => ({
+    ...prev,
+    phase: "TURN_START",
+    activityShop: null,
+    activityResult: null,
+    lastDieFace: null,
+    lastCategory: null,
+  }));
+},
   };
 
   return {
     state,
     actions,
-    engine,
+    engine: engineRef.current,
   };
 }
-
-export default useGameState;
