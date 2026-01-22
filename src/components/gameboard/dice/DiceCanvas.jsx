@@ -1,71 +1,66 @@
 // src/components/gameboard/dice/DiceCanvas.jsx
 
-import React, { useRef } from "react";
-import { Canvas } from "@react-three/fiber";
-import { Stage, OrbitControls } from "@react-three/drei";
-import styled from "styled-components";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import DieMesh from "./DieMesh";
 
-/*
-  DiceCanvas.jsx
-  ---------------
-  This component creates the 3D scene where the acrylic die lives.
-
-  Includes:
-  - Perfect studio lighting (soft shadows, bloom-ready)
-  - Controlled camera
-  - Performance-optimized R3F canvas
-  - Renders the future DieMesh (our signature acrylic cube)
-*/
-
-export default function DiceCanvas({ engine, game }) {
-  const meshRef = useRef();
-
+export default function DiceCanvas({ engine }) {
   return (
-    <CanvasWrapper>
+    <div className="dice-canvas-container" style={{ width: "100%", height: "260px" }}>
       <Canvas
-        camera={{ position: [0, 2.2, 4.2], fov: 42 }}
         shadows
+        camera={{ position: [2.8, 2.4, 3.2], fov: 45 }}
         gl={{
           antialias: true,
+          alpha: true,
           preserveDrawingBuffer: true,
         }}
       >
-        {/* --- Stage gives us beautiful lighting + contact shadows automatically --- */}
-        <Stage
-          preset="soft"
-          intensity={1.2}
-          environment="city"
-          adjustCamera={false}
-          shadows={{ type: "accumulative", color: "#000", colorBlend: 0.4 }}
-        >
-          <DieMesh ref={meshRef} engine={engine} />
-        </Stage>
+        {/* ---- LIGHTING ---- */}
+        <ambientLight intensity={0.55} />
 
-        {/* --- Lock camera orbit, but allow subtle movement so players can admire the cube --- */}
+        <directionalLight
+          position={[4, 6, 4]}
+          intensity={1.2}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-bias={-0.0005}
+        />
+
+        {/* Beautiful soft studio reflections */}
+        <Environment preset="studio" />
+
+        {/* Extra realism on the table */}
+        <ContactShadows
+          position={[0, -0.51, 0]}
+          opacity={0.4}
+          width={10}
+          height={10}
+          blur={2.8}
+          far={5}
+        />
+
+        {/* DIE WRAPPER */}
+        <DieWrapper engine={engine} />
+
+        {/* Allow gentle orbit viewing */}
         <OrbitControls
           enablePan={false}
           enableZoom={false}
-          maxPolarAngle={Math.PI / 2.2}
+          maxPolarAngle={Math.PI / 2.1}
           minPolarAngle={Math.PI / 3}
-          rotateSpeed={0.4}
+          rotateSpeed={0.45}
         />
       </Canvas>
-    </CanvasWrapper>
+    </div>
   );
 }
 
-/* -------------------------------------------------------
-   STYLED WRAPPER
-------------------------------------------------------- */
+function DieWrapper({ engine }) {
+  useFrame((state, delta) => {
+    if (engine) engine.step(delta);
+  });
 
-const CanvasWrapper = styled.div`
-  width: 100%;
-  height: 240px; /* fits the DiceArea layout perfectly */
-  border-radius: 20px;
-  overflow: hidden;
-
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-`;
+  return <DieMesh engine={engine} />;
+}
