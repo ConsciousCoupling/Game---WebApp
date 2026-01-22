@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import useGameState from "../../game/useGameState";
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
 import PhaseBanner from "../../components/gameboard/phase/PhaseBanner";
+
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
 import "../../components/gameboard/styles/diceArea.css";
@@ -30,9 +31,8 @@ export default function GameBoard() {
 
   return (
     <div className="gameboard-container">
-
-      {/* GLOBAL PHASE EFFECTS */}
-      <PhaseGlow phase={state.phase} />
+      
+      {/* GLOBAL PHASE UI */}
       <PhaseBanner phase={state.phase} />
 
       {/* ============= TOP BAR ============= */}
@@ -75,7 +75,9 @@ export default function GameBoard() {
 
           {state.lastDieFace && (
             <div className="final-face-display">
-              <div className="face-label">Rolled: {state.lastDieFace}</div>
+              <div className="face-label">
+                Rolled: {state.lastDieFace}
+              </div>
               <div className="face-category">
                 Category {state.lastCategory}
               </div>
