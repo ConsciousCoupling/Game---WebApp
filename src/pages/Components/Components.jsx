@@ -1,9 +1,12 @@
-// src/pages/Components.jsx
+// src/pages/Components/Components.jsx
 
 import React from "react";
-import "./Components.css"; // We'll create this next
+import { useNavigate } from "react-router-dom";
+import "./Components.css";
 
 export default function Components() {
+  const navigate = useNavigate();
+
   return (
     <div className="components-page">
       <div className="components-container">
@@ -17,7 +20,7 @@ export default function Components() {
           <div className="component-card">
             <h2>🎲 Acrylic Die</h2>
             <p>
-              Custom frosted-edge cube with engraved category icons.  
+              Custom frosted-edge cube with engraved category icons.<br />
               Used to determine prompts, movements, and activities each turn.
             </p>
           </div>
@@ -61,10 +64,15 @@ export default function Components() {
               and players advance through the game.
             </p>
           </div>
-          <button className="components-back" onClick={() => navigate("/menu")}>
-  Back to Menu
-</button>
         </div>
+
+        {/* FIXED BUTTON */}
+        <button
+          className="components-back"
+          onClick={() => navigate("/menu")}
+        >
+          Back to Menu
+        </button>
       </div>
     </div>
   );
