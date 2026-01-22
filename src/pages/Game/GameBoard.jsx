@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import useGameState from "../../game/useGameState";
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
 import PhaseBanner from "../../components/gameboard/phase/PhaseBanner";
-import PhaseGlow from "../../components/gameboard/phase/PhaseGlow";
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
 import "../../components/gameboard/styles/diceArea.css";
