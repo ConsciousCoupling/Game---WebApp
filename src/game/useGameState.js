@@ -88,21 +88,25 @@ export default function useGameState(gameId) {
         };
       }
 
-      // --------------------------------------
-      // CATEGORY 5 → MOVEMENT CARD
-      // --------------------------------------
-      if (category === 5) {
-        const movementCard = getRandomMovementCard();
+     // --------------------------------------
+// CATEGORY 5 → MOVEMENT CARD
+// --------------------------------------
+if (category === 5) {
+  const movementCard = getRandomMovementCard();
 
-        const players = [...prev.players];
-        players[prev.currentPlayerId].inventory.push(movementCard);
+  const players = [...prev.players];
+  const current = players[prev.currentPlayerId];
 
-        return {
-          ...newState,
-          players,
-          phase: "TURN_START",
-        };
-      }
+  // Add exactly ONE movement card
+  current.inventory = [...current.inventory, movementCard];
+
+  return {
+    ...newState,
+    players,
+    activePrompt: null,
+    phase: "TURN_START"
+  };
+}
 
       // --------------------------------------
       // CATEGORY 6 → ACTIVITY SHOP (no prompt yet)
@@ -156,6 +160,18 @@ export default function useGameState(gameId) {
       setState((prev) => {
         const players = [...prev.players];
         players[prev.currentPlayerId].tokens += amount;
+        // Special rule: After receiving a movement card (Cat 5)
+// the turn should immediately pass to the other player
+if (prev.lastCategory === 5) {
+  return {
+    ...prev,
+    currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
+    lastDieFace: null,
+    lastCategory: null,
+    activePrompt: null,
+    phase: "TURN_START",
+  };
+}
 
         return {
           ...prev,
