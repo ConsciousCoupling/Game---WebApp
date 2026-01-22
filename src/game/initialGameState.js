@@ -14,11 +14,23 @@ export const initialGameState = {
   // ----------- PROMPTS -----------
   activePrompt: null,
   promptDecks: {
-    1: [],   // Strengths
-    2: [],   // Vulnerabilities
-    3: [],   // Top Three
-    4: [],   // Playfulness
-  },
+  1: [
+    { category: 1, text: "What is something about your partner you admire?" },
+    { category: 1, text: "What recent moment made you feel appreciated?" }
+  ],
+  2: [
+    { category: 2, text: "Share something vulnerable you've been holding." },
+    { category: 2, text: "What fear would you like more support with?" }
+  ],
+  3: [
+    { category: 3, text: "Name your top three desires for tonight." },
+    { category: 3, text: "Top three favorite shared memories?" }
+  ],
+  4: [
+    { category: 4, text: "Do something playful together right now." },
+    { category: 4, text: "Make your partner laugh within 30 seconds." }
+  ],
+},
 
   // ----------- PLAYERS -----------
   players: [
