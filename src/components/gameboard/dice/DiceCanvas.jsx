@@ -6,51 +6,53 @@ import DieMesh from "./DieMesh";
 
 export default function DiceCanvas({ engine }) {
   return (
-    <div className="dice-canvas-container" style={{ width: "100%", height: "260px" }}>
+    <div
+      className="dice-canvas-container"
+      style={{ width: "100%", height: "280px" }}
+    >
       <Canvas
         shadows
-        camera={{ position: [2.8, 2.4, 3.2], fov: 45 }}
+        camera={{ position: [3, 3, 4], fov: 45 }}
         gl={{
           antialias: true,
           alpha: true,
           preserveDrawingBuffer: true,
         }}
       >
-        {/* ---- LIGHTING ---- */}
+        {/* Lighting */}
         <ambientLight intensity={0.55} />
 
         <directionalLight
-          position={[4, 6, 4]}
-          intensity={1.2}
+          position={[5, 7, 5]}
+          intensity={1.25}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
-          shadow-bias={-0.0005}
+          shadow-bias={-0.0004}
         />
 
-        {/* Beautiful soft studio reflections */}
+        {/* Clean glossy studio reflections */}
         <Environment preset="studio" />
 
-        {/* Extra realism on the table */}
+        {/* Soft shadows under die */}
         <ContactShadows
           position={[0, -0.51, 0]}
           opacity={0.4}
-          width={10}
-          height={10}
-          blur={2.8}
-          far={5}
+          width={12}
+          height={12}
+          blur={3}
+          far={6}
         />
 
-        {/* DIE WRAPPER */}
+        {/* Die wrapper that drives engine updates */}
         <DieWrapper engine={engine} />
 
-        {/* Allow gentle orbit viewing */}
         <OrbitControls
           enablePan={false}
           enableZoom={false}
-          maxPolarAngle={Math.PI / 2.1}
+          maxPolarAngle={Math.PI / 2.2}
           minPolarAngle={Math.PI / 3}
-          rotateSpeed={0.45}
+          rotateSpeed={0.4}
         />
       </Canvas>
     </div>
@@ -58,7 +60,7 @@ export default function DiceCanvas({ engine }) {
 }
 
 function DieWrapper({ engine }) {
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (engine) engine.step(delta);
   });
 
