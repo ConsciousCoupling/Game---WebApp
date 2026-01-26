@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
-import DieMesh from "./DieMesh";
+import DieMesh from "./DieMesh.jsx";
 
 export default function DiceCanvas({ engine }) {
   return (
@@ -20,7 +20,7 @@ export default function DiceCanvas({ engine }) {
         }}
       >
         {/* Lighting */}
-        <ambientLight intensity={0.55} />
+        <ambientLight intensity={0.35} />
 
         <directionalLight
           position={[5, 7, 5]}

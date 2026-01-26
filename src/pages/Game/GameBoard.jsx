@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import useGameState from "../../game/useGameState";
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
 import PhaseBanner from "../../components/gameboard/phase/PhaseBanner";
+import CoinFlip from "../../components/gameboard/activity/CoinFlip";
 
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
@@ -11,6 +12,13 @@ import "../../components/gameboard/styles/diceArea.css";
 import "../../components/gameboard/styles/inventoryPanel.css";
 import "../../components/gameboard/styles/playerPanel.css";
 import "../../components/gameboard/styles/promptDisplay.css";
+import "../../components/gameboard/styles/instructionOverlay.css";
+import ActivityShop from "../../components/gameboard/activity/ActivityShop";
+import ActivityResult from "../../components/gameboard/activity/ActivityResult";
+import MovementCardPanel from "../../components/gameboard/movement/MovementCardPanel";
+import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
+import PromptCard from "../../components/gameboard/prompt/PromptCard";
+import MovementCardAward from "../../components/gameboard/movement/MovementCardAward";
 
 export default function GameBoard() {
   const { gameId } = useParams();
@@ -53,17 +61,18 @@ export default function GameBoard() {
           Tokens: <span>{playerOne.tokens}</span>
         </div>
 
-        <div className="player-inventory">
-          {playerOne.inventory.length === 0 ? (
-            <p className="empty-inv">No movement cards</p>
-          ) : (
-            playerOne.inventory.map((card, i) => (
-              <div key={i} className="inv-card">
-                {card.name}
-              </div>
-            ))
-          )}
-        </div>
+       {/* INVENTORY */}
+      <div className="player-inventory">
+        {playerOne.inventory.length === 0 ? (
+          <p className="empty-inv">No movement cards</p>
+        ) : (
+          <MovementCardPanel
+            player={playerOne}
+            isCurrent={state.currentPlayerId === 0}
+            onUseCard={actions.useMovementCard}
+          />
+        )}
+      </div>
       </div>
 
       {/* ============= CENTER AREA ============= */}
@@ -71,6 +80,18 @@ export default function GameBoard() {
 
         {/* ---- DIE DISPLAY ---- */}
         <div className="die-wrapper">
+
+          {/* 🌬️ PLAYER GLOW BEHIND DIE — NEW */}
+          <div
+            className="die-glow"
+            style={{
+              background: `radial-gradient(circle,
+                ${currentPlayer.color}55 0%,
+                ${currentPlayer.color}22 70%,
+                transparent 50%)`,
+            }}
+          />
+
           <DiceCanvas engine={engine} game={state} />
 
           {state.lastDieFace && (
@@ -87,30 +108,70 @@ export default function GameBoard() {
 
         {/* ---- MAIN CARD AREA ---- */}
         <div className="center-card-placeholder">
+
+          {state.phase === "COIN_TOSS" && (
+            <CoinFlip
+              coin={state.coin}
+              onFlip={actions.flipCoin}
+              onComplete={actions.completeCoinFlip}
+            />
+          )}
+
+          {/* TURN START */}
           {state.phase === "TURN_START" && (
             <p className="placeholder-text">
               It’s {currentPlayer.name}’s turn.
             </p>
           )}
 
+          {/* ROLLING */}
           {state.phase === "ROLLING" && (
             <p className="placeholder-text">Rolling the die… 🎲</p>
           )}
 
+          {/* PROMPT */}
           {state.phase === "PROMPT" && state.activePrompt && (
-            <div className="prompt-card">
-              <h2 className="prompt-title">
-                Category {state.activePrompt.category}
-              </h2>
-              <p className="prompt-text">{state.activePrompt.text}</p>
-            </div>
+            <PromptCard 
+              prompt={state.activePrompt} 
+              onReady={actions.beginAwardPhase}
+            />
           )}
 
+          {/* ⭐ MOVEMENT CARD AWARD POPUP */}
+          {state.phase === "MOVEMENT_AWARD" &&
+            state.awardedMovementCard && (
+              <MovementCardAward
+                card={state.awardedMovementCard}
+                onContinue={actions.dismissMovementAward}
+              />
+            )}
+
+          {/* AWARD */}
           {state.phase === "AWARD" && (
             <p className="placeholder-text">
               Rate {currentPlayer.name}’s effort…
             </p>
           )}
+
+          {/* ⭐ ACTIVITY SHOP */}
+          {state.phase === "ACTIVITY_SHOP" && state.activityShop && (
+            <ActivityShop
+              canAfford={state.activityShop.canAfford}
+              message={state.activityShop.message}
+              onPurchase={actions.purchaseActivity}
+              onDecline={actions.declineActivity}
+            />
+          )}
+
+          {/* ⭐ ACTIVITY RESULT */}
+          {state.phase === "ACTIVITY_RESULT" &&
+            state.activityResult && (
+              <ActivityResult
+                outcome={state.activityResult.outcome}
+                message={state.activityResult.message}
+                onContinue={actions.finishActivityResult}
+              />
+            )}
         </div>
 
         {/* ---- ACTION BAR ---- */}
@@ -157,17 +218,23 @@ export default function GameBoard() {
           Tokens: <span>{playerTwo.tokens}</span>
         </div>
 
-        <div className="player-inventory">
-          {playerTwo.inventory.length === 0 ? (
-            <p className="empty-inv">No movement cards</p>
-          ) : (
-            playerTwo.inventory.map((card, i) => (
-              <div key={i} className="inv-card">
-                {card.name}
-              </div>
-            ))
-          )}
-        </div>
+       <div className="player-inventory">
+        {playerTwo.inventory.length === 0 ? (
+          <p className="empty-inv">No movement cards</p>
+        ) : (
+          <MovementCardPanel
+            player={playerTwo}
+            isCurrent={state.currentPlayerId === 1}
+            onUseCard={actions.useMovementCard}
+          />
+        )}
+      </div>
+
+      <InstructionOverlay
+        phase={state.phase}
+        currentPlayer={currentPlayer}
+        prompt={state.activePrompt}
+      />
       </div>
     </div>
   );

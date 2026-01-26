@@ -1,6 +1,4 @@
-// src/components/gameboard/dice/EngravingMaterial.jsx
-
-import React from "react";
+import * as THREE from "three";
 
 export default function EngravingMaterial({
   texture,
@@ -10,15 +8,24 @@ export default function EngravingMaterial({
   return (
     <meshPhysicalMaterial
       map={texture}
-      transparent
-      opacity={0.9}
-      roughness={0.95}
-      metalness={0}
+      
+      // Make the texture brighter & clearer
       color={color}
+      transparent={true}
+      opacity={0.9}          // ↓ slightly transparent for glass-inlay effect
+
+      roughness={0.6}         // ↓ glossier
+      metalness={0.1}
+
+      // Glow / emissive tuning
       emissive={glow}
-      emissiveIntensity={0.45}
+      emissiveIntensity={1.25}  // ↑ stronger glow
       emissiveMap={texture}
-      toneMapped={true}
+
+      depthWrite={false}      // ensures engravings stay visible
+      depthTest={false}
+      side={THREE.DoubleSide}
+      toneMapped={false}      // prevents glow dimming
     />
   );
 }

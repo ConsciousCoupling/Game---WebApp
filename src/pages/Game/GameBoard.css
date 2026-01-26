@@ -151,17 +151,6 @@
   opacity: 0.8;
 }
 
-/* Placeholder card area */
-.center-card-placeholder {
-  flex: 1;
-  border-radius: 18px;
-  background: rgba(255, 240, 235, 0.08);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .placeholder-text {
   color: #ffe7ef;
   font-size: 1.6rem;
@@ -182,4 +171,29 @@
 
 .action-placeholder {
   opacity: 0.65;
+}
+
+.die-wrapper {
+  position: relative;
+}
+
+.die-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.65;
+  animation: breathe 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes breathe {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+  50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
 }

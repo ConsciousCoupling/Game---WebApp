@@ -5,12 +5,11 @@ import * as THREE from "three";
 /*
   DiceEngine.js
   -------------
-  Handles:
-  - Creating a random spin (angular velocity)
-  - Updating rotation per frame
-  - Detecting when the die stops
-  - Determining final face using real 3D normal vectors
-  - Mapping face → category
+  Improvements:
+  - Smooth realistic spin
+  - Accurate final face detection
+  - Snap-to-perfect orientation after stopping
+  - Better friction + stable threshold tuning
 */
 
 class DiceEngine {
@@ -22,8 +21,7 @@ class DiceEngine {
 
     this.isRolling = false;
 
-    // When all angular velocities fall below this → stop
-    this.stableThreshold = 0.12;
+    this.stableThreshold = 0.10; // slightly more sensitive — stops cleanly
   }
 
   /* ----------------------------------------------------------
@@ -35,12 +33,11 @@ class DiceEngine {
     this.isRolling = true;
 
     this.angularVelocity = this._randomAngularVelocity();
-
     return this.angularVelocity;
   }
 
   /* ----------------------------------------------------------
-     MAIN FRAME UPDATE (called every r3f frame)
+     FRAME UPDATE
   ---------------------------------------------------------- */
   step(delta) {
     if (!this.isRolling) return this.currentRotation;
@@ -51,19 +48,24 @@ class DiceEngine {
     this.currentRotation[2] += this.angularVelocity[2] * delta;
 
     // Apply friction
-    const friction = 0.985;
+    const friction = 0.982;
     this.angularVelocity = this.angularVelocity.map(v => v * friction);
 
-    // Stop if stable
+    // Check if die has settled
     if (this._isStable()) {
       this.isRolling = false;
 
-      const face = this._determineFace(this.currentRotation);
-      const category = this._mapFaceToCategory(face);
+      // Determine final face BEFORE snapping
+      const finalFace = this._determineFace(this.currentRotation);
+      const category = this._mapFaceToCategory(finalFace);
 
+      // Snap rotation to perfect orientation for that face
+      this.currentRotation = this._snapRotationToFace(finalFace);
+
+      // Emit result
       if (this.onRollComplete) {
         this.onRollComplete({
-          value: face,
+          value: finalFace,
           category,
         });
       }
@@ -73,18 +75,17 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
-     RANDOM SPIN GEN
+     RANDOM SPIN
   ---------------------------------------------------------- */
   _randomAngularVelocity() {
     const rand = () =>
-      (Math.random() * 14 + 8) * (Math.random() > 0.5 ? 1 : -1);
+      (Math.random() * 16 + 10) * (Math.random() > 0.5 ? 1 : -1);
 
     return [rand(), rand(), rand()];
   }
 
   _isStable() {
     const [x, y, z] = this.angularVelocity;
-
     return (
       Math.abs(x) < this.stableThreshold &&
       Math.abs(y) < this.stableThreshold &&
@@ -93,7 +94,7 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
-     TRUE 3D FINAL FACE DETECTION (CORRECT FIX)
+     FINAL FACE DETECTION USING NORMAL VECTORS
   ---------------------------------------------------------- */
   _determineFace(rotation) {
     const [x, y, z] = rotation;
@@ -101,13 +102,14 @@ class DiceEngine {
     const euler = new THREE.Euler(x, y, z, "XYZ");
     const matrix = new THREE.Matrix4().makeRotationFromEuler(euler);
 
+    // Normal vectors representing each die face in local space
     const faces = [
-      { face: 1, normal: new THREE.Vector3(0, 1, 0) },  // top
-      { face: 6, normal: new THREE.Vector3(0, -1, 0) }, // bottom
-      { face: 2, normal: new THREE.Vector3(1, 0, 0) },  // right
-      { face: 5, normal: new THREE.Vector3(-1, 0, 0) }, // left
-      { face: 3, normal: new THREE.Vector3(0, 0, 1) },  // front
-      { face: 4, normal: new THREE.Vector3(0, 0, -1) }, // back
+      { face: 1, normal: new THREE.Vector3(0, 1, 0) },   // top
+      { face: 6, normal: new THREE.Vector3(0, -1, 0) },  // bottom
+      { face: 2, normal: new THREE.Vector3(1, 0, 0) },   // right
+      { face: 5, normal: new THREE.Vector3(-1, 0, 0) },  // left
+      { face: 3, normal: new THREE.Vector3(0, 0, 1) },   // front
+      { face: 4, normal: new THREE.Vector3(0, 0, -1) },  // back
     ];
 
     const up = new THREE.Vector3(0, 1, 0);
@@ -129,12 +131,28 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
+     SNAP ROTATION PERFECTLY TO MATCH THE FACE
+  ---------------------------------------------------------- */
+  _snapRotationToFace(face) {
+    const map = {
+      1: [0, 0, 0],                     // top facing up
+      6: [Math.PI, 0, 0],               // bottom up
+      2: [0, Math.PI / 2, 0],           // right up
+      5: [0, -Math.PI / 2, 0],          // left up
+      3: [-Math.PI / 2, 0, 0],          // front up
+      4: [Math.PI / 2, 0, 0],           // back up
+    };
+
+    return map[face] || [0, 0, 0];
+  }
+
+  /* ----------------------------------------------------------
      CATEGORY MAP
   ---------------------------------------------------------- */
   _mapFaceToCategory(face) {
     if (face >= 1 && face <= 4) return face;
-    if (face === 5) return 5; // Movement
-    if (face === 6) return 6; // Activity Shop
+    if (face === 5) return 5;
+    if (face === 6) return 6;
     return 1;
   }
 }

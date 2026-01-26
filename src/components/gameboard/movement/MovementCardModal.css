@@ -1,0 +1,54 @@
+.movement-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 500;
+}
+
+.movement-modal {
+  width: 360px;
+  padding: 26px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,200,220,0.25);
+  color: #ffe7ef;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.movement-modal-title {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+.movement-modal-desc {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: 22px;
+}
+
+.movement-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.use-btn {
+  background: #ff88aa;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}

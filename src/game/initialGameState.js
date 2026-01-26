@@ -13,6 +13,8 @@ export const initialGameState = {
 
   // ------------ PROMPTS ------------
   activePrompt: null,
+  goOnActive: false,
+  reversePromptActive: false,
 
   promptDecks: {
     1: [ // STRENGTHS

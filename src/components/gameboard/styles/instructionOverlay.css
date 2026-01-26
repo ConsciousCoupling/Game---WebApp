@@ -1,0 +1,32 @@
+.instruction-overlay {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+
+  width: 260px;
+  padding: 16px 20px;
+
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.4;
+
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+
+  animation: fadeIn 0.4s ease;
+  max-width: 80%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

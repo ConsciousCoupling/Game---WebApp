@@ -21,7 +21,7 @@ export default function Game() {
 
   return (
     <div className="page game-container">
-      <GameBoard gameId={gameId} />
+      <GameBoard />
     </div>
   );
 }

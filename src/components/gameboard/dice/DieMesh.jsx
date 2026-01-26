@@ -7,9 +7,9 @@ import * as THREE from "three";
 import EngravingTextures from "./engravingTextures.js";
 import EngravingMaterial from "./EngravingMaterial.jsx";
 
-// ---------------------------------------------------
-// FACTORY: Create imperfect acrylic cube geometry
-// ---------------------------------------------------
+// -------------------------------------------
+// Create imperfect acrylic cube geometry
+// -------------------------------------------
 function createImperfectionCube(size) {
   const geom = new THREE.BoxGeometry(size, size, size);
   const pos = geom.attributes.position;
@@ -29,82 +29,124 @@ function createImperfectionCube(size) {
   return geom;
 }
 
-const baseGeometry = createImperfectionCube(1);
+const DIE_SIZE = 1.3;
+const FACE_OFFSET = DIE_SIZE / 2 + 0.01;
+const baseGeometry = createImperfectionCube(DIE_SIZE);
 
-// ---------------------------------------------------
-// MAIN DIE MESH
-// ---------------------------------------------------
-const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
+// -------------------------------------------
+// Main Die Mesh
+// -------------------------------------------
+const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
   const mesh = useRef();
+  const aura = useRef();
+
   if (ref) ref.current = mesh.current;
 
   useFrame((_, delta) => {
     if (!engine || !mesh.current) return;
 
+    // Update rotation
     const rotation = engine.step(delta);
     if (rotation) {
       mesh.current.rotation.x = rotation[0];
       mesh.current.rotation.y = rotation[1];
       mesh.current.rotation.z = rotation[2];
     }
+
+    // Player aura breathing effect
+    if (aura.current && game) {
+      const color =
+        game.currentPlayerId === 0
+          ? game.players[0].color
+          : game.players[1].color;
+
+      aura.current.material.color = new THREE.Color(color);
+
+      const pulse = 1 + Math.sin(Date.now() * 0.0025) * 0.18;
+      aura.current.scale.set(pulse, pulse, pulse);
+
+      aura.current.material.opacity =
+        0.28 + Math.sin(Date.now() * 0.003) * 0.12;
+    }
   });
 
   return (
-    <mesh ref={mesh} geometry={baseGeometry} castShadow receiveShadow>
+    <group>
+      {/* ==========================
+          PLAYER AURA BEHIND DIE
+      =========================== */}
+      <mesh ref={aura} position={[0, -0.05, 0]}>
+        <sphereGeometry args={[1.2, 32, 32]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0.25}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
 
-      {/* ENGRAVED FACE PLANES */}
-      <group>
-        {/* FACE 1 – FRONT */}
-        <mesh position={[0, 0, 0.501]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[1]} glow="#ff6fa0" />
-        </mesh>
+      {/* ==========================
+          THE ACRYLIC DIE
+      =========================== */}
+      <mesh ref={mesh} geometry={baseGeometry} castShadow receiveShadow>
+        
+        {/* ==========================
+            ENGRAVED FACES
+        =========================== */}
+        <group>
 
-        {/* FACE 6 – BACK */}
-        <mesh position={[0, 0, -0.501]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[6]} glow="#ffaa33" />
-        </mesh>
+          {/* 1: TOP (+Y) */}
+          <mesh position={[0, FACE_OFFSET, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[1]} glow="#f30c0c" />
+          </mesh>
 
-        {/* FACE 2 – RIGHT */}
-        <mesh position={[0.501, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[2]} glow="#5599ff" />
-        </mesh>
+          {/* 6: BOTTOM (-Y) */}
+          <mesh position={[0, -FACE_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[6]} glow="#ff9900" />
+          </mesh>
 
-        {/* FACE 5 – LEFT */}
-        <mesh position={[-0.501, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[5]} glow="#aa66ff" />
-        </mesh>
+          {/* 2: RIGHT (+X) */}
+          <mesh position={[FACE_OFFSET, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[2]} glow="#052de2" />
+          </mesh>
 
-        {/* FACE 3 – TOP */}
-        <mesh position={[0, 0.501, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[3]} glow="#66cc77" />
-        </mesh>
+          {/* 5: LEFT (-X) */}
+          <mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[5]} glow="#6633cc" />
+          </mesh>
 
-        {/* FACE 4 – BOTTOM */}
-        <mesh position={[0, -0.501, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.88, 0.88]} />
-          <EngravingMaterial texture={EngravingTextures[4]} glow="#ff99cc" />
-        </mesh>
-      </group>
+          {/* 3: FRONT (+Z) */}
+          <mesh position={[0, 0, FACE_OFFSET]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
+          </mesh>
 
-      {/* ACRYLIC MATERIAL */}
-      <meshPhysicalMaterial
-        transparent
-        transmission={1}         // full glassy effect
-        roughness={0.1}
-        thickness={1}
-        metalness={0}
-        clearcoat={1}
-        clearcoatRoughness={0.12}
-        ior={1.5}                // fixes clarity issues
-        attenuationColor="#ffffff"
-        attenuationDistance={0.7}
-      />
-    </mesh>
+          {/* 4: BACK (-Z) */}
+          <mesh position={[0, 0, -FACE_OFFSET]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[1.25, 1.25]} />
+            <EngravingMaterial texture={EngravingTextures[4]} glow="#dd0aa9" />
+          </mesh>
+
+        </group>
+
+        {/* Acrylic core material */}
+        <meshPhysicalMaterial
+          transparent
+          transmission={1}
+          roughness={0.08}
+          thickness={2.5}
+          metalness={0}
+          clearcoat={1}
+          clearcoatRoughness={0.1}
+          ior={2.33}
+          attenuationColor="#ffffff"
+          attenuationDistance={2}
+        />
+      </mesh>
+    </group>
   );
 });
 
