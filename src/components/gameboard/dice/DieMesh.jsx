@@ -69,6 +69,7 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
         0.28 + Math.sin(Date.now() * 0.003) * 0.12;
     }
   });
+  
 
   return (
     <group>
@@ -95,40 +96,42 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
         <group>
 
           {/* 1: TOP (+Y) */}
-          <mesh position={[0, FACE_OFFSET, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[1]} glow="#f30c0c" />
-          </mesh>
+<mesh position={[0, FACE_OFFSET, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  <EngravingMaterial texture={EngravingTextures[1]} glow="#f30c0c" />
+</mesh>
 
-          {/* 6: BOTTOM (-Y) */}
-          <mesh position={[0, -FACE_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[6]} glow="#ff9900" />
-          </mesh>
+{/* 6: BOTTOM (-Y) */}
+<mesh position={[0, -FACE_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  <EngravingMaterial texture={EngravingTextures[6]} glow="#ff9900" />
+</mesh>
 
-          {/* 2: RIGHT (+X) */}
-          <mesh position={[FACE_OFFSET, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[2]} glow="#052de2" />
-          </mesh>
+{/* 2: RIGHT (+X) — FIXED */}
+<mesh position={[FACE_OFFSET, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  {/* swapped textures */}
+  <EngravingMaterial texture={EngravingTextures[5]} glow="#052de2" />
+</mesh>
 
-          {/* 5: LEFT (-X) */}
-          <mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[5]} glow="#6633cc" />
-          </mesh>
+{/* 5: LEFT (-X) — FIXED */}
+<mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  {/* swapped textures */}
+  <EngravingMaterial texture={EngravingTextures[2]} glow="#6633cc" />
+</mesh>
 
-          {/* 3: FRONT (+Z) */}
-          <mesh position={[0, 0, FACE_OFFSET]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
-          </mesh>
+{/* 3: FRONT (+Z) */}
+<mesh position={[0, 0, FACE_OFFSET]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
+</mesh>
 
-          {/* 4: BACK (-Z) */}
-          <mesh position={[0, 0, -FACE_OFFSET]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[4]} glow="#dd0aa9" />
-          </mesh>
+{/* 4: BACK (-Z) */}
+<mesh position={[0, 0, -FACE_OFFSET]} rotation={[0, Math.PI, 0]}>
+  <planeGeometry args={[1.25, 1.25]} />
+  <EngravingMaterial texture={EngravingTextures[4]} glow="#dd0aa9" />
+</mesh>
 
         </group>
 
