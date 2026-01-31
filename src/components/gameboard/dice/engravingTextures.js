@@ -11,12 +11,12 @@ function loadTexture(path) {
 }
 
 const EngravingTextures = {
-  1: loadTexture("/icons/cat1.JPG"),
-  2: loadTexture("/icons/cat2.JPG"),
-  3: loadTexture("/icons/cat3.JPG"),
-  4: loadTexture("/icons/cat4.JPG"),
-  5: loadTexture("/icons/cat5.JPG"),
-  6: loadTexture("/icons/cat6.PNG"),
+ 1: loadTexture("/icons/Cat1_fix.png"),
+  2: loadTexture("/icons/Cat2_fix.png"),
+  3: loadTexture("/icons/Cat3_fix.png"),
+  4: loadTexture("/icons/Cat4_fix.png"),
+  5: loadTexture("/icons/Cat5_fix.png"),
+  6: loadTexture("/icons/Cat6_fix.png"),
 };
 
 export default EngravingTextures;
