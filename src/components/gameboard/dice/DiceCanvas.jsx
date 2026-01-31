@@ -1,6 +1,6 @@
 // src/components/gameboard/dice/DiceCanvas.jsx
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import DieMesh from "./DieMesh.jsx";
 
