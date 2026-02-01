@@ -1,15 +1,15 @@
 // src/game/dice/DiceEngine.js
-
 import * as THREE from "three";
 
 /*
   DiceEngine.js
   -------------
-  Improvements:
-  - Smooth realistic spin
-  - Accurate final face detection
-  - Snap-to-perfect orientation after stopping
-  - Better friction + stable threshold tuning
+  Stable + Correct Version
+  Fixes:
+  - Cat2 (-) now shows correct face
+  - Cat5 (arrow) now shows correct face
+  - Cat1 no longer incorrectly appears on top
+  - Snapping map finally matches your actual cube orientation
 */
 
 class DiceEngine {
@@ -21,7 +21,7 @@ class DiceEngine {
 
     this.isRolling = false;
 
-    this.stableThreshold = 0.10; // slightly more sensitive — stops cleanly
+    this.stableThreshold = 0.10; // when rotation slows enough → stop
   }
 
   /* ----------------------------------------------------------
@@ -31,13 +31,13 @@ class DiceEngine {
     if (this.isRolling) return;
 
     this.isRolling = true;
-
     this.angularVelocity = this._randomAngularVelocity();
+
     return this.angularVelocity;
   }
 
   /* ----------------------------------------------------------
-     FRAME UPDATE
+     FRAME UPDATE FROM R3F
   ---------------------------------------------------------- */
   step(delta) {
     if (!this.isRolling) return this.currentRotation;
@@ -47,22 +47,22 @@ class DiceEngine {
     this.currentRotation[1] += this.angularVelocity[1] * delta;
     this.currentRotation[2] += this.angularVelocity[2] * delta;
 
-    // Apply friction
+    // Friction — slows motion realistically
     const friction = 0.982;
     this.angularVelocity = this.angularVelocity.map(v => v * friction);
 
-    // Check if die has settled
+    // If all axes slow down enough → die is stable
     if (this._isStable()) {
       this.isRolling = false;
 
-      // Determine final face BEFORE snapping
+      // Determine face BEFORE snapping
       const finalFace = this._determineFace(this.currentRotation);
       const category = this._mapFaceToCategory(finalFace);
 
-      // Snap rotation to perfect orientation for that face
+      // Snap perfectly upright
       this.currentRotation = this._snapRotationToFace(finalFace);
 
-      // Emit result
+      // Notify the game
       if (this.onRollComplete) {
         this.onRollComplete({
           value: finalFace,
@@ -75,7 +75,7 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
-     RANDOM SPIN
+     RANDOM SPIN GENERATOR
   ---------------------------------------------------------- */
   _randomAngularVelocity() {
     const rand = () =>
@@ -94,7 +94,8 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
-     FINAL FACE DETECTION USING NORMAL VECTORS
+     DETERMINE WHICH FACE IS POINTING UP
+     (using 3D normals + dot product)
   ---------------------------------------------------------- */
   _determineFace(rotation) {
     const [x, y, z] = rotation;
@@ -102,7 +103,6 @@ class DiceEngine {
     const euler = new THREE.Euler(x, y, z, "XYZ");
     const matrix = new THREE.Matrix4().makeRotationFromEuler(euler);
 
-    // Normal vectors representing each die face in local space
     const faces = [
       { face: 1, normal: new THREE.Vector3(0, 1, 0) },   // top
       { face: 6, normal: new THREE.Vector3(0, -1, 0) },  // bottom
@@ -131,19 +131,40 @@ class DiceEngine {
   }
 
   /* ----------------------------------------------------------
-     SNAP ROTATION PERFECTLY TO MATCH THE FACE
+     FIXED SNAP ORIENTATIONS (MATCHES YOUR ACTUAL DIE)
+     This is the part that was WRONG before.
+     Cat2 and Cat5 are now corrected.
   ---------------------------------------------------------- */
   _snapRotationToFace(face) {
-    const map = {
-      1: [0, 0, 0],                     // top facing up
-      6: [Math.PI, 0, 0],               // bottom up
-      2: [0, Math.PI / 2, 0],           // right up
-      5: [0, -Math.PI / 2, 0],          // left up
-      3: [-Math.PI / 2, 0, 0],          // front up
-      4: [Math.PI / 2, 0, 0],           // back up
-    };
+    switch (face) {
 
-    return map[face] || [0, 0, 0];
+      case 1: // TOP (+Y)
+        return [0, 0, 0];
+
+      case 6: // BOTTOM (-Y)
+        return [Math.PI, 0, 0];
+
+      case 2: 
+        // RIGHT (+X)
+        // FIXED ORIENTATION
+        return [0, 0, -Math.PI / 2];
+
+      case 5: 
+        // LEFT (-X)
+        // FIXED ORIENTATION
+        return [0, 0, Math.PI / 2];
+
+      case 3: 
+        // FRONT (+Z)
+        return [-Math.PI / 2, 0, 0];
+
+      case 4:
+        // BACK (-Z)
+        return [Math.PI / 2, 0, 0];
+
+      default:
+        return [0, 0, 0];
+    }
   }
 
   /* ----------------------------------------------------------
