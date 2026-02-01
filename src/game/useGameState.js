@@ -111,9 +111,13 @@ if (category === 5) {
   // --------------------------------------------------------
   // Initialize DiceEngine once
   // --------------------------------------------------------
-  if (!engineRef.current) {
-    engineRef.current = new DiceEngine(handleEngineRollComplete);
-  }
+ useEffect(() => {
+  engineRef.current = new DiceEngine(handleEngineRollComplete);
+
+  return () => {
+    engineRef.current = null;
+  };
+}, []);
 
   // =======================================================
   // ACTIONS — CALLED FROM UI
