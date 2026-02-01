@@ -1,0 +1,37 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* FONTS */
+@font-face {
+  font-family: 'IntimaCaps';
+  src: url('/fonts/aFontcaps.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IntimaFun';
+  src: url('/fonts/aFontFun.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'IntimaBlock';
+  src: url('/fonts/aFontopenblock.ttf') format('truetype');
+}
+
+/* BODY */
+body {
+  font-family: 'IntimaFun', sans-serif;
+  background: var(--gradient-bg);
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* DEFAULT PAGE WRAPPER */
+.page {
+  padding: 2rem;
+  max-width: 900px;
+  margin: auto;
+}

@@ -1,0 +1,58 @@
+/* Action Buttons (bottom of GameBoard)
+   ----------------------------------- */
+
+.big-action-btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #ff7aa7, #ff467e);
+  border: none;
+  border-radius: 14px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.25s ease;
+  box-shadow: 0 4px 12px rgba(255, 80, 130, 0.35);
+}
+
+.big-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 80, 130, 0.45);
+}
+
+.big-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(255, 80, 130, 0.25);
+}
+
+/* Rating Buttons (0–3)
+   --------------------- */
+
+.rating-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.rating-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  border: none;
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffe5ef;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.rating-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+}
+
+.rating-btn:active {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(0);
+}

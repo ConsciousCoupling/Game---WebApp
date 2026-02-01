@@ -1,0 +1,52 @@
+/* ============================================
+   PHASE BANNER — Top-of-screen instruction bar
+============================================ */
+
+.phase-banner {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  padding: 14px 0;
+  text-align: center;
+  color: #ffeaf5;
+  font-size: 20px;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+  z-index: 10;
+  pointer-events: none; /* UI beneath still clickable */
+  opacity: 0;
+  transform: translateY(-8px);
+  animation: bannerFadeIn 0.35s ease forwards;
+}
+
+/* Dynamic colors for each phase */
+.phase-TURN_START {
+  color: #ffd1e8;
+}
+.phase-ROLLING {
+  color: #f5c7ff;
+}
+.phase-PROMPT {
+  color: #d8faff;
+}
+.phase-AWARD {
+  color: #fff4c2;
+}
+.phase-ACTIVITY_SHOP {
+  color: #ffe0a8;
+}
+.phase-ACTIVITY_RESULT {
+  color: #ffd7ba;
+}
+
+/* Animation */
+@keyframes bannerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

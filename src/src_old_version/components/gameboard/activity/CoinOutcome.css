@@ -1,0 +1,62 @@
+.coin-outcome-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.coin-outcome-container {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 26px;
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+}
+
+.coin-outcome-image {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 18px;
+}
+
+.coin-outcome-title {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+.coin-outcome-activity,
+.coin-outcome-performer {
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+  opacity: 0.95;
+}
+
+.coin-outcome-btn {
+  margin-top: 16px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: #ff4fa8;
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.coin-outcome-btn:hover {
+  background: #ff7fc2;
+}
+
+.coin-outcome-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;     /* <-- FIXES THE BUTTON */
+}

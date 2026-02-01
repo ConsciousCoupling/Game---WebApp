@@ -1,0 +1,72 @@
+/* Square-ish elegant cards */
+
+.activity-card {
+  width: 220px;
+  height: 220px;
+  background: rgba(255, 255, 255, 0.12); /* brighter */
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.22); /* stronger outline */
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.35); /* darker shadow = not washed out */
+  opacity: 1; /* FIXED — full brightness */
+  transition: opacity .2s, transform .2s;
+}
+
+.activity-card:hover {
+  opacity: 1;
+  transform: translateY(-4px);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
+}
+
+.activity-card.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.activity-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-name {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.activity-cost {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  display: flex;
+  gap: 4px;
+}
+
+.token-icon {
+  filter: drop-shadow(0 0 4px white);
+}
+
+.activity-desc {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin: 12px 0;
+  flex-grow: 1;
+}
+
+.activity-buy-btn {
+  padding: 8px;
+  background: #ffffff22;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.activity-buy-btn:hover {
+  background: #ffffff44;
+}
