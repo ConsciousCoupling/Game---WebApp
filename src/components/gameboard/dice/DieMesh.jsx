@@ -121,10 +121,10 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
   <EngravingMaterial texture={EngravingTextures[2]} glow="#6633cc" />
 </mesh>
 
-{/* 3: FRONT (+Z) */}
-<mesh position={[0, 0, FACE_OFFSET]}>
+{/* 3: LEFT (-X) */}
+<mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
   <planeGeometry args={[1.25, 1.25]} />
-  <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
+  <EngravingMaterial texture={EngravingTextures[3]} glow="#00b7ff" />
 </mesh>
 
 {/* 4: BACK (-Z) */}
