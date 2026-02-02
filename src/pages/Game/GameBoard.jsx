@@ -144,10 +144,12 @@ export default function GameBoard() {
 
           {/* PROMPT */}
           {state.phase === "PROMPT" && state.activePrompt && (
-            <PromptCard
-              prompt={state.activePrompt}
-              onReady={actions.beginAwardPhase}
-            />
+            <div className="prompt-card">
+              <h2 className="prompt-title">
+                Category {state.activePrompt.category}
+              </h2>
+              <p className="prompt-text">{state.activePrompt.text}</p>
+            </div>
           )}
 
           {/* MOVEMENT AWARD */}
