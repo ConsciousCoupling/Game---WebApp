@@ -21,7 +21,7 @@ import "../../components/gameboard/styles/actionButtons.css";
 import "../../components/gameboard/styles/diceArea.css";
 import "../../components/gameboard/styles/inventoryPanel.css";
 import "../../components/gameboard/styles/playerPanel.css";
-import "../../components/gameboard/styles/promptDisplay.css";
+import "../../components/gameboard/styles/promptCard.css";
 import "../../components/gameboard/styles/instructionOverlay.css";
 import "../../components/gameboard/activity/CoinOutcome.css";
 
