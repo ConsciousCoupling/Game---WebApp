@@ -1,4 +1,7 @@
-/* FULL-SCREEN BACKGROUND */
+/* ============================================================
+   MAIN GAMEBOARD LAYOUT — DESKTOP
+============================================================ */
+
 .gameboard-container {
   height: 100vh;
   width: 100%;
@@ -12,7 +15,10 @@
   overflow: hidden;
 }
 
-/* TOP BAR */
+/* ============================================================
+   TOP BAR
+============================================================ */
+
 .gameboard-topbar {
   grid-area: topbar;
   height: 60px;
@@ -45,7 +51,10 @@
   cursor: pointer;
 }
 
-/* PLAYER PANELS */
+/* ============================================================
+   PLAYER PANELS
+============================================================ */
+
 .player-panel {
   backdrop-filter: blur(14px);
   background: rgba(255, 255, 255, 0.05);
@@ -102,14 +111,10 @@
   opacity: 0.75;
 }
 
-.inv-card {
-  background: rgba(255, 240, 240, 0.12);
-  padding: 8px 10px;
-  margin: 4px 0;
-  border-radius: 8px;
-}
+/* ============================================================
+   CENTER AREA
+============================================================ */
 
-/* CENTER AREA */
 .gameboard-center {
   grid-area: center;
   display: flex;
@@ -118,63 +123,11 @@
   padding: 28px;
 }
 
-/* HYBRID DIE CONTAINER */
 .die-wrapper {
   position: relative;
   width: 100%;
   height: 260px;
   margin-bottom: 18px;
-}
-
-/* FINAL FACE VISUAL OVERLAY */
-.final-face-display {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 240, 235, 0.16);
-  backdrop-filter: blur(10px);
-  padding: 10px 20px;
-  border-radius: 14px;
-  text-align: center;
-  color: #ffe5ee;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-}
-
-.face-label {
-  font-size: 1.1rem;
-  opacity: 0.9;
-}
-
-.face-category {
-  font-size: 0.95rem;
-  opacity: 0.8;
-}
-
-.placeholder-text {
-  color: #ffe7ef;
-  font-size: 1.6rem;
-  opacity: 0.85;
-}
-
-/* ACTION BAR */
-.action-bar {
-  height: 110px;
-  background: rgba(255, 240, 235, 0.07);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  padding: 18px;
-  text-align: center;
-  color: #ffe3ec;
-  font-size: 1.1rem;
-}
-
-.action-placeholder {
-  opacity: 0.65;
-}
-
-.die-wrapper {
-  position: relative;
 }
 
 .die-glow {
@@ -197,3 +150,106 @@
   50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.85; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
 }
+
+/* Final die result label */
+.final-face-display {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 240, 235, 0.16);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-radius: 14px;
+  text-align: center;
+  color: #ffe5ee;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.placeholder-text {
+  color: #ffe7ef;
+  font-size: 1.6rem;
+  opacity: 0.85;
+}
+
+/* ============================================================
+   ACTION BAR
+============================================================ */
+
+.action-bar {
+  height: 110px;
+  background: rgba(255, 240, 235, 0.07);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+  color: #ffe3ec;
+  font-size: 1.1rem;
+}
+
+/* ============================================================
+   MOBILE LAYOUT — FULL RESPONSIVE STACK
+============================================================ */
+
+@media (max-width: 768px) {
+
+  /* Replace 3-column grid with clean vertical layout */
+  .gameboard-container {
+    display: flex !important;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .gameboard-topbar {
+    height: 54px;
+    padding: 0 16px;
+  }
+
+  /* Force sections to full width */
+  .left-panel,
+  .right-panel,
+  .gameboard-center {
+    grid-area: unset !important;
+    width: 100%;
+    padding: 16px;
+  }
+
+  /* Stack order */
+  .gameboard-center { order: 1; }
+  .left-panel       { order: 2; }
+  .right-panel      { order: 3; }
+
+  /* Dice section shrinks */
+  .die-wrapper {
+    height: 200px !important;
+    margin-bottom: 12px;
+  }
+
+  .dice-canvas-container {
+    height: 200px !important;
+  }
+
+  /* Prompt / Shop spacing */
+  .center-card-placeholder {
+    margin-top: 12px;
+  }
+
+  /* Make inventory scroll horizontally */
+  .player-inventory {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Bigger tap area at bottom */
+  .action-bar {
+    margin-top: 18px;
+    padding: 16px;
+    padding-bottom: 32px;
+  }
+}
+
+/* ============================================================
+   END FILE
+============================================================ */
