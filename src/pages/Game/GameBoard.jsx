@@ -22,7 +22,6 @@ import "../../components/gameboard/styles/diceArea.css";
 import "../../components/gameboard/styles/inventoryPanel.css";
 import "../../components/gameboard/styles/playerPanel.css";
 import "../../components/gameboard/styles/promptDisplay.css";
-import "../../components/gameboard/prompt/PromptCard.css";
 import "../../components/gameboard/styles/instructionOverlay.css";
 import "../../components/gameboard/activity/CoinOutcome.css";
 
@@ -144,12 +143,10 @@ export default function GameBoard() {
 
           {/* PROMPT */}
           {state.phase === "PROMPT" && state.activePrompt && (
-            <div className="prompt-card">
-              <h2 className="prompt-title">
-                Category {state.activePrompt.category}
-              </h2>
-              <p className="prompt-text">{state.activePrompt.text}</p>
-            </div>
+            <PromptCard
+              prompt={state.activePrompt}
+              onReady={actions.beginAwardPhase}
+            />
           )}
 
           {/* MOVEMENT AWARD */}
@@ -174,7 +171,7 @@ export default function GameBoard() {
   canAfford={state.activityShop.canAfford}
   message={state.activityShop.message}
   onPurchase={actions.purchaseActivity}
-  onDecline={actions.declineActivity}      // ❗Cancel button
+//  onDecline={actions.declineActivity}      // ❗Cancel button
   onEndTurn={actions.endTurnInShop}        // ❗End Turn card
 />
           )}

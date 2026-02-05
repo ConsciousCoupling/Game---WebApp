@@ -1,11 +1,11 @@
-// src/components/gameboard/activity/CoinFlip.jsx
 import { useEffect, useState } from "react";
 import "./CoinFlip.css";
 
-export default function CoinFlip({ coin, onFlip, onComplete }) {
+export default function CoinFlip({ coin, onFlip, onComplete, activityResult }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [face, setFace] = useState("favor");
 
+  // Detect final outcome & set which face shows
   useEffect(() => {
     if (coin?.result) {
       setFace(coin.result.includes("Favor") ? "favor" : "challenge");
@@ -13,22 +13,21 @@ export default function CoinFlip({ coin, onFlip, onComplete }) {
   }, [coin]);
 
   const handleFlip = () => {
-    if (isAnimating) return;
+    if (isAnimating || coin.result) return;
 
     setIsAnimating(true);
+    onFlip(); // start animation
 
-    // Start animation ONLY
-    onFlip();
-
-    // After animation finishes, call the REAL result function
     setTimeout(() => {
-      onComplete();   // ← only place that decides outcome
+      onComplete(); // finalize outcome
       setIsAnimating(false);
     }, 1500);
   };
 
   return (
     <div className="coinflip-wrapper">
+
+      {/* ------------ The Coin Element ------------ */}
       <div
         className={`coin ${isAnimating ? "flip" : ""} ${face}`}
         onClick={handleFlip}
@@ -37,14 +36,34 @@ export default function CoinFlip({ coin, onFlip, onComplete }) {
         <img src="/assets/coin-challenge.png" className="coin-face coin-back" />
       </div>
 
-      {!coin.result && <p className="coin-instruction">Tap to flip the coin</p>}
+      {/* ------------ Instructions (before result) ------------ */}
+      {!coin.result && (
+        <p className="coin-instruction">Tap to flip the coin</p>
+      )}
 
+      {/* ------------ After Result: Display outcome + activity ------------ */}
       {coin.result && (
-        <p className="coin-result-text">
-          {coin.result === "Favor ❤️"
-            ? "You earned a Favor! Your partner will perform the activity ❤️"
-            : "You received a Challenge! You will perform the activity 🔥"}
-        </p>
+        <div className="coin-result-block">
+          <p className="coin-result-label">
+            {coin.result === "Favor ❤️"
+              ? "Favor ❤️"
+              : "Challenge 🔥"}
+          </p>
+
+          {/* Activity name */}
+          {activityResult?.activityName && (
+            <p className="coin-activity-name">
+              Activity: <strong>{activityResult.activityName}</strong>
+            </p>
+          )}
+
+          {/* Performer message */}
+          {activityResult?.performerMessage && (
+            <p className="coin-performer-message">
+              {activityResult.performerMessage}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

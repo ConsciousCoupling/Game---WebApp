@@ -16,7 +16,7 @@ export default function InstructionOverlay({ phase, currentPlayer, prompt }) {
       break;
 
     case "ACTIVITY_SHOP":
-      text = "You rolled Category 6! Choose whether to buy an activity for 5 tokens.";
+      text = "You rolled Category 6! Choose whether to buy an activity.";
       break;
 
     case "ACTIVITY_RESULT":

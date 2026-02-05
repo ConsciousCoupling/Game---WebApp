@@ -1,48 +1,45 @@
 // src/game/initialGameState.js
-import { promptDecks } from "./promptDecks";
+import { PROMPT_CARDS } from "./data/promptCards";
+import { MOVEMENT_CARDS } from "./data/movementCards";
+import { ACTIVITIES } from "./data/activityList";
 
+// Shuffle helper
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+const decks = {
+  1: shuffle(PROMPT_CARDS.filter(p => p.category === 1)),
+  2: shuffle(PROMPT_CARDS.filter(p => p.category === 2)),
+  3: shuffle(PROMPT_CARDS.filter(p => p.category === 3)),
+  4: shuffle(PROMPT_CARDS.filter(p => p.category === 4)),
+};
 export const initialGameState = {
   gameId: null,
 
-  // ------------ TURN / FLOW CONTROL ------------
-  phase: "TURN_START",
+  players: [
+    { name: "", tokens: 10, inventory: [], color: "#ff55aa" },
+    { name: "", tokens: 10, inventory: [], color: "#55aaff" },
+  ],
+
   currentPlayerId: 0,
 
-  // ------------ DICE RESULTS ------------
+  phase: "TURN_START",
+
+  promptDecks: decks,
+  activePrompt: null,
+
   lastDieFace: null,
   lastCategory: null,
 
-  // ------------ PROMPTS ------------
-  activePrompt: null,
-  goOnActive: false,
-  reversePromptActive: false,
+  awardedMovementCard: null,
 
- promptDecks: JSON.parse(JSON.stringify(promptDecks)),
+  activityShop: null,
+  pendingActivity: null,
+  activityResult: null,
 
-  // ------------ PLAYERS ------------
-  players: [
-    {
-      id: 0,
-      name: "",
-      tokens: 10,
-      inventory: [],
-      color: "#ffda79",
-    },
-    {
-      id: 1,
-      name: "",
-      tokens: 10,
-      inventory: [],
-      color: "#7fd1ff",
-    },
-  ],
-
-  // ------------ FUTURE FEATURES ------------
-  pendingEffect: null,
-  timers: { pausedUntil: null },
-
-  meta: {
-    roundsPlayed: 0,
-    startedAt: Date.now(),
-  },
+  coin: {
+    isFlipping: false,
+    result: null,
+  }
 };

@@ -1,0 +1,103 @@
+/* ---------------------------------------------------------
+   HOLOGRAPHIC MOVEMENT CARD STYLE ✨  
+   Inspired by frosted plastic cards with rainbow foil edges  
+   --------------------------------------------------------- */
+
+.movement-card {
+  width: 180px;
+  height: 110px;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  /* Frosted matte base */
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
+
+  /* Thin white inner outline (matte plastic) */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+
+  /* Holographic glow border (rainbow foil) */
+  position: relative;
+  overflow: hidden;
+}
+
+/* HOLOGRAPHIC BORDER ANIMATION */
+.movement-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+
+  background: conic-gradient(
+    from 0deg,
+    #ff00c8,
+    #ff8a00,
+    #ffee00,
+    #00ff95,
+    #00c8ff,
+    #a800ff,
+    #ff00c8
+  );
+
+  animation: holo-spin 6s linear infinite;
+  filter: blur(4px);
+}
+
+/* MASK so the holographic effect stays on the *border only* */
+.movement-card::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: rgba(10, 10, 10, 0.55);
+  border-radius: 10px;
+}
+
+/* Ensure card content stays on top */
+.movement-card-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.movement-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.movement-card-effect {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  color: white;
+}
+
+/* Slight shimmer on hover */
+.movement-card:hover {
+  transform: translateY(-3px);
+  transition: 0.25s ease;
+  box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes holo-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* BUTTON VERSION FOR AWARD POPUP */
+.movement-card-button {
+  cursor: pointer;
+}
+
+.movement-card-button:active {
+  transform: scale(0.97);
+}

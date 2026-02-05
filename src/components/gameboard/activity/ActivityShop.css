@@ -12,9 +12,10 @@
 
   /* FIXES SCROLLING */
   overflow-y: auto;
-  max-height: calc(100vh - 240px); /* dynamic, not cutoff */
+  max-height: calc(100vh - 360px); /* dynamic, not cutoff */
   display: flex;
   flex-direction: column;
+  padding-bottom: 40px;
 }
 
 /* Smooth scroll aesthetic */
@@ -122,4 +123,45 @@
 .coin-toss-area {
   margin-top: 18px;
   text-align: center;
+}
+/* ActivityShop.css */
+
+.activity-shop-instructions {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.skip-btn {
+  background: #555;
+  color: white;
+}
+
+.skip-btn:hover {
+  background: #666;
+}
+
+/* END TURN CARD — distinct palette */
+.end-turn-card {
+  background: #2a334aee; /* deep blue-gray */
+  border: 1px solid #8aaaff77;
+  color: #f2f4ff;
+}
+
+.end-turn-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border-color: #bcd3ff;
+}
+
+.end-title {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.activity-card-sub {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-bottom: 6px;
 }

@@ -1,0 +1,125 @@
+/* -------------------------------------------------------
+   ACTIVITY SHOP — MAIN CONTAINER
+-------------------------------------------------------- */
+.activity-shop-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 24px;
+  background: rgba(20, 20, 25, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  color: white;
+
+  /* FIXES SCROLLING */
+  overflow-y: auto;
+  max-height: calc(100vh - 240px); /* dynamic, not cutoff */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth scroll aesthetic */
+.activity-shop-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.activity-shop-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 4px;
+}
+
+.activity-shop-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* -------------------------------------------------------
+   TITLES & MESSAGE
+-------------------------------------------------------- */
+.shop-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
+}
+
+.shop-message {
+  opacity: 0.85;
+  font-size: 1.05rem;
+  margin-bottom: 20px;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------
+   ACTIVITY GRID
+-------------------------------------------------------- */
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+  padding: 8px 0;
+}
+
+/* -------------------------------------------------------
+   ACTIVITY CARD
+-------------------------------------------------------- */
+.activity-card {
+  background: rgba(255, 255, 255, 0.781);
+  border: 1px solid rgba(255,255,255,0.12);
+
+  border-radius: 16px;
+  padding: 18px;
+
+  transition: transform 0.18s ease, 
+              box-shadow 0.18s ease, 
+              border-color 0.18s ease;
+
+  cursor: pointer;
+}
+
+.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+  border-color: rgba(255,255,255,0.25);
+}
+
+/* Card Title */
+.activity-card-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* Card Cost */
+.activity-card-cost {
+  font-size: 1.25rem;
+  opacity: 0.7;
+}
+
+/* -------------------------------------------------------
+   DECLINE BUTTON
+-------------------------------------------------------- */
+.shop-decline-btn {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.shop-decline-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* -------------------------------------------------------
+   OPTIONAL: COIN TOSS AREA (placeholder for later)
+-------------------------------------------------------- */
+
+.coin-toss-area {
+  margin-top: 18px;
+  text-align: center;
+}

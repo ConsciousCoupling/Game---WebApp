@@ -3,103 +3,111 @@
 import { useEffect, useState, useRef } from "react";
 import { initialGameState } from "./initialGameState";
 import { DiceEngine } from "./dice/DiceEngine";
-import { MOVEMENT_CARDS, getRandomMovementCard } 
-  from "./data/movementCards";
+import { getRandomMovementCard } from "./data/movementCards";
+import { PROMPT_CARDS } from "./data/promptCards";   // ★ REQUIRED
 
-
-// =======================================================
-// useGameState — CENTRAL GAME STATE CONTROLLER
-// =======================================================
+// ★ Add shuffle helper here too
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
 
 export default function useGameState(gameId) {
   const [state, setState] = useState(null);
   const engineRef = useRef(null);
 
-  // --------------------------------------------
-  // Load or create new game (DEEP CLONE FIX APPLIED)
-  // --------------------------------------------
+  // ------------------------------
+  // LOAD OR CREATE GAME
+  // ------------------------------
   useEffect(() => {
     const saved = localStorage.getItem(`game-${gameId}`);
 
     if (saved) {
       setState(JSON.parse(saved));
     } else {
-      const fresh = JSON.parse(JSON.stringify(initialGameState)); // deep copy
+      const fresh = JSON.parse(JSON.stringify(initialGameState));
       fresh.gameId = gameId;
-
       setState(fresh);
       localStorage.setItem(`game-${gameId}`, JSON.stringify(fresh));
     }
   }, [gameId]);
 
-  // --------------------------------------------
-  // Auto-save on every state change
-  // --------------------------------------------
+  // ------------------------------
+  // AUTO-SAVE
+  // ------------------------------
   useEffect(() => {
     if (state) {
       localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
     }
   }, [state, gameId]);
 
-  // =======================================================
+  // ------------------------------
   // HANDLE FINAL DIE RESULT
-  // =======================================================
+  // ------------------------------
   function handleEngineRollComplete({ value, category }) {
-    setState((prev) => {
-      let newState = {
+    setState(prev => {
+      const newState = {
         ...prev,
         lastDieFace: value,
         lastCategory: category,
       };
 
-      // --------------------------------------
-      // CATEGORY 1–4 → PROMPT
-      // --------------------------------------
-      if (category >= 1 && category <= 4) {
-        const deck = prev.promptDecks?.[category] ?? [];
-        const prompt = deck[0] ?? null;
+ // PROMPTS (1–4)
+// PROMPTS (1–4)
+if (category >= 1 && category <= 4) {
 
-        const updatedDecks = { ...prev.promptDecks };
-        updatedDecks[category] = deck.slice(1);
+  let deck = prev.promptDecks?.[category] ?? [];
 
-        return {
-          ...newState,
-          activePrompt: prompt,
-          promptDecks: updatedDecks,
-          phase: "PROMPT",
-        };
+  // auto-reshuffle if empty
+  if (deck.length === 0) {
+    deck = shuffle(PROMPT_CARDS.filter(p => p.category === category));
+  }
+
+  const raw = deck[0];
+  const prompt = raw
+    ? {
+        category: raw.category,
+        text: raw.text,
+        reversed: false,
+        deepen: false
       }
+    : null;
 
- // CATEGORY 5 — MOVEMENT CARD
-if (category === 5) {
-  const movementCard = getRandomMovementCard();
-
-  const players = [...prev.players];
-  const current = players[prev.currentPlayerId];
-
-  current.inventory = [...current.inventory, movementCard];
-
-  const nextPlayer = prev.currentPlayerId === 0 ? 1 : 0;
+  const updatedDecks = { ...prev.promptDecks };
+  updatedDecks[category] = deck.slice(1);
 
   return {
     ...newState,
-    players,
-    awardedMovementCard: movementCard, 
-    phase: "MOVEMENT_AWARD",
-    currentPlayerId: nextPlayer  // <-- TURN PASSES NOW
+    activePrompt: prompt,
+    promptDecks: updatedDecks,
+    phase: "PROMPT",
   };
 }
 
-      // --------------------------------------
-      // CATEGORY 6 → ACTIVITY SHOP
-      // --------------------------------------
+      // MOVEMENT CARD (5)
+      if (category === 5) {
+        const movementCard = getRandomMovementCard();
+        const players = [...prev.players];
+        const current = players[prev.currentPlayerId];
+
+        current.inventory = [...current.inventory, movementCard];
+
+        return {
+          ...newState,
+          players,
+          awardedMovementCard: movementCard,
+          phase: "MOVEMENT_AWARD",
+          currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
+        };
+      }
+
+      // ACTIVITY SHOP (6)
       if (category === 6) {
         return {
           ...newState,
           phase: "ACTIVITY_SHOP",
           activityShop: {
             canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
-            message: "Would you like to purchase an activity for 5 tokens?",
+            message: "Choose an activity or skip your turn.",
           },
         };
       }
@@ -108,197 +116,179 @@ if (category === 5) {
     });
   }
 
-  // --------------------------------------------------------
-  // Initialize DiceEngine once
-  // --------------------------------------------------------
- useEffect(() => {
-  engineRef.current = new DiceEngine(handleEngineRollComplete);
+  // ------------------------------
+  // CREATE DICE ENGINE ONCE
+  // ------------------------------
+  if (!engineRef.current) {
+    engineRef.current = new DiceEngine(handleEngineRollComplete);
+  }
 
-  return () => {
-    engineRef.current = null;
-  };
-}, []);
-
-  // =======================================================
-  // ACTIONS — CALLED FROM UI
-  // =======================================================
+  // ------------------------------
+  // ACTIONS
+  // ------------------------------
   const actions = {
-    rollDice: () => {
-      setState((prev) => ({
+    rollDice: () =>
+      setState(prev => ({
         ...prev,
         phase: "ROLLING",
+      })) || engineRef.current.roll(),
+
+    beginAwardPhase: () =>
+      setState(prev => ({
+        ...prev,
+        phase: "AWARD",
+      })),
+
+    awardTokens: amount =>
+      setState(prev => {
+        const players = [...prev.players];
+        const currentId = prev.currentPlayerId;
+        let targetId = currentId;
+
+        if (prev.reversePromptActive) {
+          targetId = currentId === 0 ? 1 : 0;
+        }
+
+        players[targetId].tokens += prev.goOnActive ? amount * 2 : amount;
+
+        const nextTurn = prev.reversePromptActive
+          ? targetId
+          : currentId === 0
+          ? 1
+          : 0;
+
+        return {
+          ...prev,
+          players,
+          goOnActive: false,
+          reversePromptActive: false,
+          activePrompt: null,
+          lastDieFace: null,
+          lastCategory: null,
+          phase: "TURN_START",
+          currentPlayerId: nextTurn,
+        };
+      }),
+
+    // MOVEMENT AWARD POPUP CLOSE
+    dismissMovementAward: () =>
+      setState(prev => ({
+        ...prev,
+        awardedMovementCard: null,
+        activePrompt: null,
+        phase: "TURN_START",
+        lastDieFace: null,
+        lastCategory: null,
+      })),
+
+    // ---------------------------
+    // ACTIVITY SHOP
+    // ---------------------------
+    endTurnInShop: () =>
+      setState(prev => ({
+        ...prev,
+        activityShop: null,
+        pendingActivity: null,
+        phase: "TURN_START",
         lastDieFace: null,
         lastCategory: null,
         activePrompt: null,
-      }));
-
-      engineRef.current.roll();
-    },
-
-    beginAwardPhase: () => {
-      setState((prev) => ({
-        ...prev,
-        phase: "AWARD",
-      }));
-    },
-
- awardTokens: (amount) => {
-  setState(prev => {
-    const players = [...prev.players];
-    const currentId = prev.currentPlayerId;
-    let targetId = currentId;
-
-    // If Turn It Around was used, the OTHER player answered
-    if (prev.reversePromptActive) {
-      targetId = currentId === 0 ? 1 : 0;
-    }
-
-    // Apply Go On multiplier
-    const finalAmount = prev.goOnActive ? amount * 2 : amount;
-
-    players[targetId].tokens += finalAmount;
-
-    // Determine whose turn is next
-    let nextTurn;
-    if (prev.reversePromptActive) {
-      nextTurn = targetId;   // THEY answered and now continue
-    } else {
-      nextTurn = currentId === 0 ? 1 : 0; // normal alternation
-    }
-
-    return {
-      ...prev,
-      players,
-      goOnActive: false,
-      reversePromptActive: false,
-      activePrompt: null,
-      lastDieFace: null,
-      lastCategory: null,
-      phase: "TURN_START",
-      currentPlayerId: nextTurn
-    };
-  });
-},
-
-    // ---------------------------
-    // ACTIVITY SHOP ACTIONS
-    // ---------------------------
-    openActivityShop: () =>
-      setState((prev) => ({
-        ...prev,
-        phase: "ACTIVITY_SHOP",
-        activityShop: {
-          canAfford: prev.players[prev.currentPlayerId].tokens >= 5,
-          message: "Select an activity to purchase.",
-        },
+        currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
       })),
 
     declineActivity: () =>
-  setState(prev => ({
-    ...prev,
-    phase: "TURN_START",
-    lastDieFace: null,
-    lastCategory: null,
-    activePrompt: null,
-    currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0
-  })),
-
- purchaseActivity: (activity) =>
-  setState(prev => {
-    const players = [...prev.players];
-    const current = players[prev.currentPlayerId];
-
-    // Not enough tokens for this specific activity
-    if (current.tokens < activity.cost) {
-      return {
+      setState(prev => ({
         ...prev,
-        activityShop: {
-          ...prev.activityShop,
-          message: `You need ${activity.cost} tokens for this activity.`,
-        },
-      };
-    }
+        activityShop: null,
+        phase: "TURN_START",
+        lastDieFace: null,
+        lastCategory: null,
+        activePrompt: null,
+        currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
+      })),
 
-    // Deduct the exact cost
-    current.tokens -= activity.cost;
+    purchaseActivity: activity =>
+      setState(prev => {
+        const players = [...prev.players];
+        const current = players[prev.currentPlayerId];
 
-    return {
-      ...prev,
-      players,
-      phase: "COIN_TOSS",
-      coin: {
-        isFlipping: false,   // waiting for user to tap flip
-        result: null,
-      },
-      pendingActivity: activity, // store chosen activity for final result
-    };
-  }),
+        if (current.tokens < activity.cost) {
+          return {
+            ...prev,
+            activityShop: {
+              ...prev.activityShop,
+              message: `You need ${activity.cost} tokens for this activity.`,
+            },
+          };
+        }
 
+        current.tokens -= activity.cost;
 
-flipCoin: () =>
-  setState(prev => {
-    return {
-      ...prev,
-      coin: {
-        ...prev.coin,
-        isFlipping: true,
-        result: null  // ensure no result yet
-      }
-    };
-  }),
+        return {
+          ...prev,
+          players,
+          phase: "COIN_TOSS",
+          pendingActivity: activity,
+          coin: {
+            isFlipping: false,
+            result: null,
+          },
+        };
+      }),
 
-completeCoinFlip: () =>
-  setState(prev => {
-    const activity = prev.pendingActivity;
-    const result = Math.random() < 0.5 ? "Favor ❤️" : "Challenge 🔥";
+    flipCoin: () =>
+      setState(prev => ({
+        ...prev,
+        coin: { ...prev.coin, isFlipping: true },
+      })),
 
-    return {
-      ...prev,
-      coin: {
-        isFlipping: false,
-        result,
-      },
-      phase: "ACTIVITY_RESULT",
-      activityResult: {
-        activityName: activity.name,
-        outcome: result,
-        message:
+    completeCoinFlip: () =>
+      setState(prev => {
+        const activity = prev.pendingActivity;
+
+        const result =
+          Math.random() < 0.5 ? "Favor ❤️" : "Challenge 🔥";
+
+        const performer =
           result === "Favor ❤️"
-            ? "Your partner owes you a Favor! They will perform the activity ❤️"
-            : "You received a Challenge! You will perform the activity 🔥",
-      },
-      pendingActivity: null,
-    };
-  }),
+            ? prev.players[prev.currentPlayerId === 0 ? 1 : 0].name
+            : prev.players[prev.currentPlayerId].name;
 
-        finishActivityResult: () =>
-      setState((prev) => ({
+        return {
+          ...prev,
+          coin: {
+            isFlipping: false,
+            result,
+          },
+          phase: "COIN_OUTCOME",
+          activityResult: {
+            activityName: activity.name,
+            outcome: result,
+            performer,
+          },
+          pendingActivity: null,
+        };
+      }),
+
+    finishActivityResult: () =>
+      setState(prev => ({
         ...prev,
         phase: "TURN_START",
         activityShop: null,
         activityResult: null,
         lastDieFace: null,
         lastCategory: null,
+         currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
       })),
 
-      dismissMovementAward: () => {
-  setState(prev => ({
-    ...prev,
-    awardedMovementCard: null,
-    phase: "TURN_START"
-  }));
-},
-
     // ---------------------------
-    // MOVEMENT CARD HANDLER
+    // MOVEMENT CARDS
     // ---------------------------
-    useMovementCard: (card) => {
-      setState((prev) => {
+    useMovementCard: card =>
+      setState(prev => {
         const players = [...prev.players];
         const current = players[prev.currentPlayerId];
-
-        // Remove used card
-        current.inventory = current.inventory.filter((c) => c !== card);
+        current.inventory = current.inventory.filter(c => c !== card);
 
         switch (card.effect) {
           case "skip_prompt":
@@ -308,7 +298,8 @@ completeCoinFlip: () =>
               activePrompt: null,
               lastDieFace: null,
               lastCategory: null,
-              currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
+              currentPlayerId:
+                prev.currentPlayerId === 0 ? 1 : 0,
               phase: "TURN_START",
             };
 
@@ -316,9 +307,6 @@ completeCoinFlip: () =>
             return {
               ...prev,
               players,
-              activePrompt: null,
-              lastDieFace: null,
-              lastCategory: null,
               phase: "ROLLING",
             };
 
@@ -356,8 +344,7 @@ completeCoinFlip: () =>
           default:
             return prev;
         }
-      });
-    },
+      }),
   };
 
   return {
