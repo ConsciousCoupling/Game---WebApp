@@ -1,67 +1,153 @@
+/* ============================
+   GLOBAL ONBOARDING LAYOUT
+============================ */
 .onboarding-container {
   height: 100vh;
   width: 100%;
-  background: linear-gradient(to bottom right, #1b0f14, #2e1a22);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  background: #0d0d0f; /* deep black */
   padding: 20px;
-  color: #fbe9e7;
+  color: #eee;
+  font-family: "Inter", sans-serif;
 }
 
+/* Frosted-glass style card */
 .onboarding-card {
-  width: 90%;
-  max-width: 480px;
-  background: rgba(255, 230, 225, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   padding: 32px;
-  border-radius: 14px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 20px rgba(255, 140, 160, 0.25);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.5);
+  max-width: 580px;
+  width: 100%;
   text-align: center;
 }
 
-.onboarding-card h2 {
-  font-size: 2rem;
-  margin-bottom: 1.2rem;
-  color: #ffd0d8;
+/* Titles & Text */
+.onboarding-title {
+  font-size: 2.4rem;
+  margin-bottom: 14px;
+  font-weight: 700;
+  color: #fff;
 }
 
-.onboarding-card p {
-  font-size: 1.15rem;
-  line-height: 1.5;
-  opacity: 0.9;
+.onboarding-text {
+  font-size: 1.6rem;
+  opacity: 0.85;
+  margin-bottom: 26px;
+  line-height: 1.45;
 }
 
-.onboarding-controls {
+/* ============================
+   INITIAL SCREEN BUTTONS
+============================ */
+.onboarding-buttons {
   display: flex;
-  justify-content: space-between;
-  margin-top: 2rem;
+  flex-direction: column;
+  gap: 26px;
 }
 
-.next-btn, .back-btn {
-  padding: 12px 22px;
-  border-radius: 8px;
-  border: none;
+.onboarding-btn {
+  padding: 14px 20px;
+  font-size: 1.8rem;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 1.1rem;
+  border: none;
   transition: 0.25s ease;
 }
 
-.next-btn {
-  background: #ff5f76;
+/* primary = Start New Game */
+.onboarding-btn.primary-btn {
+  background: #ff3e84;
   color: white;
 }
-.next-btn:hover {
-  background: #ff8294;
-  transform: scale(1.05);
+
+.onboarding-btn.primary-btn:hover {
+  background: #ff589a;
 }
 
-.back-btn {
-  background: transparent;
-  border: 2px solid #ff8294;
-  color: #ffb3c0;
+/* secondary = Join Game */
+.onboarding-btn.secondary-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #eaeaea;
 }
-.back-btn:hover {
-  background: rgba(255, 150, 170, 0.1);
-  transform: scale(1.05);
+
+.onboarding-btn.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================
+   SLIDE MODE
+============================ */
+/* src/pages/Onboarding/OnboardingSlides.css */
+
+.onboard-slides-page {
+  height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at center, #1a1a1d 0%, #0d0d0f 70%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 28px;
+}
+
+.onboard-slide-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 42px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+  color: #f5f5f5;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.04),
+    0 0 70px rgba(0, 0, 0, 0.4);
+}
+
+.onboard-title {
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.onboard-text {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+
+.onboard-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.onboard-btn {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1.05rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: #f5f5f5;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+
+.onboard-btn.back:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.onboard-btn.next {
+  border-color: rgba(255,255,255,0.35);
+  font-weight: 600;
+}
+
+.onboard-btn.next:hover {
+  background: rgba(255,255,255,0.18);
 }

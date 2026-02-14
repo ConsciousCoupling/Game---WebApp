@@ -1,0 +1,33 @@
+/* ============================================
+   UNIVERSAL NEON EFFECTS
+   ============================================ */
+
+.neon-border {
+  border: var(--neon-border) solid var(--neon-white);
+  box-shadow: 0 0 12px var(--neon-shadow);
+}
+
+/* Category accents */
+.cat1-accent { border-color: var(--cat1-red); box-shadow: 0 0 12px var(--cat1-red); }
+.cat2-accent { border-color: var(--cat2-blue); box-shadow: 0 0 12px var(--cat2-blue); }
+.cat3-accent { border-color: var(--cat3-yellow); box-shadow: 0 0 12px var(--cat3-green); }
+.cat4-accent { border-color: var(--cat4-fuchsia); box-shadow: 0 0 12px var(--cat4-fuchsia); }
+.cat5-accent { border-color: var(--cat5-purple); box-shadow: 0 0 12px var(--cat5-purple); }
+.cat6-accent { border-color: var(--cat6-orange); box-shadow: 0 0 12px var(--cat6-orange); }
+
+/* Neon glow on hover */
+.neon-hover:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 18px var(--neon-white);
+}
+
+/* Pulsing glow (use in buttons, title cards, etc.) */
+@keyframes neonPulse {
+  0% { box-shadow: 0 0 6px var(--neon-white); }
+  50% { box-shadow: 0 0 14px var(--neon-white); }
+  100% { box-shadow: 0 0 6px var(--neon-white); }
+}
+
+.neon-pulse {
+  animation: neonPulse 2.6s infinite ease-in-out;
+}

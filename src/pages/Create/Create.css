@@ -1,0 +1,171 @@
+/* ================================
+   Layout & Container
+================================ */
+.create-container {
+  height: 100vh;
+  width: 100%;
+  background: #0d0d0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  font-family: "Inter", sans-serif;
+}
+
+/* Frosted glass card */
+.create-card {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 32px;
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  /* ★ Soft white glow behind the card */
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+}
+
+/* ================================
+   Text
+================================ */
+.create-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.create-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  margin-bottom: 28px;
+}
+
+/* ================================
+   Input
+================================ */
+.create-input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 24px;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  outline: none;
+  transition: 0.25s ease;
+}
+
+.create-input::placeholder {
+  color: #bbb;
+}
+
+.create-input:focus {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ================================
+   Buttons
+================================ */
+.create-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  cursor: pointer;
+  border: none;
+  transition: 0.25s ease;
+}
+
+.primary-btn {
+  background: linear-gradient(90deg, #ff3e84, #ff6ba8);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(255, 62, 132, 0.4);
+}
+
+.primary-btn:hover {
+  background: linear-gradient(90deg, #ff5694, #ff8ab8);
+}
+
+.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ================================
+   Mobile
+================================ */
+@media (max-width: 480px) {
+  .create-card {
+    padding: 28px;
+  }
+
+  .create-title {
+    font-size: 1.7rem;
+  }
+
+  .create-btn {
+    font-size: 1.05rem;
+  }
+}
+
+/* ================================
+   Summary Screen
+================================ */
+.summary-box {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 18px;
+  border-radius: 12px;
+  margin-bottom: 26px;
+}
+
+.summary-name {
+  font-size: 1.3rem;
+  padding: 6px 0;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ddd;
+  margin-top: 12px;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.color-picker-label {
+  margin-top: 20px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.color-picker-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.color-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.12);
+}
+
+.color-swatch.selected {
+  border-color: white;
+  transform: scale(1.18);
+}

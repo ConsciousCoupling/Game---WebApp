@@ -1,4 +1,7 @@
 /* src/index.css */
+@import "./theme/variables.css";
+@import "./theme/neon.css";
+@import "./theme/layout.css";
 
 /* RESET + GLOBALS ---------------------------------- */
 html, body, #root {

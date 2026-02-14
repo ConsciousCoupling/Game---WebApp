@@ -9,45 +9,67 @@
   color: #fbe9e7;
 }
 
+.menu-page {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at top, #1d1016, #140a0f 60%, #0e060a);
+  padding: 20px;
+}
+
 .menu-card {
-  width: 90%;
-  max-width: 480px;
-  background: rgba(255, 230, 225, 0.1);
-  padding: 40px;
-  border-radius: 14px;
+  background: rgba(255, 240, 235, 0.08);
   backdrop-filter: blur(12px);
-  box-shadow: 0 0 20px rgba(255, 140, 160, 0.25);
+  padding: 40px 32px;
+  border-radius: 20px;
   text-align: center;
-  animation: fadeIn 1s ease-out forwards;
+  width: 100%;
+  max-width: 380px;
+  border: 1px solid rgba(255, 200, 215, 0.1);
 }
 
 .menu-title {
-  font-size: 2.6rem;
-  margin-bottom: 2rem;
-  letter-spacing: 1.5px;
-  color: #ffd6dd;
+  color: #ffe7ef;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.menu-subtitle {
+  color: #ffdde8;
+  opacity: 0.8;
+  margin-bottom: 30px;
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 15px;
 }
 
 .menu-btn {
-  padding: 14px 20px;
-  border-radius: 10px;
-  background: #ff5f76;
-  color: white;
-  border: none;
-  font-size: 1.2rem;
+  background: rgba(255, 240, 235, 0.12);
+  border: 1px solid rgba(255, 200, 215, 0.2);
+  color: #ffe7ef;
+  padding: 12px;
+  font-size: 1.1rem;
+  border-radius: 12px;
   cursor: pointer;
-  transition: 0.25s ease;
+  transition: 0.2s ease;
 }
 
 .menu-btn:hover {
-  background: #ff8294;
-  transform: scale(1.04);
+  background: rgba(255, 240, 235, 0.18);
+}
+
+.menu-btn.primary {
+  background: #ff4f9d;
+  color: white;
+  border: none;
+}
+
+.menu-btn.primary:hover {
+  background: #ff6ab0;
 }
 
 .menu-btn.secondary {

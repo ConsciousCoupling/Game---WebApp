@@ -2,19 +2,11 @@
 
 import "./PromptCard.css";
 
-export default function PromptCard({ prompt }) {
+export default function PromptCard({ prompt, currentPlayerName, otherPlayerName }) {
   if (!prompt) return null;
 
-  // Support both formats:
-  // - { text: "..." }
-  // - { prompt: "..." }
   const promptText = prompt.text || prompt.prompt || "";
-
-  const {
-    category,
-    reversed = false,
-    deepen = false
-  } = prompt;
+  const { category, reversed = false, deepen = false } = prompt;
 
   return (
     <div className="prompt-card">
@@ -26,11 +18,7 @@ export default function PromptCard({ prompt }) {
       {/* Main Prompt */}
       <p className="prompt-text">{promptText}</p>
 
-      {/* ================================
-          SPECIAL MODIFIERS (Movement Cards)
-          reversed = Turn It Around
-          deepen = Go On
-      ================================= */}
+      {/* Special modifiers */}
       {(reversed || deepen) && (
         <div className="prompt-modifiers">
 
@@ -54,8 +42,19 @@ export default function PromptCard({ prompt }) {
       {/* Footer Instruction */}
       <div className="prompt-instructions">
         {reversed
-          ? "Partner answers. When ready, press 'Ready to Rate'."
-          : "Answer the prompt. When done, your partner will rate your effort."
+          ? (
+              <>
+                Your partner <strong>{otherPlayerName}</strong> answers this one.
+                When ready, press “Ready to Rate.”
+              </>
+            )
+          : (
+              <>
+                <strong>{currentPlayerName}</strong>, answer the prompt. 
+                When you're done,
+                <strong> {otherPlayerName}</strong> will rate your effort.
+              </>
+            )
         }
       </div>
     </div>

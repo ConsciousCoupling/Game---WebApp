@@ -132,7 +132,7 @@ export default function GameBoard() {
           {/* TURN START */}
           {state.phase === "TURN_START" && (
             <p className="placeholder-text">
-              It’s {currentPlayer.name}'s turn.
+              It’s <strong>{currentPlayer.name}</strong>’s turn.
             </p>
           )}
 
@@ -145,6 +145,10 @@ export default function GameBoard() {
           {state.phase === "PROMPT" && state.activePrompt && (
             <PromptCard
               prompt={state.activePrompt}
+              currentPlayerName={currentPlayer.name}
+              otherPlayerName={
+                state.currentPlayerId === 0 ? playerTwo.name : playerOne.name
+              }
               onReady={actions.beginAwardPhase}
             />
           )}
@@ -161,20 +165,19 @@ export default function GameBoard() {
           {/* AWARD */}
           {state.phase === "AWARD" && (
             <p className="placeholder-text">
-              Rate {currentPlayer.name}’s effort…
+              Award 0, 1, 2, or 3 tokens to <strong>{currentPlayer.name}</strong>'s prompt answer, based on effort…
             </p>
           )}
 
           {/* ACTIVITY SHOP */}
-          {state.phase === "ACTIVITY_SHOP" && state.activityShop && (
-           <ActivityShop
-  canAfford={state.activityShop.canAfford}
+          {state.phase === "ACTIVITY_SHOP" && (
+  <ActivityShop
   message={state.activityShop.message}
+  currentTokens={currentPlayer.tokens}
   onPurchase={actions.purchaseActivity}
-//  onDecline={actions.declineActivity}      // ❗Cancel button
-  onEndTurn={actions.endTurnInShop}        // ❗End Turn card
+  onEndTurn={actions.endTurnInShop}
 />
-          )}
+)}
 
         </div>
 

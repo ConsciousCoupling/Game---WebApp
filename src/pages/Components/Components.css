@@ -2,7 +2,7 @@
   width: 100%;
   min-height: 100vh;
   background: radial-gradient(circle at top, #2b0b17, #0d0d0d);
-  color: #f8dada;
+  color: #d8d3d3;
   display: flex;
   justify-content: center;
   padding: 40px 20px;
@@ -33,7 +33,7 @@
 }
 
 .component-card {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(138, 136, 136, 0.08);
   border-radius: 16px;
   padding: 20px;
   backdrop-filter: blur(10px);
@@ -44,13 +44,13 @@
 
 .component-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 18px rgba(189, 185, 185, 0.4);
 }
 
 .component-card h2 {
   margin-bottom: 10px;
   font-size: 1.3rem;
-  color: #ffd4e4;
+  color: #ddd28f;
 }
 
 .component-card p {
@@ -63,7 +63,7 @@
   margin-top: 20px;
   padding: 12px 24px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(169, 166, 166, 0.1);
   border: 1px solid rgba(255,255,255,0.25);
   color: #fff;
   cursor: pointer;

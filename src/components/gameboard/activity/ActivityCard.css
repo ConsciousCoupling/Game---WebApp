@@ -70,3 +70,54 @@
 .activity-buy-btn:hover {
   background: #ffffff44;
 }
+
+/* Base disabled state */
+.activity-card.disabled {
+  opacity: 0.45;
+  filter: grayscale(50%) blur(1px);
+  cursor: not-allowed;
+  position: relative;
+  pointer-events: none; /* Prevent clicking */
+}
+
+/* Lock icon overlay */
+.activity-card.disabled::after {
+  content: "🔒";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 1.3rem;
+  opacity: 0.9;
+}
+
+/* Show helper message on hover (desktop) */
+.activity-card.disabled:hover::before {
+  content: "Not enough tokens";
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.65);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Mobile-friendly indicator (always show if disabled & mobile) */
+@media (max-width: 768px) {
+  .activity-card.disabled::before {
+    content: "Not enough tokens";
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.65);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #fff;
+    white-space: nowrap;
+  }
+}

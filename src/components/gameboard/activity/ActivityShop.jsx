@@ -4,39 +4,46 @@ import "./ActivityShop.css";
 import { ACTIVITIES } from "../../../game/data/activityList";
 
 export default function ActivityShop({
-  canAfford,
   message,
   onPurchase,
-  onEndTurn
+  onEndTurn,
+  currentTokens
 }) {
   return (
     <div className="activity-shop-container">
 
       <h2 className="shop-title">Activity Shop</h2>
+
       <p className="shop-message">
-        Choose an activity to purchase or end your turn and save your tokens.
+        Choose something fun to try — or end your turn to save your tokens.
       </p>
 
+      {/* Dynamic helper message from game state */}
       <p className="activity-shop-message">{message}</p>
 
       <div className="activity-grid">
-        
-        {/* ACTIVITY CARDS */}
-        {ACTIVITIES.map((activity, index) => (
-          <button
-            key={index}
-            className="activity-card"
-            onClick={() => onPurchase(activity)}
-          >
-            <div className="activity-card-title">{activity.name}</div>
-            <div className="activity-card-cost">-{activity.cost} tokens</div>
-            <p className="activity-card-description">
-              {activity.description}
-            </p>
-          </button>
-        ))}
 
-        {/* END TURN CARD */}
+        {/* ACTIVITY CARDS */}
+        {ACTIVITIES.map((activity, index) => {
+          const affordable = currentTokens >= activity.cost;
+
+          return (
+            <button
+              key={index}
+              className={`activity-card ${!affordable ? "disabled" : ""}`}
+              disabled={!affordable}
+              onClick={() => affordable && onPurchase(activity)}
+            >
+              <div className="activity-card-title">{activity.name}</div>
+              <div className="activity-card-cost">-{activity.cost} tokens</div>
+              <p className="activity-card-description">
+                {activity.description}
+              </p>
+            </button>
+          );
+        })}
+
+        {/* END TURN OPTION */}
         <button className="activity-card end-turn-card" onClick={onEndTurn}>
           <div className="activity-card-title end-title">End Turn</div>
           <div className="activity-card-sub">Save your tokens for later</div>
@@ -46,7 +53,6 @@ export default function ActivityShop({
         </button>
 
       </div>
-
     </div>
   );
 }

@@ -10,8 +10,8 @@ export default function CoinOutcome({ result, activity, performer, onContinue })
   return (
     <div className="coin-outcome-overlay">
       <div className="coin-outcome-container">
-        
-        <img className="coin-outcome-image" src={imageSrc} />
+
+        <img className="coin-outcome-image" src={imageSrc} alt="Coin Flip Result" />
 
         <h2 className="coin-outcome-title">{result}</h2>
 
@@ -20,7 +20,7 @@ export default function CoinOutcome({ result, activity, performer, onContinue })
         </p>
 
         <p className="coin-outcome-performer">
-          <strong>Performer:</strong> {performer}
+          <strong>Performer:</strong> <strong>{performer}</strong>
         </p>
 
         <button className="coin-outcome-btn" onClick={onContinue}>

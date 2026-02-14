@@ -1,3 +1,4 @@
+// src/pages/Consent/Consent.jsx
 import { useNavigate } from "react-router-dom";
 import "./Consent.css";
 
@@ -5,25 +6,38 @@ export default function Consent() {
   const navigate = useNavigate();
 
   return (
-    <div className="consent-container">
-      <div className="consent-card">
-        <h2>Before we begin…</h2>
+    <div className="consent-page">
 
-        <p>
-          Do you both willingly consent to share openly, respond honestly, and
-          participate fully in this experience together?
+      <div className="consent-content">
+        <h1 className="consent-title">Before we begin...</h1>
+
+        <p className="consent-text">
+          Please confirm that you both willingly consent and commit to:<br /><br />
+          - share openly and honestly<br />
+          - make an effort to expand awareness<br />
+          - create a safe, supportive space<br />
+          - explore with curiosity, not judgment<br />
+          - lovingly accept each other as you truly are<br />
+          - move through any discomfort with care and grace
         </p>
 
-        <div className="consent-buttons">
-          <button onClick={() => navigate("/onboarding")} className="yes">
-            Yes, we both consent ❤️
+        <div className="consent-actions">
+          <button
+            className="consent-btn yes"
+            onClick={() => navigate("/onboarding")}
+          >
+            Yes, we both consent
           </button>
 
-          <button onClick={() => navigate("/") } className="no">
+          <button
+            className="consent-btn no"
+            onClick={() => navigate("/")}
+          >
             We do not consent
           </button>
         </div>
       </div>
+
     </div>
   );
 }

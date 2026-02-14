@@ -1,3 +1,4 @@
+// src/pages/Portal/Portal.jsx
 import { useNavigate } from "react-router-dom";
 import "./Portal.css";
 
@@ -6,15 +7,19 @@ export default function Portal() {
 
   return (
     <div className="portal-container">
-      <div className="portal-warning">
-        <h1>⚠️ WARNING</h1>
-        <p>
-          This experience explores connection, vulnerability, emotional intimacy,
-          and playful sensuality. Enter with intention.
+      <div className="portal-glow" />
+
+      <div className="portal-card">
+        <h1 className="portal-title">⚠️ WARNING</h1>
+
+        <p className="portal-text">
+          This experience explores emotional intimacy, vulnerability,
+          connection, and sensuality.  <br />
+          Continue at your own discretion.
         </p>
 
         <button
-          className="portal-enter"
+          className="portal-enter-btn"
           onClick={() => navigate("/consent")}
         >
           Enter Intima-Date

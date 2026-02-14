@@ -1,0 +1,35 @@
+/* ============================================
+   GLOBAL COLOR VARIABLES — INTIMA-DATE THEME
+   ============================================ */
+
+:root {
+  /* Neutral base */
+  --bg-dark: #0c0a0d;
+  --bg-panel: rgba(255, 255, 255, 0.06);
+  --bg-panel-strong: rgba(255, 255, 255, 0.12);
+  --text-light: #f7eef9;
+
+  /* Shared Glow */
+  --neon-white: #ffffff;
+  --neon-shadow: rgba(255, 255, 255, 0.3);
+
+  /* CATEGORY COLORS — synced to die faces */
+  --cat1-red: #f30c0c;
+  --cat2-blue: #052de2;
+  --cat3-yellow: #eaff2b;
+  --cat3-green: #15c429; /* gradient option */
+  --cat4-fuchsia: #dd0aa9;
+  --cat5-purple: #6633cc;
+  --cat6-orange: #ff9900;
+
+  /* Frosted glass blur */
+  --frost-blur: blur(14px);
+
+  /* Radiant border thickness */
+  --neon-border: 2px;
+}
+
+/* Gradient helpers */
+.cat3-gradient {
+  background: linear-gradient(135deg, var(--cat3-yellow), var(--cat3-green));
+}

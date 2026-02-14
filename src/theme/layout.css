@@ -1,0 +1,41 @@
+/* ============================================
+   BASE LAYOUT & SURFACES
+   ============================================ */
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-light);
+  font-family: "Inter", sans-serif;
+  margin: 0;
+}
+
+/* Panels & Cards */
+.panel,
+.card {
+  background: var(--bg-panel);
+  backdrop-filter: var(--frost-blur);
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Stronger glass (modals, overlays) */
+.panel-strong {
+  background: var(--bg-panel-strong);
+  backdrop-filter: blur(18px);
+}
+
+/* Vert spacers */
+.v-space { margin-top: 20px; }
+.v-space-lg { margin-top: 40px; }
+
+/* Universal button baseline */
+.btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+  transition: 0.25s ease;
+  color: var(--text-light);
+}

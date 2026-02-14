@@ -1,50 +1,91 @@
+/* ===========================
+   PORTAL — Dramatic Threshold
+=========================== */
+
 .portal-container {
   height: 100vh;
   width: 100%;
-  background: radial-gradient(circle at center, #1a1a1a, #000000);
+  background: #000;
   display: flex;
-  justify-content: center;
   align-items: center;
-  color: #f7e9e3;
-  text-align: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
   padding: 20px;
 }
 
-.portal-warning {
-  max-width: 500px;
-  animation: fadeIn 1s ease-out forwards;
+/* Glowing amber halo behind card */
+.portal-glow {
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255,153,0,0.45) 0%,
+    rgba(255,102,0,0.25) 40%,
+    transparent 80%
+  );
+  filter: blur(50px);
+  animation: pulseGlow 5s ease-in-out infinite;
+  z-index: 0;
 }
 
-.portal-warning h1 {
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.18); opacity: 0.75; }
+}
+
+/* CARD */
+.portal-card {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+  padding: 40px 34px;
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(14px);
+
+  box-shadow: 0 0 40px rgba(255,140,0,0.25);
+  text-align: center;
+  color: #ffe7d1;
+}
+
+.portal-title {
   font-size: 2.6rem;
-  margin-bottom: 1rem;
-  letter-spacing: 2px;
+  margin-bottom: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #ffbc6d;
 }
 
-.portal-warning p {
-  font-size: 1.2rem;
-  line-height: 1.5;
+.portal-text {
+  font-size: 1.55rem;
+  line-height: 1.85;
   opacity: 0.9;
+  margin-bottom: 32px;
 }
 
-.portal-enter {
-  margin-top: 2rem;
-  padding: 12px 28px;
-  font-size: 1.3rem;
+/* ENTER BUTTON */
+.portal-enter-btn {
+  width: 100%;
+  padding: 14px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+
+  background: linear-gradient(90deg, #ff8800, #ff5500);
+  color: #fff;
+
   border: none;
-  border-radius: 8px;
-  background: #e04f5f;
-  color: white;
+  border-radius: 12px;
   cursor: pointer;
-  transition: 0.25s ease;
+
+  box-shadow: 0 4px 18px rgba(255,100,0,0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.portal-enter:hover {
-  background: #ff7085;
-  transform: scale(1.05);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+.portal-enter-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(255,100,0,0.55);
 }

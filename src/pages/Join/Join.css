@@ -1,0 +1,45 @@
+.join-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #0b0b0b;
+}
+
+.join-card {
+  background: #1a1a1d;
+  padding: 32px;
+  border-radius: 14px;
+  width: 340px;
+  text-align: center;
+}
+
+.join-title {
+  color: white;
+  margin-bottom: 12px;
+}
+
+.join-text {
+  color: #bbb;
+  margin-bottom: 20px;
+}
+
+.join-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 18px;
+  font-size: 1.1rem;
+}
+
+.join-btn {
+  width: 100%;
+  padding: 14px;
+  background: #ff4da6;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  cursor: pointer;
+}

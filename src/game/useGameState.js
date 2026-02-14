@@ -139,36 +139,34 @@ if (category >= 1 && category <= 4) {
         phase: "AWARD",
       })),
 
-    awardTokens: amount =>
-      setState(prev => {
-        const players = [...prev.players];
-        const currentId = prev.currentPlayerId;
-        let targetId = currentId;
+    awardTokens: (amount) =>
+  setState((prev) => {
+    const players = [...prev.players];
+    const currentId = prev.currentPlayerId;
 
-        if (prev.reversePromptActive) {
-          targetId = currentId === 0 ? 1 : 0;
-        }
+    // Who actually gets the tokens?
+    const answeringPlayerId = prev.reversePromptActive
+      ? (currentId === 0 ? 1 : 0)
+      : currentId;
 
-        players[targetId].tokens += prev.goOnActive ? amount * 2 : amount;
+    const finalAmount = prev.goOnActive ? amount * 2 : amount;
+    players[answeringPlayerId].tokens += finalAmount;
 
-        const nextTurn = prev.reversePromptActive
-          ? targetId
-          : currentId === 0
-          ? 1
-          : 0;
+    // After awarding, ALWAYS switch turns normally
+    const nextTurn = currentId === 0 ? 1 : 0;
 
-        return {
-          ...prev,
-          players,
-          goOnActive: false,
-          reversePromptActive: false,
-          activePrompt: null,
-          lastDieFace: null,
-          lastCategory: null,
-          phase: "TURN_START",
-          currentPlayerId: nextTurn,
-        };
-      }),
+    return {
+      ...prev,
+      players,
+      goOnActive: false,
+      reversePromptActive: false,
+      activePrompt: null,
+      lastDieFace: null,
+      lastCategory: null,
+      phase: "TURN_START",
+      currentPlayerId: nextTurn,
+    };
+  }),
 
     // MOVEMENT AWARD POPUP CLOSE
     dismissMovementAward: () =>
@@ -303,12 +301,24 @@ if (category >= 1 && category <= 4) {
               phase: "TURN_START",
             };
 
-          case "reroll":
-            return {
-              ...prev,
-              players,
-              phase: "ROLLING",
-            };
+          case "reroll": {
+  // Remove the card from inventory (you already did this above)
+  const nextState = {
+    ...prev,
+    players,
+    activePrompt: null,
+    lastDieFace: null,
+    lastCategory: null,
+    phase: "ROLLING",
+  };
+
+  // IMPORTANT: trigger an actual reroll
+  setTimeout(() => {
+    engineRef.current?.roll();
+  }, 50);
+
+  return nextState;
+}
 
           case "double_reward":
             return {
