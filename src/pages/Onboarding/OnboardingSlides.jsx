@@ -25,7 +25,7 @@ export default function OnboardingSlides() {
 
   const next = () => {
     if (index < slides.length - 1) setIndex(index + 1);
-    else navigate("/create/player-one");
+    else navigate("/menu");
   };
 
   const back = () => {
