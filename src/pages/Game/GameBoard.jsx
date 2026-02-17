@@ -1,6 +1,5 @@
 // src/pages/Game/GameBoard.jsx
 
-import { useParams } from "react-router-dom";
 import useGameState from "../../game/useGameState";
 
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
@@ -25,9 +24,9 @@ import "../../components/gameboard/styles/promptDisplay.css";
 import "../../components/gameboard/styles/instructionOverlay.css";
 import "../../components/gameboard/activity/CoinOutcome.css";
 
-export default function GameBoard() {
-  const { gameId } = useParams();
+export default function GameBoard({ gameId }) {
   const { state, actions, engine } = useGameState(gameId);
+  
 
   if (!state) {
     return (
@@ -50,10 +49,17 @@ export default function GameBoard() {
 
       {/* TOP BAR */}
       <div className="gameboard-topbar">
-        <div className="game-id">Game ID: {gameId}</div>
-        <div className="game-phase">{state.phase}</div>
-        <button className="menu-btn">☰</button>
-      </div>
+
+  <div className="game-id-block">
+    <div className="game-id-label">Game ID</div>
+    <div className="game-id-value">{gameId}</div>
+    <div className="game-id-hint">
+      Save this ID to continue your game later.
+    </div>
+  </div>
+
+  <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
+</div>
 
       {/* LEFT PANEL */}
       <div

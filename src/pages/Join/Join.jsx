@@ -1,34 +1,55 @@
-// src/pages/Join/Join.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { loadGameFromCloud } from "../../services/gameStore";
 import "./Join.css";
 
 export default function Join() {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
+  const [error, setError] = useState("");
 
-  function submit() {
-    if (!code.trim()) return;
-    navigate(`/game/${code.trim()}`);
+  async function handleJoin() {
+    setError("");
+
+    const cleaned = code.trim().toUpperCase();
+    if (!cleaned) {
+      setError("Please enter a game code.");
+      return;
+    }
+
+    const game = await loadGameFromCloud(cleaned);
+
+    if (!game) {
+      setError("Game not found. Check the code and try again.");
+      return;
+    }
+
+    navigate(`/game/${cleaned}`);
   }
 
   return (
     <div className="join-page">
       <div className="join-card">
 
-        <h2 className="join-title">Join a Game</h2>
+        <h2 className="join-title">Join an Existing Game</h2>
 
-        <p className="join-text">Enter the game code shared with you:</p>
+        <p className="join-subtitle">Enter the game code your partner shared.</p>
 
         <input
           className="join-input"
-          placeholder="e.g., ROSE-143"
+          placeholder="e.g. ROSE-143"
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onChange={(e) => setCode(e.target.value)}
         />
 
-        <button className="join-btn" onClick={submit}>
+        {error && <p className="join-error">{error}</p>}
+
+        <button className="join-btn" onClick={handleJoin}>
           Join Game
+        </button>
+
+        <button className="join-back" onClick={() => navigate("/onboarding")}>
+          Back
         </button>
 
       </div>

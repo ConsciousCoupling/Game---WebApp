@@ -123,3 +123,23 @@ html, body, #root, .app-container {
     font-size: 1rem;
   }
 }
+
+.menu-back-btn {
+  margin-top: 26px;
+  padding: 10px 24px;
+  font-size: 1.05rem;
+
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #e6e6e6;
+
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+
+  transition: background 0.25s ease, transform 0.2s ease;
+}
+
+.menu-back-btn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+}

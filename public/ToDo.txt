@@ -1,0 +1,3 @@
+1. AMA card should always award the tokens to the player who USED the card
+2. MVMT cards should only be colorful when it is possible to use them based on game state, game rules, etc
+3. 

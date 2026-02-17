@@ -5,6 +5,7 @@ import { initialGameState } from "./initialGameState";
 import { DiceEngine } from "./dice/DiceEngine";
 import { getRandomMovementCard } from "./data/movementCards";
 import { PROMPT_CARDS } from "./data/promptCards";   // ★ REQUIRED
+import { loadGameFromCloud } from "../services/gameStore";
 
 // ★ Add shuffle helper here too
 function shuffle(arr) {
@@ -19,17 +20,32 @@ export default function useGameState(gameId) {
   // LOAD OR CREATE GAME
   // ------------------------------
   useEffect(() => {
-    const saved = localStorage.getItem(`game-${gameId}`);
+  async function load() {
+    const local = localStorage.getItem(`game-${gameId}`);
 
-    if (saved) {
-      setState(JSON.parse(saved));
-    } else {
-      const fresh = JSON.parse(JSON.stringify(initialGameState));
-      fresh.gameId = gameId;
-      setState(fresh);
-      localStorage.setItem(`game-${gameId}`, JSON.stringify(fresh));
+    if (local) {
+      setState(JSON.parse(local));
+      return;
     }
-  }, [gameId]);
+
+    // Try Firebase
+    const cloud = await loadGameFromCloud(gameId);
+    if (cloud) {
+      setState(cloud);
+      localStorage.setItem(`game-${gameId}`, JSON.stringify(cloud));
+      return;
+    }
+
+    // Create fresh game (should only happen if someone navigates manually)
+    const fresh = JSON.parse(JSON.stringify(initialGameState));
+    fresh.gameId = gameId;
+
+    setState(fresh);
+    localStorage.setItem(`game-${gameId}`, JSON.stringify(fresh));
+  }
+
+  load();
+}, [gameId]);
 
   // ------------------------------
   // AUTO-SAVE

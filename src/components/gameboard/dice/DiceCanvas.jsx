@@ -20,19 +20,19 @@ export default function DiceCanvas({ engine }) {
         }}
       >
         {/* Lighting */}
-        <ambientLight intensity={0.35} />
+        <ambientLight intensity={0.4} />
 
         <directionalLight
           position={[5, 7, 5]}
-          intensity={1.25}
+          intensity={1.2}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
           shadow-bias={-0.0004}
         />
 
-        {/* Clean glossy studio reflections */}
-        <Environment preset="studio" />
+        {/* Safe environment preset (NO external HDR chunk loading) */}
+        <Environment preset="city" />
 
         {/* Soft shadows under die */}
         <ContactShadows

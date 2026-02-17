@@ -1,5 +1,3 @@
-// src/pages/Menu/Menu.jsx
-
 import { useNavigate } from "react-router-dom";
 import "./Menu.css";
 
@@ -15,7 +13,6 @@ export default function Menu() {
 
         <div className="menu-buttons">
 
-          {/* ⬆️ COMPONENTS */}
           <button
             className="menu-btn"
             onClick={() => navigate("/components")}
@@ -23,7 +20,6 @@ export default function Menu() {
             Components
           </button>
 
-          {/* ⬆️ INSTRUCTIONS */}
           <button
             className="menu-btn"
             onClick={() => navigate("/instructions")}
@@ -31,25 +27,21 @@ export default function Menu() {
             Instructions
           </button>
 
-          {/* ⬆️ START NEW GAME */}
           <button
             className="menu-btn primary"
             onClick={() => navigate("/create/player-one")}
           >
             Start New Game
           </button>
-
-          {/* OPTIONAL — WHEN YOU WANT JOIN GAME HERE INSTEAD OF START SCREEN */}
-          {/* 
-          <button
-            className="menu-btn secondary"
-            onClick={() => navigate("/join")}
-          >
-            Join Existing Game
-          </button>
-          */}
-
         </div>
+
+        {/* NEW BACK BUTTON */}
+        <button
+          className="menu-back-btn"
+          onClick={() => navigate("/onboarding")}
+        >
+          ← Back
+        </button>
 
       </div>
     </div>

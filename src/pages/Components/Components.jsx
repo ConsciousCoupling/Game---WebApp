@@ -7,72 +7,65 @@ import "./Components.css";
 export default function Components() {
   const navigate = useNavigate();
 
+  const parts = [
+    {
+      title: "The Game Die",
+      desc:
+        "A custom clear acrylic cube with engraved category icons. Each roll determines what kind of connection you explore next.",
+      color: "var(--cat1)"
+    },
+    {
+      title: "Prompt Cards",
+      desc:
+        "Categories 1–4 contain conversation prompts that help you explore strengths, vulnerabilities, desires, and playfulness.",
+      color: "var(--cat2)"
+    },
+    {
+      title: "Tokens",
+      desc:
+        "A feedback tool used to validate one another. Earned for effort—spent on unlocking intimate activities.",
+      color: "var(--cat3)"
+    },
+    {
+      title: "Movement Cards",
+      desc:
+        "A deck of strategic twists. Use these cards to shift the rules, reverse prompts, double rewards, or reroll the die.",
+      color: "var(--cat4)"
+    },
+    {
+      title: "Activity Store",
+      desc:
+        "Playful, sensual, or romantic activities you unlock with your tokens. A coin toss decides who performs them.",
+      color: "var(--cat5)"
+    },
+    {
+      title: "Favor / Challenge Coin",
+      desc:
+        "Flip the coin after selecting an activity—will the moment be your Favor, or your Challenge?",
+      color: "var(--cat6)"
+    }
+  ];
+
   return (
     <div className="components-page">
-      <div className="components-container">
-        <h1 className="components-title">Game Components</h1>
+      <div className="components-wrapper">
 
+        <h1 className="components-title">Game Components</h1>
         <p className="components-subtitle">
-          Explore everything included in your Intima-Date experience.
+          Everything included in your Intima-Date experience.
         </p>
 
         <div className="components-grid">
-          <div className="component-card">
-            <h2>The Game Die</h2>
-            <p>
-              Aguably, the most impotant single component of the game- a custom, clear acrylic cube with engraved category icons.<br />
-              Used to determine prompts, movements, and activities each turn.
-            </p>
-          </div>
-
-          <div className="component-card">
-            <h2>The Prompt Cards</h2>
-            <p>
-              The heart of the game- categories 1 - 4 cards correspond to different aspects of life, relationship, and personalities.<br />
-              Used to initiate conversation, connection, and intimacy dialogue categorized into four emotional themes.
-            </p>
-          </div>
-
-          <div className="component-card">
-            <h2>The Tokens</h2>
-            <p>
-              A feedback tool- tokens are awarded to you by your patner for each prompt you answer, based upon the effort you make in sharing yourself<br />
-              Used to give validation and to allow you to purchase physical activities from the Activities Shop.
-            </p>
-          </div>
-
-          <div className="component-card">
-            <h2>The Movement Cards</h2>
-            <p>
-              The twist in the game- Colorful cards you can win and hold onto until/unless you decide to use them.<br />
-              Used to shift the game dynamics during and between rounds.
-            </p>
-          </div>
-
-          <div className="component-card">
-            <h2>The Activity Store</h2>
-            <p>
-              The spice of the game- playful, sensual, or romantic physical activities unlocked with your tokens.<br />
-              Used to initiate physical intimacy and explore physical connection... but be careful because it's a coin toss whether you or your partner will be the one performing it!
-            </p>
-          </div>
-
-
-          <div className="component-card">
-            <h2>The Favor/Challenge Coin</h2>
-            <p>
-              A special custom coin that you toss after purchasing a Category 6 physical activity<br />
-              Used to determine whether you will do the activity = "Challenge" or your partner will do the activity = "Favor"
-            </p>
-          </div>
+          {parts.map((p, i) => (
+            <div key={i} className="glass-card" style={{ "--glow": p.color }}>
+              <h2>{p.title}</h2>
+              <p>{p.desc}</p>
+            </div>
+          ))}
         </div>
 
-        {/* FIXED BUTTON */}
-        <button
-          className="components-back"
-          onClick={() => navigate("/menu")}
-        >
-          Return to Menu
+        <button className="components-back" onClick={() => navigate("/menu")}>
+          ← Return to Menu
         </button>
       </div>
     </div>

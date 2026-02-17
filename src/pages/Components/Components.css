@@ -1,75 +1,116 @@
-.components-page {
-  width: 100%;
-  min-height: 100vh;
-  background: radial-gradient(circle at top, #2b0b17, #0d0d0d);
-  color: #d8d3d3;
-  display: flex;
-  justify-content: center;
-  padding: 40px 20px;
+/* -----------------------------
+   ACRYLIC GLASS COMPONENTS PAGE
+------------------------------*/
+
+:root {
+  --cat1: #ff4d4d;
+  --cat2: #3d7bff;
+  --cat3: #c7ff3d;
+  --cat4: #ff3df7;
+  --cat5: #9b4dff;
+  --cat6: #ff9b3d;
+
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --text-light: #f5f5f5;
 }
 
-.components-container {
+.components-page {
+  min-height: 100vh;
+  padding: 60px 0;
+  background: #0b0b0d;
+  display: flex;
+  justify-content: center;
+  color: var(--text-light);
+}
+
+.components-wrapper {
+  width: 90%;
   max-width: 900px;
-  width: 100%;
   text-align: center;
 }
 
+/* Title ----------------------- */
+
 .components-title {
-  font-size: 2.4rem;
-  margin-bottom: 10px;
+  font-size: 2.6rem;
+  margin-bottom: 6px;
   font-weight: 700;
 }
 
 .components-subtitle {
-  font-size: 1.2rem;
+  opacity: 0.7;
+  font-size: 1.1rem;
   margin-bottom: 40px;
-  opacity: 0.85;
 }
+
+/* Grid ------------------------ */
 
 .components-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
 }
 
-.component-card {
-  background: rgba(138, 136, 136, 0.08);
+@media (max-width: 700px) {
+  .components-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Glass Cards ---------------- */
+
+.glass-card {
+  padding: 24px 28px;
   border-radius: 16px;
-  padding: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 0 18px rgba(0, 0, 0, 0.45),
+    0 0 12px var(--glow);
+
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.component-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 18px rgba(189, 185, 185, 0.4);
-}
-
-.component-card h2 {
+.glass-card h2 {
   margin-bottom: 10px;
-  font-size: 1.3rem;
-  color: #ddd28f;
+  font-size: 1.4rem;
 }
 
-.component-card p {
-  font-size: 0.95rem;
-  line-height: 1.4;
-  opacity: 0.9;
+.glass-card p {
+  opacity: 0.85;
+  font-size: 1rem;
+  line-height: 1.45;
 }
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 20px rgba(0, 0, 0, 0.55),
+    0 0 18px var(--glow),
+    0 0 30px var(--glow);
+}
+
+/* Back Button ---------------- */
 
 .components-back {
-  margin-top: 20px;
-  padding: 12px 24px;
-  border-radius: 10px;
-  background: rgba(169, 166, 166, 0.1);
-  border: 1px solid rgba(255,255,255,0.25);
-  color: #fff;
-  cursor: pointer;
+  margin-top: 48px;
+  padding: 12px 26px;
   font-size: 1.1rem;
+
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-light);
+  border-radius: 12px;
+
+  backdrop-filter: blur(8px);
+  transition: background 0.25s ease, transform 0.2s ease;
 }
 
 .components-back:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
 }

@@ -1,0 +1,50 @@
+.summary-page {
+  width: 100%;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.summary-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 40px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 0 40px rgba(255, 0, 128, 0.25);
+}
+
+.summary-title {
+  color: white;
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.summary-players p {
+  color: #ddd;
+  font-size: 1.1rem;
+  margin: 8px 0;
+}
+
+.summary-start-btn {
+  margin-top: 30px;
+  padding: 14px 26px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff4dff, #a100ff);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+}
+
+.summary-start-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 0, 200, 0.5);
+}
