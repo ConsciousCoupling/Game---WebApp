@@ -1,5 +1,7 @@
 // src/pages/Game/GameBoard.jsx
 
+import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // required for Exit to Menu
 import useGameState from "../../game/useGameState";
 
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
@@ -26,7 +28,9 @@ import "../../components/gameboard/activity/CoinOutcome.css";
 
 export default function GameBoard({ gameId }) {
   const { state, actions, engine } = useGameState(gameId);
-  
+
+  // 🚀 FIX: ADD MENU STATE HERE
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (!state) {
     return (
@@ -47,19 +51,39 @@ export default function GameBoard({ gameId }) {
       {/* GLOBAL PHASE BANNER */}
       <PhaseBanner phase={state.phase} />
 
-      {/* TOP BAR */}
+      {/* 🌟 TOP BAR WITH GAME ID + MENU */}
       <div className="gameboard-topbar">
 
-  <div className="game-id-block">
-    <div className="game-id-label">Game ID</div>
-    <div className="game-id-value">{gameId}</div>
-    <div className="game-id-hint">
-      Save this ID to continue your game later.
-    </div>
-  </div>
+        <div className="game-id-block">
+          <div className="game-id-label">Game ID</div>
+          <div className="game-id-value">{gameId}</div>
+          <div className="game-id-hint">
+            Save this ID to continue your game later.
+          </div>
+        </div>
 
-  <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
-</div>
+        <button className="menu-btn" onClick={() => setMenuOpen(true)}>
+          ☰
+        </button>
+      </div>
+
+      {/* 🌟 MENU MODAL */}
+      {menuOpen && (
+        <div className="menu-modal">
+          <div className="menu-box">
+            <button className="close-menu" onClick={() => setMenuOpen(false)}>
+              Close
+            </button>
+
+            <button
+              className="exit-menu"
+              onClick={() => window.location.href = "/menu"}
+            >
+              Exit to Menu
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* LEFT PANEL */}
       <div
@@ -87,7 +111,7 @@ export default function GameBoard({ gameId }) {
       {/* CENTER AREA */}
       <div className="gameboard-center">
 
-        {/* ---- DICE DISPLAY ---- */}
+        {/* DICE DISPLAY */}
         <div className="die-wrapper">
           <div
             className="die-glow"
@@ -113,10 +137,8 @@ export default function GameBoard({ gameId }) {
           )}
         </div>
 
-        {/* ---- MAIN INTERACTION AREA ---- */}
+        {/* MAIN INTERACTION AREA */}
         <div className="center-card-placeholder">
-
-          {/* COIN TOSS */}
           {state.phase === "COIN_TOSS" && (
             <CoinFlip
               coin={state.coin}
@@ -125,7 +147,6 @@ export default function GameBoard({ gameId }) {
             />
           )}
 
-          {/* COIN OUTCOME */}
           {state.phase === "COIN_OUTCOME" && state.activityResult && (
             <CoinOutcome
               result={state.activityResult.outcome}
@@ -135,19 +156,16 @@ export default function GameBoard({ gameId }) {
             />
           )}
 
-          {/* TURN START */}
           {state.phase === "TURN_START" && (
             <p className="placeholder-text">
               It’s <strong>{currentPlayer.name}</strong>’s turn.
             </p>
           )}
 
-          {/* ROLLING */}
           {state.phase === "ROLLING" && (
             <p className="placeholder-text">Rolling the die… 🎲</p>
           )}
 
-          {/* PROMPT */}
           {state.phase === "PROMPT" && state.activePrompt && (
             <PromptCard
               prompt={state.activePrompt}
@@ -159,32 +177,27 @@ export default function GameBoard({ gameId }) {
             />
           )}
 
-          {/* MOVEMENT AWARD */}
-          {state.phase === "MOVEMENT_AWARD" &&
-            state.awardedMovementCard && (
-              <MovementCardAward
-                card={state.awardedMovementCard}
-                onContinue={actions.dismissMovementAward}
-              />
-            )}
+          {state.phase === "MOVEMENT_AWARD" && state.awardedMovementCard && (
+            <MovementCardAward
+              card={state.awardedMovementCard}
+              onContinue={actions.dismissMovementAward}
+            />
+          )}
 
-          {/* AWARD */}
           {state.phase === "AWARD" && (
             <p className="placeholder-text">
-              Award 0, 1, 2, or 3 tokens to <strong>{currentPlayer.name}</strong>'s prompt answer, based on effort…
+              Award 0–3 tokens to <strong>{currentPlayer.name}</strong>.
             </p>
           )}
 
-          {/* ACTIVITY SHOP */}
           {state.phase === "ACTIVITY_SHOP" && (
-  <ActivityShop
-  message={state.activityShop.message}
-  currentTokens={currentPlayer.tokens}
-  onPurchase={actions.purchaseActivity}
-  onEndTurn={actions.endTurnInShop}
-/>
-)}
-
+            <ActivityShop
+              message={state.activityShop.message}
+              currentTokens={currentPlayer.tokens}
+              onPurchase={actions.purchaseActivity}
+              onEndTurn={actions.endTurnInShop}
+            />
+          )}
         </div>
 
         {/* ACTION BAR */}
@@ -195,11 +208,8 @@ export default function GameBoard({ gameId }) {
             </button>
           )}
 
-          {state.phase === "PROMPT" && state.activePrompt && (
-            <button
-              className="big-action-btn"
-              onClick={actions.beginAwardPhase}
-            >
+          {state.phase === "PROMPT" && (
+            <button className="big-action-btn" onClick={actions.beginAwardPhase}>
               Ready to Rate
             </button>
           )}
@@ -248,7 +258,6 @@ export default function GameBoard({ gameId }) {
           prompt={state.activePrompt}
         />
       </div>
-
     </div>
   );
 }
