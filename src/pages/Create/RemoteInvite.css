@@ -1,0 +1,136 @@
+@import "../../styles/WaitingShared.css";
+
+
+
+/* Backdrop */
+.rim-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+}
+
+/* Modal container */
+.rim-modal {
+  background: #161616;
+  padding: 32px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 0 25px rgba(0,0,0,0.5);
+}
+
+/* Title */
+.rim-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+/* Text */
+.rim-text {
+  color: #ccc;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+/* Game ID box */
+.rim-game-id {
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: #222;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  margin: 12px auto 20px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+/* Button */
+.rim-btn {
+  background: #0057ff;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #fff;
+  font-weight: 600;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.rim-btn:hover {
+  background: #1a6aff;
+}
+
+
+
+/* ============================================================
+   Invite Code Box
+============================================================ */
+
+.invite-code-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.invite-code {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 1px;
+}
+
+.copy-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+
+.copy-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================================
+   Text & Buttons
+============================================================ */
+
+.instructions {
+  font-size: 1rem;
+  opacity: 0.75;
+  margin-bottom: 28px;
+}
+
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #ddd;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}

@@ -20,3 +20,8 @@ export function loadSetup() {
 export function clearSetup() {
   localStorage.removeItem(KEY);
 }
+
+export function ensureIdentity(role) {
+  const existing = localStorage.getItem("player");
+  if (!existing) localStorage.setItem("player", role);
+}

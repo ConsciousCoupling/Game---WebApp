@@ -1,0 +1,171 @@
+/* ---------------------------------------
+   REVIEW ACTIVITIES — Style Option B
+   Clean dark UI + soft glows + subtle color
+---------------------------------------- */
+
+.review-wrapper {
+  max-width: 960px;
+  margin: 40px auto;
+  padding: 32px;
+  background: #0d0d0d;
+  color: #f2f2f2;
+  border-radius: 14px;
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.6);
+}
+
+.review-title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 6px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.review-subtitle {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #cccccc;
+  margin-bottom: 30px;
+}
+
+/* ---------------------------
+   SIDE-BY-SIDE LISTS
+---------------------------- */
+
+.review-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.review-column {
+  background: #141414;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #252525;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.04);
+}
+
+.rev-player-title {
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+  color: #e6e6e6;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 6px;
+}
+
+.empty {
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------
+   ACTIVITY ROW
+---------------------------- */
+
+.review-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 0.7fr;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.review-row:last-child {
+  border-bottom: none;
+}
+
+.rev-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.rev-duration,
+.rev-cost {
+  font-size: 0.9rem;
+  text-align: right;
+  color: #c9c9c9;
+}
+
+/* ---------------------------
+   APPROVE BUTTON
+---------------------------- */
+
+.approve-btn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3a3a3a, #505050);
+  color: #fff;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.06);
+}
+
+.approve-btn:hover {
+  background: linear-gradient(135deg, #4a4a4a, #686868);
+  transform: translateY(-1px);
+}
+
+.approved-tag {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  background: rgba(0, 255, 140, 0.12);
+  color: #00ff8c;
+  border: 1px solid rgba(0, 255, 140, 0.3);
+  font-weight: 600;
+}
+
+/* ---------------------------
+   BOTTOM ACTIONS
+---------------------------- */
+
+.review-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 32px;
+}
+
+.back-btn,
+.continue-btn {
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+/* Back button */
+.back-btn {
+  background: #222;
+  color: #ddd;
+  border: 1px solid #333;
+}
+
+.back-btn:hover {
+  background: #2d2d2d;
+}
+
+/* Continue button */
+.continue-btn {
+  background: linear-gradient(135deg, #0066ff, #00bbff);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(0, 170, 255, 0.4);
+}
+
+.continue-btn:hover {
+  background: linear-gradient(135deg, #1180ff, #22cfff);
+  transform: translateY(-1px);
+}
+
+.changed { background-color: rgba(255, 230, 80, 0.35); }
+.deleted { opacity: 0.5; text-decoration: line-through; }
+.review-deleted-flag { color: red; font-weight: bold; margin-left: 8px; }

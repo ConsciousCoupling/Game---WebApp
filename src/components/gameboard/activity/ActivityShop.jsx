@@ -1,13 +1,12 @@
 // src/components/gameboard/activity/ActivityShop.jsx
-
 import "./ActivityShop.css";
-import { ACTIVITIES } from "../../../game/data/activityList";
 
 export default function ActivityShop({
+  activities = [],
+  currentTokens,
   message,
   onPurchase,
-  onEndTurn,
-  currentTokens
+  onEndTurn
 }) {
   return (
     <div className="activity-shop-container">
@@ -18,32 +17,35 @@ export default function ActivityShop({
         Choose something fun to try — or end your turn to save your tokens.
       </p>
 
-      {/* Dynamic helper message from game state */}
       <p className="activity-shop-message">{message}</p>
 
       <div className="activity-grid">
-
+        
         {/* ACTIVITY CARDS */}
-        {ACTIVITIES.map((activity, index) => {
+        {activities.map((activity) => {
           const affordable = currentTokens >= activity.cost;
 
           return (
             <button
-              key={index}
+              key={activity.id}
               className={`activity-card ${!affordable ? "disabled" : ""}`}
               disabled={!affordable}
               onClick={() => affordable && onPurchase(activity)}
             >
               <div className="activity-card-title">{activity.name}</div>
-              <div className="activity-card-cost">-{activity.cost} tokens</div>
+
+              <div className="activity-card-cost">
+                -{activity.cost} tokens
+              </div>
+
               <p className="activity-card-description">
-                {activity.description}
+                Duration: {activity.duration} min
               </p>
             </button>
           );
         })}
 
-        {/* END TURN OPTION */}
+        {/* END TURN CARD */}
         <button className="activity-card end-turn-card" onClick={onEndTurn}>
           <div className="activity-card-title end-title">End Turn</div>
           <div className="activity-card-sub">Save your tokens for later</div>

@@ -169,3 +169,123 @@
   border-color: white;
   transform: scale(1.18);
 }
+
+/* ============================================
+   Presence Buttons (Player Two Here / Not Here)
+============================================ */
+.player-presence-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.presence-btn {
+  font-size: 1.15rem;
+  padding: 16px 20px;
+  border-radius: 12px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  font-weight: 600;
+  transition: background 0.25s ease, transform 0.15s ease;
+}
+
+.presence-btn:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+.presence-btn.alt {
+  background: rgba(255, 90, 150, 0.35);
+}
+
+.presence-btn.alt:hover:not(.disabled) {
+  background: rgba(255, 90, 150, 0.48);
+}
+
+/* ============================================================
+   WAITING SCREENS — SHARED STYLING
+============================================================ */
+
+.waiting-screen {
+  height: 100vh;
+  width: 100%;
+  background: #0d0d0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.waiting-card {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 40px 36px;
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+
+  /* Glow */
+  box-shadow: 0 0 55px rgba(255, 120, 180, 0.25);
+}
+
+.waiting-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: white;
+}
+
+.waiting-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  line-height: 1.5;
+  margin-bottom: 22px;
+  color: #ddd;
+}
+
+.waiting-status {
+  font-size: 1.1rem;
+  opacity: 0.75;
+  margin-bottom: 28px;
+}
+
+.waiting-btn {
+  background: linear-gradient(90deg, #ff3e84, #ff6ba8);
+  color: white;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  transition: 0.25s ease;
+  box-shadow: 0 0 12px rgba(255, 62, 132, 0.45);
+}
+
+.waiting-btn:hover {
+  background: linear-gradient(90deg, #ff5694, #ff8ab8);
+  transform: translateY(-1px);
+}
+
+.game-code-box {
+  display: inline-block;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  margin: 12px 0 18px 0;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.game-code-box:hover {
+  background: rgba(255, 255, 255, 0.22);
+}

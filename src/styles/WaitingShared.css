@@ -1,0 +1,85 @@
+/* ============================================================
+   SHARED WAITING / INVITE / JOIN SCREEN STYLE
+============================================================ */
+
+.waiting-screen {
+  height: 100vh;
+  width: 100%;
+  background: #0d0d0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.waiting-card {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 40px 36px;
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 0 55px rgba(255, 120, 180, 0.25);
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.waiting-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: white;
+}
+
+.waiting-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  line-height: 1.5;
+  margin-bottom: 22px;
+  color: #ddd;
+}
+
+.waiting-status {
+  font-size: 1.1rem;
+  opacity: 0.75;
+  margin-bottom: 24px;
+}
+
+.waiting-btn {
+  background: linear-gradient(90deg, #ff3e84, #ff6ba8);
+  color: white;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  transition: 0.25s ease;
+  box-shadow: 0 0 12px rgba(255, 62, 132, 0.45);
+  margin-bottom: 14px;
+}
+
+.waiting-btn:hover {
+  background: linear-gradient(90deg, #ff5694, #ff8ab8);
+  transform: translateY(-1px);
+}
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #ddd;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
