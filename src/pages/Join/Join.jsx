@@ -1,186 +1,214 @@
-// src/pages/Create/PlayerOne.jsx
+// src/pages/Join/Join.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { loadGameFromCloud } from "../../services/gameStore";
 import {
   saveSetup,
   ensureIdentityForGame,
   saveIdentity
 } from "../../services/setupStorage";
 
-import generateGameId from "../../services/gameId";
 import { db } from "../../services/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 
-import "./Create.css";
+import "./Join.css";
 
-export default function PlayerOne() {
+export default function Join() {
   const navigate = useNavigate();
 
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#ff3e84");
+  const [color, setColor] = useState("#3e8bff");
 
   const colors = [
-    "#ff3e84",
-    "#3e8bff",
-    "#ffd34f",
-    "#37d67a",
-    "#ff00cc",
-    "#9b59ff",
-    "#ff7a2f"
+    "#ff3e84", "#3e8bff", "#ffd34f",
+    "#37d67a", "#ff00cc", "#9b59ff", "#ff7a2f"
   ];
 
-  // ---------------------------------------------------------
-  // CREATE GAME STATE WITH P1 FULLY REGISTERED IN FIRESTORE
-  // ---------------------------------------------------------
-  async function createGameShell(gameId, identityToken) {
-    await setDoc(
-      doc(db, "games", gameId),
-      {
-        // Activity negotiation state
-        activityDraft: [],
-        approvals: {
-          playerOne: false,
-          playerTwo: false
-        },
-        finalActivities: [],
-        editor: null,
+  const [game, setGame] = useState(null);
+  const [step, setStep] = useState(1);
 
-        // Identity-safe role reservation
-        roles: {
-          playerOne: identityToken,
-          playerTwo: null
-        },
+  // ----------------------------------------------------------
+  // STEP 1 — Validate game code and load game object
+  // ----------------------------------------------------------
+  async function handleCodeSubmit() {
+    setError("");
 
-        // Players array visible to both devices
-        players: [
-          {
-            name,
-            color,
-            tokens: 0,
-            inventory: [],
-            token: identityToken
-          },
-          {
-            name: "",
-            color: "",
-            tokens: 0,
-            inventory: [],
-            token: null
-          }
-        ]
+    const cleaned = code.trim().toUpperCase();
+    if (!cleaned) {
+      setError("Please enter a game code.");
+      return;
+    }
+
+    const gameData = await loadGameFromCloud(cleaned);
+    if (!gameData) {
+      setError("Game not found. Check the code and try again.");
+      return;
+    }
+
+    // Prevent joining a game where PlayerTwo is already claimed
+    if (gameData.roles?.playerTwo) {
+      setError("Player Two has already joined this game.");
+      return;
+    }
+
+    setGame(gameData);
+    setStep(2);
+  }
+
+  // ----------------------------------------------------------
+  // STEP 2 — Assign identity + join as Player Two
+  // ----------------------------------------------------------
+  async function handleJoin() {
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    const gameId = code.trim().toUpperCase();
+
+    // Create identity token for THIS game as PlayerTwo
+    const identity = ensureIdentityForGame(gameId, "playerTwo");
+    const token = identity.token;
+
+    // Save in local setup storage
+    saveSetup({
+      gameId,
+      playerTwoName: name,
+      playerTwoColor: color
+    });
+
+    // Save identity to local identity map
+    saveIdentity(gameId, "playerTwo", token);
+
+    // Load cloud copy again to double-check P1 hasn't claimed the role since last check
+    const cloud = await loadGameFromCloud(gameId);
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      setError("Another Player Two has already joined.");
+      return;
+    }
+
+    // ------------------------------------------
+    // UPDATE FIRESTORE: claim PlayerTwo role
+    // ------------------------------------------
+    await updateDoc(doc(db, "games", gameId), {
+      roles: {
+        ...cloud.roles,
+        playerTwo: token
       },
-      { merge: true }
-    );
-  }
-
-  // ---------------------------------------------------------
-  // LOCAL FLOW (P2 on the same device)
-  // ---------------------------------------------------------
-  async function startLocalFlow() {
-    if (!name.trim()) return;
-
-    const gameId = generateGameId();
-
-    // Generate identity for PlayerOne
-    const identity = ensureIdentityForGame(gameId, "playerOne");
-    const token = identity.token;
-
-    // Persist identity for this game
-    saveIdentity(gameId, "playerOne", token);
-
-    // Save setup info in local storage
-    saveSetup({
-      gameId,
-      playerOneName: name,
-      playerOneColor: color,
-      localPlay: true
+      players: [
+        cloud.players?.[0] ?? {
+          name: "",
+          color: "",
+          tokens: 0,
+          inventory: [],
+          token: null
+        },
+        {
+          name,
+          color,
+          tokens: 0,
+          inventory: [],
+          token
+        }
+      ]
     });
 
-    // Create the new game in Firestore
-    await createGameShell(gameId, token);
+    // --------------------------------------------------------
+    // DETERMINE NEXT SCREEN
+    // --------------------------------------------------------
 
-    navigate("/create/player-two");
-  }
+    const draft = cloud.activityDraft || [];
+    const approvals = cloud.approvals || {};
 
-  // ---------------------------------------------------------
-  // REMOTE FLOW (P2 on another device)
-  // ---------------------------------------------------------
-  async function startRemoteFlow() {
-    if (!name.trim()) return;
+    const offerReady =
+      draft.length > 0 &&
+      approvals.playerOne === true;
 
-    const gameId = generateGameId();
+    if (!offerReady) {
+      // Player One has NOT yet submitted draft → wait
+      navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
 
-    // Generate identity for PlayerOne
-    const identity = ensureIdentityForGame(gameId, "playerOne");
-    const token = identity.token;
-
-    // Persist identity
-    saveIdentity(gameId, "playerOne", token);
-
-    saveSetup({
-      gameId,
-      playerOneName: name,
-      playerOneColor: color,
-      localPlay: false
-    });
-
-    // Create in Firestore
-    await createGameShell(gameId, token);
-
-    navigate(`/create/remote-invite/${gameId}`);
+    // Player One finished → Player Two reviews, NOT edits
+    navigate(`/create/activities-review/${gameId}`);
   }
 
   return (
-    <div className="create-container">
-      <div className="create-card">
-        <button
-          className="secondary-btn"
-          onClick={() => navigate("/onboarding/slides")}
-        >
-          ← Back
-        </button>
+    <div className="join-page">
+      <div className="join-card">
 
-        <h1 className="create-title">Player One</h1>
-        <p className="create-subtitle">
-          Enter your name and choose your color.
-        </p>
+        {/* STEP 1 — ENTER CODE */}
+        {step === 1 && (
+          <>
+            <h2 className="join-title">Join an Existing Game</h2>
+            <p className="join-subtitle">
+              Enter the code your partner shared.
+            </p>
 
-        <input
-          className="create-input"
-          placeholder="Your name..."
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <label className="color-picker-label">Choose your color:</label>
-
-        <div className="color-picker-row">
-          {colors.map((c) => (
-            <button
-              key={c}
-              className={`color-swatch ${color === c ? "selected" : ""}`}
-              style={{ background: c }}
-              onClick={() => setColor(c)}
+            <input
+              className="join-input"
+              placeholder="e.g. ROSE-143"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
             />
-          ))}
-        </div>
 
-        <div className="player-presence-buttons">
-          <button
-            className={`presence-btn ${!name.trim() ? "disabled" : ""}`}
-            onClick={startLocalFlow}
-          >
-            Player Two is here with me
-          </button>
+            {error && <p className="join-error">{error}</p>}
 
-          <button
-            className={`presence-btn alt ${!name.trim() ? "disabled" : ""}`}
-            onClick={startRemoteFlow}
-          >
-            Player Two is not here right now
-          </button>
-        </div>
+            <button className="join-btn" onClick={handleCodeSubmit}>
+              Continue →
+            </button>
+
+            <button className="join-back" onClick={() => navigate("/onboarding")}>
+              Back
+            </button>
+          </>
+        )}
+
+        {/* STEP 2 — ENTER NAME + COLOR */}
+        {step === 2 && (
+          <>
+            <h2 className="join-title">Welcome!</h2>
+            <p className="join-subtitle">Enter your name and choose a color.</p>
+
+            <input
+              className="join-input"
+              placeholder="Your name..."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <label className="color-picker-label">Your color:</label>
+
+            <div className="color-picker-row">
+              {colors.map((c) => (
+                <button
+                  key={c}
+                  className={`color-swatch ${color === c ? "selected" : ""}`}
+                  style={{ background: c }}
+                  onClick={() => setColor(c)}
+                />
+              ))}
+            </div>
+
+            {error && <p className="join-error">{error}</p>}
+
+            <button
+              className={`join-btn ${!name.trim() ? "disabled" : ""}`}
+              onClick={handleJoin}
+            >
+              Join Game →
+            </button>
+
+            <button className="join-back" onClick={() => setStep(1)}>
+              ← Back
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,59 +1,13 @@
 // src/pages/Create/RemoteInvite.jsx
-import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { trackEvent } from "../../services/analytics";
 import "./RemoteInvite.css";
 
 export default function RemoteInvite() {
   const navigate = useNavigate();
   const { gameId } = useParams();
-  const [shareStatus, setShareStatus] = useState("");
 
-  const inviteUrl = useMemo(() => {
-    if (!gameId) return "";
-    const joinPath = `/join?code=${encodeURIComponent(gameId)}`;
-
-    if (typeof window === "undefined") return joinPath;
-    return `${window.location.origin}${joinPath}`;
-  }, [gameId]);
-
-  async function copyCode() {
-    if (!gameId || !navigator.clipboard?.writeText) return;
-
-    await navigator.clipboard.writeText(gameId);
-    setShareStatus("Code copied.");
-    void trackEvent("share_clicked", { method: "copy_code" });
-  }
-
-  async function copyInviteLink() {
-    if (!inviteUrl || !navigator.clipboard?.writeText) return;
-
-    await navigator.clipboard.writeText(inviteUrl);
-    setShareStatus("Invite link copied.");
-    void trackEvent("share_clicked", { method: "copy_link" });
-  }
-
-  async function shareInviteLink() {
-    if (!inviteUrl) return;
-
-    if (navigator.share) {
-      void trackEvent("share_clicked", { method: "native_share" });
-
-      try {
-        await navigator.share({
-          title: "Join my Intima-Date game",
-          text: `Join my Intima-Date game with code ${gameId}.`,
-          url: inviteUrl
-        });
-
-        setShareStatus("Invite sent.");
-        return;
-      } catch (error) {
-        if (error?.name === "AbortError") return;
-      }
-    }
-
-    await copyInviteLink();
+  function copyCode() {
+    navigator.clipboard.writeText(gameId);
   }
 
   return (
@@ -75,18 +29,6 @@ export default function RemoteInvite() {
           Ask them to open <strong>IntimaDate</strong> →
           <em> Join Game </em> → enter the code.
         </p>
-
-        <div className="invite-link-actions">
-          <button className="waiting-btn" onClick={shareInviteLink}>
-            Share Invite Link
-          </button>
-
-          <button className="copy-link-btn" onClick={copyInviteLink}>
-            Copy Invite Link
-          </button>
-        </div>
-
-        {shareStatus && <p className="share-feedback">{shareStatus}</p>}
 
         <p className="waiting-status">Waiting for Player Two…</p>
 
