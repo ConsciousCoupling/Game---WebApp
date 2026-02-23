@@ -1,9 +1,16 @@
 // src/pages/Join/Join.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { loadGameFromCloud } from "../../services/gameStore";
-import { saveSetup } from "../../services/setupStorage";
-import { ensureIdentity } from "../../utils/ensureIdentity";
+import {
+  saveSetup,
+  ensureIdentityForGame,
+  saveIdentity
+} from "../../services/setupStorage";
+
+import { db } from "../../services/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 import "./Join.css";
 
@@ -21,12 +28,12 @@ export default function Join() {
     "#37d67a", "#ff00cc", "#9b59ff", "#ff7a2f"
   ];
 
-  const [game, setGame] = useState(null); // Loaded Firebase game
-  const [step, setStep] = useState(1);    // 1 = enter code, 2 = name/color
+  const [game, setGame] = useState(null);
+  const [step, setStep] = useState(1);
 
-  // ----------------------------------------------
-  // STEP 1: Validate game code
-  // ----------------------------------------------
+  // ----------------------------------------------------------
+  // STEP 1 — Validate game code and load game object
+  // ----------------------------------------------------------
   async function handleCodeSubmit() {
     setError("");
 
@@ -37,19 +44,24 @@ export default function Join() {
     }
 
     const gameData = await loadGameFromCloud(cleaned);
-
     if (!gameData) {
       setError("Game not found. Check the code and try again.");
       return;
     }
 
+    // Prevent joining a game where PlayerTwo is already claimed
+    if (gameData.roles?.playerTwo) {
+      setError("Player Two has already joined this game.");
+      return;
+    }
+
     setGame(gameData);
-    setStep(2); // Move to PlayerTwo name/color
+    setStep(2);
   }
 
-  // ----------------------------------------------
-  // STEP 2: Save PlayerTwo and route properly
-  // ----------------------------------------------
+  // ----------------------------------------------------------
+  // STEP 2 — Assign identity + join as Player Two
+  // ----------------------------------------------------------
   async function handleJoin() {
     if (!name.trim()) {
       setError("Please enter your name.");
@@ -58,35 +70,72 @@ export default function Join() {
 
     const gameId = code.trim().toUpperCase();
 
-    // Save PlayerTwo info for localStorage-based components
+    // Create identity token for THIS game as PlayerTwo
+    const identity = ensureIdentityForGame(gameId, "playerTwo");
+    const token = identity.token;
+
+    // Save in local setup storage
     saveSetup({
       gameId,
       playerTwoName: name,
-      playerTwoColor: color,
+      playerTwoColor: color
     });
 
-    // Assign identity
-    localStorage.setItem("player", "playerTwo");
-    ensureIdentity("playerTwo");
+    // Save identity to local identity map
+    saveIdentity(gameId, "playerTwo", token);
 
-    // ----------------------------------------------
-    // CHECK IF PLAYER ONE'S OPENING OFFER IS READY
-    // ----------------------------------------------
-    const draft = game?.activityDraft || [];
-    const approvals = game?.approvals || {};
+    // Load cloud copy again to double-check P1 hasn't claimed the role since last check
+    const cloud = await loadGameFromCloud(gameId);
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      setError("Another Player Two has already joined.");
+      return;
+    }
+
+    // ------------------------------------------
+    // UPDATE FIRESTORE: claim PlayerTwo role
+    // ------------------------------------------
+    await updateDoc(doc(db, "games", gameId), {
+      roles: {
+        ...cloud.roles,
+        playerTwo: token
+      },
+      players: [
+        cloud.players?.[0] ?? {
+          name: "",
+          color: "",
+          tokens: 0,
+          inventory: [],
+          token: null
+        },
+        {
+          name,
+          color,
+          tokens: 0,
+          inventory: [],
+          token
+        }
+      ]
+    });
+
+    // --------------------------------------------------------
+    // DETERMINE NEXT SCREEN
+    // --------------------------------------------------------
+
+    const draft = cloud.activityDraft || [];
+    const approvals = cloud.approvals || {};
 
     const offerReady =
       draft.length > 0 &&
       approvals.playerOne === true;
 
-    // Player One not done editing yet → wait
-if (!offerReady) {
-  navigate(`/create/waiting/player-two/${gameId}`);
-  return;
-}
+    if (!offerReady) {
+      // Player One has NOT yet submitted draft → wait
+      navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
 
-// Player One is done editing → Player Two should REVIEW, not EDIT
-navigate(`/create/activities-review/${gameId}`);
+    // Player One finished → Player Two reviews, NOT edits
+    navigate(`/create/activities-review/${gameId}`);
   }
 
   return (
@@ -97,7 +146,9 @@ navigate(`/create/activities-review/${gameId}`);
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
-            <p className="join-subtitle">Enter the code your partner shared.</p>
+            <p className="join-subtitle">
+              Enter the code your partner shared.
+            </p>
 
             <input
               className="join-input"

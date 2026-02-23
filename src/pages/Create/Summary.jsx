@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { saveGameToCloud, loadGameFromCloud } from "../../services/gameStore";
+
 import { loadSetup } from "../../services/setupStorage";
 import { loadFinalActivities } from "../../services/activityStore";
+
+import { loadIdentity, ensureIdentityForGame } from "../../services/setupStorage";
 
 import { initialGameState } from "../../game/initialGameState";
 
@@ -16,37 +19,44 @@ export default function Summary() {
 
   const [playerOneName, setPlayerOneName] = useState("");
   const [playerTwoName, setPlayerTwoName] = useState("");
+
   const [playerOneColor, setPlayerOneColor] = useState("#ffffff");
   const [playerTwoColor, setPlayerTwoColor] = useState("#ffffff");
 
   const [activities, setActivities] = useState([]);
 
-  const me = localStorage.getItem("player"); // "playerOne" or "playerTwo"
-
   // --------------------------------------------------------
-  // LOAD FROM FIREBASE FIRST → fallback to localStorage
+  // LOAD DATA: Cloud → Setup storage fallback
   // --------------------------------------------------------
   useEffect(() => {
     async function load() {
       const cloud = await loadGameFromCloud(gameId);
-      const setup = loadSetup() || {};
+      const setup = loadSetup();
+      const identity = loadIdentity(gameId);
 
-      // Cloud data is the source of truth
-      if (cloud?.players) {
-        setPlayerOneName(cloud.players[0].name || setup.playerOneName || "");
-        setPlayerTwoName(cloud.players[1].name || setup.playerTwoName || "");
-
-        setPlayerOneColor(cloud.players[0].color || setup.playerOneColor || "#ffffff");
-        setPlayerTwoColor(cloud.players[1].color || setup.playerTwoColor || "#ffffff");
-      } else {
-        // Fallback for very rare edge cases
-        setPlayerOneName(setup.playerOneName || "");
-        setPlayerTwoName(setup.playerTwoName || "");
-
-        setPlayerOneColor(setup.playerOneColor || "#ffffff");
-        setPlayerTwoColor(setup.playerTwoColor || "#ffffff");
+      // Ensure identity exists for this game
+      if (!identity) {
+        console.warn("Identity missing on Summary screen. Regenerating...");
+        ensureIdentityForGame(gameId, "playerOne"); // If they got here, they're P1
       }
 
+      // -------- Player Names + Colors (cloud-first) --------
+      if (cloud?.players && cloud.players.length === 2) {
+        setPlayerOneName(cloud.players[0].name || setup?.playerOneName || "");
+        setPlayerTwoName(cloud.players[1].name || setup?.playerTwoName || "");
+
+        setPlayerOneColor(cloud.players[0].color || setup?.playerOneColor);
+        setPlayerTwoColor(cloud.players[1].color || setup?.playerTwoColor);
+      } else {
+        // No cloud yet — fallback
+        setPlayerOneName(setup?.playerOneName || "");
+        setPlayerTwoName(setup?.playerTwoName || "");
+
+        setPlayerOneColor(setup?.playerOneColor || "#ffffff");
+        setPlayerTwoColor(setup?.playerTwoColor || "#ffffff");
+      }
+
+      // -------- Negotiated Activity List --------
       const finalList = await loadFinalActivities(gameId);
       setActivities(finalList || []);
     }
@@ -55,21 +65,28 @@ export default function Summary() {
   }, [gameId]);
 
   // --------------------------------------------------------
-  // START GAME — ONLY PLAYER ONE CAN RUN THIS
+  // START GAME — identity-safe initialization
   // --------------------------------------------------------
   async function startGame() {
-    if (me !== "playerOne") {
-      console.warn("Player Two attempted to start the game — ignored.");
+    const identityP1 = loadIdentity(gameId);
+    if (!identityP1 || identityP1.role !== "playerOne") {
+      alert("Only Player One can start the game.");
       return;
     }
 
-    // Build fresh state
-    const state = JSON.parse(JSON.stringify(initialGameState));
+    // Construct new game state
+    const state = structuredClone(initialGameState);
     state.gameId = gameId;
 
-    // Inject names/colors
+    // Inject real player names/colors
     state.players[0].name = playerOneName;
     state.players[0].color = playerOneColor;
+    state.players[0].token = identityP1.token;
+
+    const identityP2 = loadIdentity(gameId);
+    if (identityP2?.role === "playerTwo") {
+      state.players[1].token = identityP2.token;
+    }
 
     state.players[1].name = playerTwoName;
     state.players[1].color = playerTwoColor;
@@ -77,10 +94,11 @@ export default function Summary() {
     // Inject negotiated activities
     state.negotiatedActivities = activities;
 
-    // Save to Firestore
-    await saveGameToCloud(gameId, state);
+    // IMPORTANT:
+    // We DO NOT touch roles or tokens here.
+    // They are already stored safely in cloud.
 
-    // Local fallback (resume)
+    await saveGameToCloud(gameId, state);
     localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
 
     navigate(`/game/${gameId}`);
@@ -117,19 +135,9 @@ export default function Summary() {
           )}
         </div>
 
-        {/* --------------------------------------------------------
-            PLAYER ONE CAN START GAME
-            PLAYER TWO WAITS
-        -------------------------------------------------------- */}
-        {me === "playerOne" ? (
-          <button className="summary-start-btn" onClick={startGame}>
-            Start Game →
-          </button>
-        ) : (
-          <p className="waiting-text">
-            Waiting for <strong>{playerOneName}</strong> to start the game…
-          </p>
-        )}
+        <button className="summary-start-btn" onClick={startGame}>
+          Start Game →
+        </button>
       </div>
     </div>
   );

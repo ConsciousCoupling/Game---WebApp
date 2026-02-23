@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { saveSetup } from "../../services/setupStorage";
+import { ensureIdentityForGame, saveIdentity } from "../../services/setupStorage";
 import generateGameId from "../../services/gameId";
+
 import { db } from "../../services/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { ensureIdentity } from "../../utils/ensureIdentity";
 
 import "./Create.css";
 
@@ -27,12 +29,44 @@ export default function PlayerOne() {
   ];
 
   // ---------------------------------------------------------
-  // LOCAL FLOW: Both players on same device
+  // HELPERS
+  // ---------------------------------------------------------
+
+  async function initializeGameShell(gameId, token) {
+    await setDoc(
+      doc(db, "games", gameId),
+      {
+        players: [
+          { name: name, color: color, tokens: 0, inventory: [], token: token },
+          { name: "", color: "", tokens: 0, inventory: [], token: null }
+        ],
+        roles: {
+          playerOne: token,
+          playerTwo: null
+        },
+        activityDraft: [],
+        approvals: {
+          playerOne: false,
+          playerTwo: false
+        },
+        finalActivities: [],
+        editor: null
+      },
+      { merge: true }
+    );
+  }
+
+  // ---------------------------------------------------------
+  // LOCAL FLOW
   // ---------------------------------------------------------
   async function startLocalFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
+
+    // Assign identity token for PlayerOne
+    const identity = ensureIdentityForGame(gameId, "playerOne");
+    const token = identity.token;
 
     saveSetup({
       gameId,
@@ -41,34 +75,26 @@ export default function PlayerOne() {
       localPlay: true
     });
 
-    // Create Firestore game shell
-    await setDoc(
-      doc(db, "games", gameId),
-      {
-        activityDraft: [],
-        approvals: {
-          playerOne: false,
-          playerTwo: false
-        },
-        finalActivities: [],
-        editor: null // <-- REQUIRED FOR EXCLUSIVE EDITING
-      },
-      { merge: true }
-    );
+    // Create the game in Firestore with identity token included
+    await initializeGameShell(gameId, token);
 
-    localStorage.setItem("player", "playerOne");
-    ensureIdentity("playerOne");
+    // Store identity for this game locally
+    saveIdentity(gameId, "playerOne", token);
 
     navigate("/create/player-two");
   }
 
   // ---------------------------------------------------------
-  // REMOTE FLOW: Player Two joins from another device
+  // REMOTE FLOW
   // ---------------------------------------------------------
   async function startRemoteFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
+
+    // Assign identity token for P1
+    const identity = ensureIdentityForGame(gameId, "playerOne");
+    const token = identity.token;
 
     saveSetup({
       gameId,
@@ -77,23 +103,9 @@ export default function PlayerOne() {
       localPlay: false
     });
 
-    // Create Firestore game shell
-    await setDoc(
-      doc(db, "games", gameId),
-      {
-        activityDraft: [],
-        approvals: {
-          playerOne: false,
-          playerTwo: false
-        },
-        finalActivities: [],
-        editor: null // <-- MUST BE HERE TOO
-      },
-      { merge: true }
-    );
+    await initializeGameShell(gameId, token);
 
-    localStorage.setItem("player", "playerOne");
-    ensureIdentity("playerOne");
+    saveIdentity(gameId, "playerOne", token);
 
     navigate(`/create/remote-invite/${gameId}`);
   }
@@ -133,7 +145,6 @@ export default function PlayerOne() {
           ))}
         </div>
 
-        {/* TWO-BUTTON SELECTOR */}
         <div className="player-presence-buttons">
           <button
             className={`presence-btn ${!name.trim() ? "disabled" : ""}`}

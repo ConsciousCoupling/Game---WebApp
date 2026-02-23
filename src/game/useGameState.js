@@ -1,6 +1,6 @@
 // src/game/useGameState.js
 //-------------------------------------------------------
-// REAL-TIME GAME STATE ENGINE WITH FIREBASE SYNC (Option B)
+// REAL-TIME GAME STATE ENGINE WITH FIREBASE SYNC (Identity-Safe Edition)
 //-------------------------------------------------------
 
 import { useEffect, useState, useRef } from "react";
@@ -12,46 +12,58 @@ import { PROMPT_CARDS } from "./data/promptCards";
 import { db } from "../services/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, setDoc } from "firebase/firestore";
 
-// Helper: shuffle deck
+import { loadIdentity } from "../services/setupStorage";
+
+// ------------------------------------------------------
+// Helpers
+// ------------------------------------------------------
 function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
-// Deep compare to avoid loops
 function statesAreEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function getCurrentPlayerIndex(state) {
+  return state.currentPlayerId ?? 0;
+}
+
+// ------------------------------------------------------
+// MAIN HOOK
+// ------------------------------------------------------
 export default function useGameState(gameId) {
   const [state, setState] = useState(null);
-  const engineRef = useRef(null);
+
   const gameRef = doc(db, "games", gameId);
+  const engineRef = useRef(null);
+
+  const identity = loadIdentity(gameId);
+  const myToken = identity?.token;
 
   //-------------------------------------------------------
-  // LOAD GAME (Cloud first, Local only as fallback)
+  // LOAD GAME (Cloud-first)
   //-------------------------------------------------------
   useEffect(() => {
     async function loadGame() {
       const snap = await getDoc(gameRef);
 
       if (snap.exists()) {
-        // Cloud state found ✔
         setState(snap.data());
         return;
       }
 
-      // No cloud state → try localStorage fallback
+      // No cloud → try localStorage fallback
       const local = localStorage.getItem(`game-${gameId}`);
       if (local) {
         const parsed = JSON.parse(local);
 
-        // Create game in cloud using the local version
         await setDoc(gameRef, parsed, { merge: true });
         setState(parsed);
         return;
       }
 
-      // No cloud, no local → start fresh game
+      // No cloud, no local → create fresh
       const fresh = { ...initialGameState, gameId };
       await setDoc(gameRef, fresh, { merge: true });
       setState(fresh);
@@ -61,30 +73,26 @@ export default function useGameState(gameId) {
   }, [gameId]);
 
   //-------------------------------------------------------
-  // REAL-TIME SUBSCRIPTION: Listen to all remote updates
+  // REAL-TIME LISTENER
   //-------------------------------------------------------
   useEffect(() => {
     const unsub = onSnapshot(gameRef, (snap) => {
       if (!snap.exists()) return;
-
       const cloud = snap.data();
 
-      setState((local) => {
-        // First load or mismatch → apply new cloud state
-        if (!local || !statesAreEqual(local, cloud)) {
-          return cloud;
-        }
-        return local; // avoid overwrite loop
-      });
+      setState((local) =>
+        !local || !statesAreEqual(local, cloud) ? cloud : local
+      );
     });
 
     return () => unsub();
   }, [gameId]);
 
   //-------------------------------------------------------
-  // SAVE STATE TO CLOUD (used after every action)
+  // CLOUD SYNC (with stability)
   //-------------------------------------------------------
   async function syncToCloud(newState) {
+    if (!newState || typeof newState !== "object") return;
     await updateDoc(gameRef, newState);
   }
 
@@ -96,10 +104,22 @@ export default function useGameState(gameId) {
   }
 
   //-------------------------------------------------------
-  // DIE RESULT -> Update state, then sync to cloud
+  // GUARD: Only the active player can perform actions
+  //-------------------------------------------------------
+  function allowIfMyTurn(prev) {
+    const currentIndex = getCurrentPlayerIndex(prev);
+    const currentToken = prev.players?.[currentIndex]?.token;
+
+    return currentToken === myToken;
+  }
+
+  //-------------------------------------------------------
+  // DIE RESULT HANDLER
   //-------------------------------------------------------
   function handleDieResult({ value, category }) {
     setState((prev) => {
+      if (!allowIfMyTurn(prev)) return prev;
+
       let newState = {
         ...prev,
         lastDieFace: value,
@@ -107,7 +127,7 @@ export default function useGameState(gameId) {
       };
 
       //---------------------------------------------------
-      // PROMPT CATEGORIES 1–4
+      // PROMPT (1–4)
       //---------------------------------------------------
       if (category >= 1 && category <= 4) {
         let deck = prev.promptDecks?.[category] ?? [];
@@ -133,12 +153,12 @@ export default function useGameState(gameId) {
       }
 
       //---------------------------------------------------
-      // MOVEMENT CARD (Category 5)
+      // MOVEMENT CARD (5)
       //---------------------------------------------------
       else if (category === 5) {
         const movement = getRandomMovementCard();
         const players = [...prev.players];
-        const current = players[prev.currentPlayerId];
+        const current = players[getCurrentPlayerIndex(prev)];
 
         current.inventory = [...current.inventory, movement];
 
@@ -151,7 +171,7 @@ export default function useGameState(gameId) {
       }
 
       //---------------------------------------------------
-      // ACTIVITY SHOP (Category 6)
+      // ACTIVITY SHOP (6)
       //---------------------------------------------------
       else if (category === 6) {
         newState = {
@@ -169,38 +189,54 @@ export default function useGameState(gameId) {
   }
 
   //-------------------------------------------------------
-  // PUBLIC GAME ACTIONS — EVERY ACTION SYNCED
+  // PUBLIC GAME ACTIONS (now identity-gated)
   //-------------------------------------------------------
   const actions = {
+    //---------------------------------------------------
+    // Dice Roll
+    //---------------------------------------------------
     rollDice: () =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const newState = { ...prev, phase: "ROLLING" };
         syncToCloud(newState);
+
         engineRef.current?.roll();
         return newState;
       }),
 
+    //---------------------------------------------------
+    // Begin Award Phase
+    //---------------------------------------------------
     beginAwardPhase: () =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const newState = { ...prev, phase: "AWARD" };
         syncToCloud(newState);
         return newState;
       }),
 
+    //---------------------------------------------------
+    // Award Tokens
+    //---------------------------------------------------
     awardTokens: (val) =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const players = [...prev.players];
-        const current = prev.currentPlayerId;
+        const current = getCurrentPlayerIndex(prev);
 
         players[current].tokens += val;
 
-        const nextPlayer = current === 0 ? 1 : 0;
+        const next = current === 0 ? 1 : 0;
 
         const newState = {
           ...prev,
           players,
           phase: "TURN_START",
-          currentPlayerId: nextPlayer,
+          currentPlayerId: next,
           activePrompt: null,
           lastDieFace: null,
           lastCategory: null,
@@ -210,15 +246,20 @@ export default function useGameState(gameId) {
         return newState;
       }),
 
+    //---------------------------------------------------
+    // Dismiss Movement Award
+    //---------------------------------------------------
     dismissMovementAward: () =>
       setState((prev) => {
-        const nextPlayer = prev.currentPlayerId === 0 ? 1 : 0;
+        if (!allowIfMyTurn(prev)) return prev;
+
+        const next = getCurrentPlayerIndex(prev) === 0 ? 1 : 0;
 
         const newState = {
           ...prev,
           awardedMovementCard: null,
           phase: "TURN_START",
-          currentPlayerId: nextPlayer,
+          currentPlayerId: next,
           lastDieFace: null,
           lastCategory: null,
         };
@@ -227,13 +268,15 @@ export default function useGameState(gameId) {
         return newState;
       }),
 
-    // ------------------------------
-    // ACTIVITY SHOP ACTIONS
-    // ------------------------------
+    //---------------------------------------------------
+    // Activity Shop: Purchase
+    //---------------------------------------------------
     purchaseActivity: (activity) =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const players = [...prev.players];
-        const current = players[prev.currentPlayerId];
+        const current = players[getCurrentPlayerIndex(prev)];
 
         if (current.tokens < activity.cost) {
           const newState = {
@@ -261,8 +304,13 @@ export default function useGameState(gameId) {
         return newState;
       }),
 
+    //---------------------------------------------------
+    // Coin Flip
+    //---------------------------------------------------
     flipCoin: () =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const newState = {
           ...prev,
           coin: { ...prev.coin, isFlipping: true },
@@ -274,13 +322,15 @@ export default function useGameState(gameId) {
 
     completeCoinFlip: () =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const activity = prev.pendingActivity;
         const result = Math.random() < 0.5 ? "Favor ❤️" : "Challenge 🔥";
 
         const performer =
           result === "Favor ❤️"
-            ? prev.players[prev.currentPlayerId === 0 ? 1 : 0].name
-            : prev.players[prev.currentPlayerId].name;
+            ? prev.players[getCurrentPlayerIndex(prev) === 0 ? 1 : 0].name
+            : prev.players[getCurrentPlayerIndex(prev)].name;
 
         const newState = {
           ...prev,
@@ -298,29 +348,36 @@ export default function useGameState(gameId) {
         return newState;
       }),
 
+    //---------------------------------------------------
+    // Finish Activity Result
+    //---------------------------------------------------
     finishActivityResult: () =>
       setState((prev) => {
-        const nextPlayer = prev.currentPlayerId === 0 ? 1 : 0;
+        if (!allowIfMyTurn(prev)) return prev;
+
+        const next = getCurrentPlayerIndex(prev) === 0 ? 1 : 0;
 
         const newState = {
           ...prev,
           activityResult: null,
           activityShop: null,
           phase: "TURN_START",
-          currentPlayerId: nextPlayer,
+          currentPlayerId: next,
         };
 
         syncToCloud(newState);
         return newState;
       }),
 
-    // ------------------------------
-    // MOVEMENT CARD USE
-    // ------------------------------
+    //---------------------------------------------------
+    // Movement Cards
+    //---------------------------------------------------
     useMovementCard: (card) =>
       setState((prev) => {
+        if (!allowIfMyTurn(prev)) return prev;
+
         const players = [...prev.players];
-        const current = players[prev.currentPlayerId];
+        const current = players[getCurrentPlayerIndex(prev)];
 
         current.inventory = current.inventory.filter((c) => c !== card);
 
@@ -332,7 +389,7 @@ export default function useGameState(gameId) {
               ...newState,
               activePrompt: null,
               phase: "TURN_START",
-              currentPlayerId: prev.currentPlayerId === 0 ? 1 : 0,
+              currentPlayerId: getCurrentPlayerIndex(prev) === 0 ? 1 : 0,
             };
             break;
 
@@ -350,12 +407,12 @@ export default function useGameState(gameId) {
             break;
 
           case "ama_bonus": {
-            const updated = [...players];
-            updated[prev.currentPlayerId].tokens += 10;
+            const updatedPlayers = [...players];
+            updatedPlayers[getCurrentPlayerIndex(prev)].tokens += 10;
 
             newState = {
               ...newState,
-              players: updated,
+              players: updatedPlayers,
               activePrompt: {
                 category: "AMA",
                 text: "Ask your partner any question.",

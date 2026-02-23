@@ -1,7 +1,8 @@
 // src/pages/Game/GameBoard.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
 import useGameState from "../../game/useGameState";
 
 import DiceCanvas from "../../components/gameboard/dice/DiceCanvas";
@@ -17,6 +18,11 @@ import MovementCardPanel from "../../components/gameboard/movement/MovementCardP
 import PromptCard from "../../components/gameboard/prompt/PromptCard";
 import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
 
+import {
+  loadIdentity,
+  ensureIdentityForGame,
+} from "../../services/setupStorage";
+
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
 import "../../components/gameboard/styles/diceArea.css";
@@ -28,11 +34,32 @@ import "../../components/gameboard/activity/CoinOutcome.css";
 
 export default function GameBoard({ gameId }) {
   const { state, actions, engine } = useGameState(gameId);
+  const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const me = localStorage.getItem("player"); // "playerOne" or "playerTwo"
 
-  if (!state || !state.players || !state.players[0] || !state.players[1]) {
+  // --------------------------------------------
+  // IDENTITY VALIDATION
+  // --------------------------------------------
+  const identity = loadIdentity(gameId);
+
+  const [validated, setValidated] = useState(false);
+  const [role, setRole] = useState(null);
+
+  useEffect(() => {
+    if (!identity) {
+      console.error("No identity found for this game. Returning to menu.");
+      navigate("/menu");
+      return;
+    }
+
+    // Prevents rare mismatch edge cases
+    ensureIdentityForGame(gameId, identity.role);
+    setRole(identity.role);
+    setValidated(true);
+  }, [identity, navigate, gameId]);
+
+  if (!validated || !state) {
     return (
       <div className="game-missing">
         <p>Loading game…</p>
@@ -40,13 +67,42 @@ export default function GameBoard({ gameId }) {
     );
   }
 
-  const playerOne = state.players[0];
-  const playerTwo = state.players[1];
-  const currentPlayer = state.currentPlayerId === 0 ? playerOne : playerTwo;
+  // --------------------------------------------
+  // CLOUD PLAYER TOKENS (Authoritative Roles)
+  // --------------------------------------------
+  const p1 = state.players?.[0];
+  const p2 = state.players?.[1];
 
-  const myTurn =
-    (me === "playerOne" && state.currentPlayerId === 0) ||
-    (me === "playerTwo" && state.currentPlayerId === 1);
+  if (!p1 || !p2) {
+    return (
+      <div className="game-missing">
+        <p>Setting up players…</p>
+      </div>
+    );
+  }
+
+  const myToken = identity.token;
+  const isPlayerOne = p1.token === myToken;
+  const isPlayerTwo = p2.token === myToken;
+
+  // If token does not match either position, it's a mismatch
+  if (!isPlayerOne && !isPlayerTwo) {
+    return (
+      <div className="game-missing">
+        <p>Identity mismatch. Please rejoin the game.</p>
+        <button onClick={() => navigate("/menu")}>Exit</button>
+      </div>
+    );
+  }
+
+  const me = isPlayerOne ? "playerOne" : "playerTwo";
+  const myIndex = isPlayerOne ? 0 : 1;
+
+  // --------------------------------------------
+  // Turn & Interaction Rules
+  // --------------------------------------------
+  const currentPlayer = state.players[state.currentPlayerId];
+  const myTurn = state.currentPlayerId === myIndex;
 
   return (
     <div className="gameboard-container">
@@ -70,26 +126,31 @@ export default function GameBoard({ gameId }) {
         <div className="menu-modal">
           <div className="menu-box">
             <button className="close-menu" onClick={() => setMenuOpen(false)}>Close</button>
-            <button className="exit-menu" onClick={() => (window.location.href = "/menu")}>
+            <button className="exit-menu" onClick={() => navigate("/menu")}>
               Exit to Menu
             </button>
           </div>
         </div>
       )}
 
-      {/* PLAYER ONE PANEL */}
-      <div className="player-panel left-panel" style={{ "--player-aura": playerOne.color }}>
-        <div className="player-name">{playerOne.name}</div>
-        <div className="player-tokens">Tokens: <span>{playerOne.tokens}</span></div>
+      {/* LEFT PLAYER PANEL */}
+      <div
+        className="player-panel left-panel"
+        style={{ "--player-aura": p1.color }}
+      >
+        <div className="player-name">{p1.name}</div>
+        <div className="player-tokens">
+          Tokens: <span>{p1.tokens}</span>
+        </div>
 
         <div className="player-inventory">
-          {playerOne.inventory.length === 0 ? (
+          {p1.inventory.length === 0 ? (
             <p className="empty-inv">No movement cards</p>
           ) : (
             <MovementCardPanel
-              player={playerOne}
+              player={p1}
               isCurrent={state.currentPlayerId === 0}
-              onUseCard={myTurn ? actions.useMovementCard : () => {}}
+              onUseCard={myTurn && isPlayerOne ? actions.useMovementCard : () => {}}
             />
           )}
         </div>
@@ -120,26 +181,8 @@ export default function GameBoard({ gameId }) {
           )}
         </div>
 
-        {/* MAIN INTERACTION */}
+        {/* MAIN INTERACTION ZONE */}
         <div className="center-card-placeholder">
-          {/* COIN TOSS */}
-          {state.phase === "COIN_TOSS" && (
-            <CoinFlip
-              coin={state.coin}
-              onFlip={myTurn ? actions.flipCoin : () => {}}
-              onComplete={myTurn ? actions.completeCoinFlip : () => {}}
-            />
-          )}
-
-          {/* COIN OUTCOME */}
-          {state.phase === "COIN_OUTCOME" && state.activityResult && (
-            <CoinOutcome
-              result={state.activityResult.outcome}
-              activity={state.activityResult.activityName}
-              performer={state.activityResult.performer}
-              onContinue={myTurn ? actions.finishActivityResult : () => {}}
-            />
-          )}
 
           {/* TURN START */}
           {state.phase === "TURN_START" && (
@@ -161,46 +204,42 @@ export default function GameBoard({ gameId }) {
 
           {/* PROMPT */}
           {state.phase === "PROMPT" && state.activePrompt && (
-  <PromptCard
-    prompt={state.activePrompt}
-    currentPlayerName={currentPlayer.name}
-    otherPlayerName={state.currentPlayerId === 0 ? playerTwo.name : playerOne.name}
-    onReady={
-      !myTurn       // <-- the OTHER player must click Ready
-        ? actions.beginAwardPhase
-        : () => {}
-    }
-  />
-)}
+            <PromptCard
+              prompt={state.activePrompt}
+              currentPlayerName={currentPlayer.name}
+              otherPlayerName={isPlayerOne ? p2.name : p1.name}
+              onReady={!myTurn ? actions.beginAwardPhase : () => {}}
+            />
+          )}
 
-          {/* MOVEMENT CARD */}
+          {/* AWARD PHASE */}
+          {state.phase === "AWARD" && (
+            !myTurn ? (
+              <div className="rating-row">
+                {[0, 1, 2, 3].map((val) => (
+                  <button
+                    key={val}
+                    className="rating-btn"
+                    onClick={() => actions.awardTokens(val)}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="placeholder-text">
+                Waiting for rating…
+              </p>
+            )
+          )}
+
+          {/* MOVEMENT AWARD */}
           {state.phase === "MOVEMENT_AWARD" && state.awardedMovementCard && (
             <MovementCardAward
               card={state.awardedMovementCard}
               onContinue={myTurn ? actions.dismissMovementAward : () => {}}
             />
           )}
-
-          {/* AWARD PHASE */}
-          {state.phase === "AWARD" && (
-  !myTurn ? (
-    <div className="rating-row">
-      {[0, 1, 2, 3].map(val => (
-        <button
-          key={val}
-          className="rating-btn"
-          onClick={() => actions.awardTokens(val)}
-        >
-          {val}
-        </button>
-      ))}
-    </div>
-  ) : (
-    <p className="placeholder-text">
-      Waiting for <strong>{currentPlayer.name}</strong> to rate…
-    </p>
-  )
-)}
 
           {/* ACTIVITY SHOP */}
           {state.phase === "ACTIVITY_SHOP" && (
@@ -212,50 +251,81 @@ export default function GameBoard({ gameId }) {
               onEndTurn={myTurn ? actions.endTurnInShop : () => {}}
             />
           )}
+
+          {/* COIN TOSS */}
+          {state.phase === "COIN_TOSS" && (
+            <CoinFlip
+              coin={state.coin}
+              onFlip={myTurn ? actions.flipCoin : () => {}}
+              onComplete={myTurn ? actions.completeCoinFlip : () => {}}
+            />
+          )}
+
+          {/* COIN RESULT */}
+          {state.phase === "COIN_OUTCOME" && state.activityResult && (
+            <CoinOutcome
+              result={state.activityResult.outcome}
+              activity={state.activityResult.activityName}
+              performer={state.activityResult.performer}
+              onContinue={myTurn ? actions.finishActivityResult : () => {}}
+            />
+          )}
+
         </div>
 
         {/* ACTION BAR */}
         <div className="action-bar">
-          {/* Roll button only appears when it's YOUR turn */}
+
+          {/* Roll Button (MY TURN ONLY) */}
           {state.phase === "TURN_START" && myTurn && (
             <button className="big-action-btn" onClick={actions.rollDice}>
               Roll the Die 🎲
             </button>
           )}
 
-          {/* Ready to Rate button */}
+          {/* Ready to Rate */}
           {state.phase === "PROMPT" && myTurn && (
             <button className="big-action-btn" onClick={actions.beginAwardPhase}>
               Ready to Rate
             </button>
           )}
 
-          {/* Rating buttons */}
+          {/* Rating Buttons (MY TURN ONLY) */}
           {state.phase === "AWARD" && myTurn && (
             <div className="rating-row">
-              {[0, 1, 2, 3].map((val) => (
-                <button key={val} className="rating-btn" onClick={() => actions.awardTokens(val)}>
-                  {val}
+              {[0, 1, 2, 3].map((v) => (
+                <button
+                  key={v}
+                  className="rating-btn"
+                  onClick={() => actions.awardTokens(v)}
+                >
+                  {v}
                 </button>
               ))}
             </div>
           )}
+
         </div>
       </div>
 
-      {/* PLAYER TWO PANEL */}
-      <div className="player-panel right-panel" style={{ "--player-aura": playerTwo.color }}>
-        <div className="player-name">{playerTwo.name}</div>
-        <div className="player-tokens">Tokens: <span>{playerTwo.tokens}</span></div>
+      {/* RIGHT PLAYER PANEL */}
+      <div
+        className="player-panel right-panel"
+        style={{ "--player-aura": p2.color }}
+      >
+        <div className="player-name">{p2.name}</div>
+        <div className="player-tokens">
+          Tokens: <span>{p2.tokens}</span>
+        </div>
 
         <div className="player-inventory">
-          {playerTwo.inventory.length === 0 ? (
+          {p2.inventory.length === 0 ? (
             <p className="empty-inv">No movement cards</p>
           ) : (
             <MovementCardPanel
-              player={playerTwo}
+              player={p2}
               isCurrent={state.currentPlayerId === 1}
-              onUseCard={myTurn ? actions.useMovementCard : () => {}}
+              onUseCard={myTurn && isPlayerTwo ? actions.useMovementCard : () => {}}
             />
           )}
         </div>
