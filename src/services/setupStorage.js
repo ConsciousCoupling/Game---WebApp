@@ -1,47 +1,73 @@
 // src/services/setupStorage.js
 
-const KEY = "intimadate.identity";
+//-------------------------------------------------------
+// LOCAL SETUP STORAGE (names, colors, local play flag)
+//-------------------------------------------------------
 
-// -------- Generate Short Anonymous Token --------
-function generateAnonToken() {
-  return "anon_" + Math.random().toString(36).substring(2, 8);
+const SETUP_KEY = "intimadate.setup";
+
+// Save P1/P2 setup values (used before gameplay)
+export function saveSetup(data) {
+  const existing = loadSetup() || {};
+  const updated = { ...existing, ...data };
+  localStorage.setItem(SETUP_KEY, JSON.stringify(updated));
 }
 
-// -------- Load identity map (per-game identity) --------
+export function loadSetup() {
+  try {
+    const raw = localStorage.getItem(SETUP_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+//-------------------------------------------------------
+// IDENTITY TOKEN SYSTEM (per game, role + token)
+//-------------------------------------------------------
+
+const IDENTITY_KEY = "intimadate.identity";
+
+// Create short anonymous token
+function generateAnonToken() {
+  return "anon_" + Math.random().toString(36).substring(2, 10);
+}
+
+// Load identity map
 function loadIdentityMap() {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) || {};
+    return JSON.parse(localStorage.getItem(IDENTITY_KEY)) || {};
   } catch {
     return {};
   }
 }
 
-// -------- Save identity map --------
+// Save identity map
 function saveIdentityMap(map) {
-  localStorage.setItem(KEY, JSON.stringify(map));
+  localStorage.setItem(IDENTITY_KEY, JSON.stringify(map));
 }
 
-// -------- Save identity for a specific game --------
+// Save identity for specific game
 export function saveIdentity(gameId, role, token) {
   const map = loadIdentityMap();
   map[gameId] = { role, token };
   saveIdentityMap(map);
 }
 
-// -------- Load identity for a specific game --------
+// Load identity for specific game
 export function loadIdentity(gameId) {
   const map = loadIdentityMap();
   return map[gameId] || null;
 }
 
-// -------- Ensure identity exists, return {role, token} --------
+// Ensure identity exists for this game; return {role, token}
 export function ensureIdentityForGame(gameId, desiredRole) {
   const existing = loadIdentity(gameId);
 
-  // If already exists, return it
+  // If already exists, must reuse it
   if (existing) return existing;
 
-  // Otherwise create new identity
+  // Create new identity
   const token = generateAnonToken();
   const identity = { role: desiredRole, token };
 
