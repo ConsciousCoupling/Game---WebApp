@@ -13,7 +13,7 @@ import {
 
 import { loadDraftActivities } from "../../services/activityStore";
 import { loadSetup } from "../../services/setupStorage";
-import { ensureIdentity } from "../../utils/ensureIdentity";
+import { loadIdentity } from "../../services/setupStorage";
 
 import "./ReviewActivities.css";
 
@@ -22,11 +22,23 @@ export default function ReviewActivities() {
   const navigate = useNavigate();
 
   // ---------------------------
-  // Identify player
+  // Identify player (NEW SYSTEM)
   // ---------------------------
-  const player = localStorage.getItem("player") || "playerOne";
+  const identity = loadIdentity(gameId);
+
+  if (!identity) {
+    return (
+      <div className="review-page">
+        <div className="review-card">
+          <h2>Error</h2>
+          <p>Could not determine your identity for this game.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const player = identity.role;            // "playerOne" or "playerTwo"
   const other = player === "playerOne" ? "playerTwo" : "playerOne";
-  ensureIdentity(player);
 
   const setup = loadSetup() || {};
   const playerOneName = setup.playerOneName || "Player 1";
@@ -50,7 +62,7 @@ export default function ReviewActivities() {
   useEffect(() => {
     async function load() {
       const existing = await loadDraftActivities(gameId);
-      setActivities(existing);
+      setActivities(existing || []);
       setLoading(false);
     }
 
@@ -59,15 +71,9 @@ export default function ReviewActivities() {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
 
-      // Prevent empty overwrites from snapshot
-      if (data.draft && data.draft.length > 0) {
-        setActivities(data.draft);
-      }
-
+      if (data.draft) setActivities(data.draft);
       if (data.baseline) setBaseline(data.baseline);
-
       if (data.approvals) setApprovals(data.approvals);
-
       if (data.editor !== undefined) setEditorState(data.editor);
     });
 
@@ -77,11 +83,12 @@ export default function ReviewActivities() {
   if (loading) return <div className="loading">Loading…</div>;
 
   // ---------------------------
-  // Approval + finalization
+  // Approval logic
   // ---------------------------
   const playerApproved = approvals[player];
   const otherApproved = approvals[other];
-  const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const bothApproved =
+    approvals.playerOne === true && approvals.playerTwo === true;
 
   async function handleApprove() {
     await approveActivities(gameId, player);
@@ -97,7 +104,7 @@ export default function ReviewActivities() {
   // ---------------------------
   if (bothApproved) {
     async function handleContinue() {
-      await finalizeActivities(gameId);  // <-- FIXED!
+      await finalizeActivities(gameId);
       await clearEditor(gameId);
       navigate(`/create/summary/${gameId}`);
     }
@@ -136,9 +143,7 @@ export default function ReviewActivities() {
           {a.cost} tokens
         </div>
 
-        {a.deleted && (
-          <div className="review-deleted-flag">Deleted</div>
-        )}
+        {a.deleted && <div className="review-deleted-flag">Deleted</div>}
       </div>
     );
   }
@@ -151,8 +156,8 @@ export default function ReviewActivities() {
       <div className="review-card">
         <h2>Review Activities</h2>
         <p>
-          Review your partner’s proposed changes.  
-          You must both approve the final list before continuing.
+          Review your partner’s proposed changes.
+          Both players must approve the final list.
         </p>
 
         <div className="review-list">
@@ -162,23 +167,24 @@ export default function ReviewActivities() {
         <div className="approval-status">
           <p>
             {playerOneName}: {approvals.playerOne ? "✓ Approved" : "Waiting…"} |
-            {" "}
             {playerTwoName}: {approvals.playerTwo ? "✓ Approved" : "Waiting…"}
           </p>
         </div>
 
+        {/* Only show Approve/Propose buttons if the player has NOT approved yet */}
         {!playerApproved && (
-          <button className="approve-btn" onClick={handleApprove}>
-            Approve Final List
-          </button>
+          <>
+            <button className="approve-btn" onClick={handleApprove}>
+              Approve Final List
+            </button>
+
+            <button className="back-btn" onClick={handleProposeChanges}>
+              ← Propose Changes
+            </button>
+          </>
         )}
 
-        {!playerApproved && (
-          <button className="back-btn" onClick={handleProposeChanges}>
-            ← Propose Changes
-          </button>
-        )}
-
+        {/* If approved, show waiting message */}
         {playerApproved && (
           <p className="approved-note">
             You have approved. Waiting for{" "}

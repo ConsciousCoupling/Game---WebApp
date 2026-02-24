@@ -1,4 +1,5 @@
 // src/pages/Create/PlayerTwo.jsx
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -21,6 +22,7 @@ export default function PlayerTwo() {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
 
+  // If no gameId, redirect
   if (!setup?.gameId) {
     return (
       <div className="create-container">
@@ -46,7 +48,7 @@ export default function PlayerTwo() {
     "#37d67a",
     "#ff00cc",
     "#9b59ff",
-    "#ff7a2f",
+    "#ff7a2f"
   ];
 
   async function handleContinue() {
@@ -54,54 +56,33 @@ export default function PlayerTwo() {
 
     const gameId = setup.gameId;
 
-    // -----------------------------
-    // Assign a TRUE identity token
-    // -----------------------------
+    // Assign identity token for PlayerTwo
     const identity = ensureIdentityForGame(gameId, "playerTwo");
     const token = identity.token;
 
-    saveIdentity(gameId, "playerTwo", token);
-
-    // Save PlayerTwo local setup (name + color)
+    // Save PlayerTwo setup locally
     saveSetup({
       ...setup,
       playerTwoName: name,
       playerTwoColor: color
     });
 
-    // -----------------------------
-    // LOAD existing cloud game
-    // -----------------------------
-    const snap = await getDoc(doc(db, "games", gameId));
-    if (!snap.exists()) {
-      alert("Game not found in cloud.");
-      return;
-    }
+    // Save identity to local identity map
+    saveIdentity(gameId, "playerTwo", token);
 
-    const cloud = snap.data();
+    // Load cloud game to check P1 identity if needed
+    const ref = doc(db, "games", gameId);
+    const snap = await getDoc(ref);
+    const cloud = snap.data() || {};
 
-    // If PlayerTwo already claimed, block
-    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
-      alert("Another Player Two has already joined.");
-      return;
-    }
-
-    // -----------------------------
-    // UPDATE FIRESTORE
-    // -----------------------------
-    await updateDoc(doc(db, "games", gameId), {
+    // Update Firestore
+    await updateDoc(ref, {
       roles: {
         ...cloud.roles,
         playerTwo: token
       },
       players: [
-        cloud.players?.[0] ?? {
-          name: "",
-          color: "",
-          tokens: 0,
-          inventory: [],
-          token: null
-        },
+        cloud.players?.[0],
         {
           name,
           color,
@@ -112,9 +93,7 @@ export default function PlayerTwo() {
       ]
     });
 
-    // ----------------------------------------
-    // PlayerTwo now WAITs until PlayerOne edits
-    // ----------------------------------------
+    // Go to waiting room
     navigate(`/create/waiting/player-two/${gameId}`);
   }
 
