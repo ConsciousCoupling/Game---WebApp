@@ -2,14 +2,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { saveGameToCloud, loadGameFromCloud } from "../../services/gameStore";
-
+import { loadGameFromCloud } from "../../services/gameStore";
 import { loadSetup } from "../../services/setupStorage";
 import { loadFinalActivities } from "../../services/activityStore";
+import { loadIdentity } from "../../services/setupStorage";
 
-import { loadIdentity, ensureIdentityForGame } from "../../services/setupStorage";
-
-import { initialGameState } from "../../game/initialGameState";
+import { db } from "../../services/firebase";
+import { updateDoc } from "firebase/firestore";
 
 import "./Summary.css";
 
@@ -19,41 +18,29 @@ export default function Summary() {
 
   const [playerOneName, setPlayerOneName] = useState("");
   const [playerTwoName, setPlayerTwoName] = useState("");
-
   const [playerOneColor, setPlayerOneColor] = useState("#ffffff");
   const [playerTwoColor, setPlayerTwoColor] = useState("#ffffff");
 
   const [activities, setActivities] = useState([]);
 
   // --------------------------------------------------------
-  // LOAD DATA: Cloud → Setup storage fallback
+  // LOAD ALL REQUIRED DATA
   // --------------------------------------------------------
   useEffect(() => {
     async function load() {
       const cloud = await loadGameFromCloud(gameId);
       const setup = loadSetup();
-      const identity = loadIdentity(gameId);
 
-      // Ensure identity exists for this game
-      if (!identity) {
-        console.warn("Identity missing on Summary screen. Regenerating...");
-        ensureIdentityForGame(gameId, "playerOne"); // If they got here, they're P1
-      }
-
-      // -------- Player Names + Colors (cloud-first) --------
-      if (cloud?.players && cloud.players.length === 2) {
+      // -------- Player Names + Colors --------
+      if (cloud?.players?.length === 2) {
         setPlayerOneName(cloud.players[0].name || setup?.playerOneName || "");
         setPlayerTwoName(cloud.players[1].name || setup?.playerTwoName || "");
 
         setPlayerOneColor(cloud.players[0].color || setup?.playerOneColor);
         setPlayerTwoColor(cloud.players[1].color || setup?.playerTwoColor);
       } else {
-        // No cloud yet — fallback
         setPlayerOneName(setup?.playerOneName || "");
         setPlayerTwoName(setup?.playerTwoName || "");
-
-        setPlayerOneColor(setup?.playerOneColor || "#ffffff");
-        setPlayerTwoColor(setup?.playerTwoColor || "#ffffff");
       }
 
       // -------- Negotiated Activity List --------
@@ -65,41 +52,30 @@ export default function Summary() {
   }, [gameId]);
 
   // --------------------------------------------------------
-  // START GAME — identity-safe initialization
+  // START GAME — merge only gameplay fields
   // --------------------------------------------------------
   async function startGame() {
-    const identityP1 = loadIdentity(gameId);
-    if (!identityP1 || identityP1.role !== "playerOne") {
+    const identity = loadIdentity(gameId);
+
+    if (!identity || identity.role !== "playerOne") {
       alert("Only Player One can start the game.");
       return;
     }
 
-    // Construct new game state
-    const state = structuredClone(initialGameState);
-    state.gameId = gameId;
+    const newFields = {
+      gameStarted: true,
 
-    // Inject real player names/colors
-    state.players[0].name = playerOneName;
-    state.players[0].color = playerOneColor;
-    state.players[0].token = identityP1.token;
+      // The game begins with turn start
+      phase: "TURN_START",
+      currentPlayerId: 0,
 
-    const identityP2 = loadIdentity(gameId);
-    if (identityP2?.role === "playerTwo") {
-      state.players[1].token = identityP2.token;
-    }
+      // Negotiated activities live inside the game for the shop
+      negotiatedActivities: activities,
 
-    state.players[1].name = playerTwoName;
-    state.players[1].color = playerTwoColor;
+      // DO NOT remove players, roles, or tokens
+    };
 
-    // Inject negotiated activities
-    state.negotiatedActivities = activities;
-
-    // IMPORTANT:
-    // We DO NOT touch roles or tokens here.
-    // They are already stored safely in cloud.
-
-    await saveGameToCloud(gameId, state);
-    localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
+    await updateDoc(db.collection("games").doc(gameId), newFields);
 
     navigate(`/game/${gameId}`);
   }
