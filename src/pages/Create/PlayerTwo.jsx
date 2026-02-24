@@ -3,9 +3,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { saveSetup, loadSetup } from "../../services/setupStorage";
+import {
+  ensureIdentityForGame,
+  saveIdentity,
+  loadIdentity
+} from "../../services/setupStorage";
+
 import { db } from "../../services/firebase";
-import { doc, updateDoc } from "firebase/firestore";
-import { ensureIdentity } from "../../utils/ensureIdentity";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 
 import "./Create.css";
 
@@ -47,25 +52,70 @@ export default function PlayerTwo() {
   async function handleContinue() {
     if (!name.trim()) return;
 
-    // Save Player Two's info locally
+    const gameId = setup.gameId;
+
+    // -----------------------------
+    // Assign a TRUE identity token
+    // -----------------------------
+    const identity = ensureIdentityForGame(gameId, "playerTwo");
+    const token = identity.token;
+
+    saveIdentity(gameId, "playerTwo", token);
+
+    // Save PlayerTwo local setup (name + color)
     saveSetup({
       ...setup,
       playerTwoName: name,
-      playerTwoColor: color,
+      playerTwoColor: color
     });
 
-    // Correct identity on THIS device
-    localStorage.setItem("player", "playerTwo");
-    ensureIdentity("playerTwo");
+    // -----------------------------
+    // LOAD existing cloud game
+    // -----------------------------
+    const snap = await getDoc(doc(db, "games", gameId));
+    if (!snap.exists()) {
+      alert("Game not found in cloud.");
+      return;
+    }
 
-    // Update Firestore to signal that Player Two has joined
-    await updateDoc(doc(db, "games", setup.gameId), {
-      playerTwoName: name,
-      playerTwoColor: color,
+    const cloud = snap.data();
+
+    // If PlayerTwo already claimed, block
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      alert("Another Player Two has already joined.");
+      return;
+    }
+
+    // -----------------------------
+    // UPDATE FIRESTORE
+    // -----------------------------
+    await updateDoc(doc(db, "games", gameId), {
+      roles: {
+        ...cloud.roles,
+        playerTwo: token
+      },
+      players: [
+        cloud.players?.[0] ?? {
+          name: "",
+          color: "",
+          tokens: 0,
+          inventory: [],
+          token: null
+        },
+        {
+          name,
+          color,
+          tokens: 0,
+          inventory: [],
+          token
+        }
+      ]
     });
 
-    // Move Player Two directly into negotiation phase
-    navigate(`/create/waiting/player-two/${setup.gameId}`);
+    // ----------------------------------------
+    // PlayerTwo now WAITs until PlayerOne edits
+    // ----------------------------------------
+    navigate(`/create/waiting/player-two/${gameId}`);
   }
 
   return (
