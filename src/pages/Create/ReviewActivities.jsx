@@ -127,27 +127,54 @@ export default function ReviewActivities() {
   // Row Renderer
   // ---------------------------
   function renderRow(a) {
-    const changed = a.changedFields || {};
+  const changed = a.changedFields || {};
 
-    return (
-      <div className={`review-row ${a.deleted ? "deleted" : ""}`} key={a.id}>
-        <div className={`review-name ${changed.name ? "changed" : ""}`}>
-          {a.name || <em>(no name)</em>}
-        </div>
-
-        <div className={`review-duration ${changed.duration ? "changed" : ""}`}>
-          {a.duration || <em>—</em>}
-        </div>
-
-        <div className={`review-cost ${changed.cost ? "changed" : ""}`}>
-          {a.cost} tokens
-        </div>
-
-        {a.deleted && <div className="review-deleted-flag">Deleted</div>}
+  return (
+    <div
+      className={`review-row 
+        ${a.deleted ? "deleted" : ""} 
+      `}
+      key={a.id}
+    >
+      {/* NAME */}
+      <div
+        className={`review-name ${
+          changed.name ? "changed-field" : ""
+        }`}
+      >
+        {a.name || <em>(no name)</em>}
+        {changed.name && <span className="change-marker">✱</span>}
       </div>
-    );
-  }
 
+      {/* DURATION */}
+      <div
+        className={`review-duration ${
+          changed.duration ? "changed-field" : ""
+        }`}
+      >
+        {a.duration || <em>—</em>}
+        {changed.duration && <span className="change-marker">✱</span>}
+      </div>
+
+      {/* COST */}
+      <div
+        className={`review-cost ${
+          changed.cost ? "changed-field" : ""
+        }`}
+      >
+        {a.cost} tokens
+        {changed.cost && <span className="change-marker">✱</span>}
+      </div>
+
+      {/* Deleted flag */}
+      {a.deleted && (
+        <div className="review-deleted-flag">
+          Deleted
+        </div>
+      )}
+    </div>
+  );
+}
   // ---------------------------
   // Render Review UI
   // ---------------------------

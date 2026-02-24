@@ -48,3 +48,15 @@
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(255, 0, 200, 0.5);
 }
+
+.changed-field {
+  background: rgba(255, 215, 0, 0.15); /* soft gold highlight */
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.change-marker {
+  color: #f7d14c;
+  font-weight: bold;
+  margin-left: 4px;
+}
