@@ -1,243 +1,145 @@
-// src/services/activityStore.js
-//------------------------------------------------------
-// PRE-GAME NEGOTIATION — BASELINE + DIFF + SOFT DELETE
-//------------------------------------------------------
+// -------------------------------------------------------------
+// ACTIVITY NEGOTIATION ENGINE (FIXED, IDENTITY-SAFE, LOOP-SAFE)
+// -------------------------------------------------------------
 
-import { db } from "./firebase";
+import { db } from "../services/firebase";
 import {
   doc,
   getDoc,
-  setDoc,
   updateDoc,
-  onSnapshot
+  onSnapshot,
 } from "firebase/firestore";
 
-/*
-Firestore structure:
-games/{gameId} {
-  activityDraft: [ ...normalized items... ],
-  baselineDraft: [ ...normalized items... ],
-
-  approvals: {
-    playerOne: boolean,
-    playerTwo: boolean
-  },
-
-  finalActivities: [ ... ]
-}
-*/
-
-// ----------------------------------------------------
-// Normalize an activity structure
-// ----------------------------------------------------
-export function normalizeActivity(a) {
-  return {
-    id: a.id ?? crypto.randomUUID(),
-    name: a.name ?? "",
-    description: a.description ?? "",
-    duration: a.duration ?? "",
-    cost: a.cost ?? 1,
-    deleted: a.deleted ?? false,
-
-    // Each field gets a boolean
-    changedFields: {
-      name: a.changedFields?.name ?? false,
-      description: a.changedFields?.description ?? false,
-      duration: a.changedFields?.duration ?? false,
-      cost: a.changedFields?.cost ?? false,
-      deleted: a.changedFields?.deleted ?? false,
-    }
-  };
-}
-
-// ----------------------------------------------------
-// Generate changedFields by comparing draft to baseline
-// ----------------------------------------------------
-export function diffAgainstBaseline(draftList, baselineList) {
-  const baselineMap = new Map();
-  baselineList?.forEach(b => baselineMap.set(b.id, normalizeActivity(b)));
-
-  return draftList.map(item => {
-    const base = baselineMap.get(item.id);
-    const n = normalizeActivity(item);
-
-    // If no baseline yet → no changed fields at all
-    if (!base) {
-      n.changedFields = {
-        name: false,
-        description: false,
-        duration: false,
-        cost: false,
-        deleted: false
-      };
-      return n;
-    }
-
-    n.changedFields = {
-      name: n.name !== base.name,
-      description: n.description !== base.description,
-      duration: n.duration !== base.duration,
-      cost: n.cost !== base.cost,
-      deleted: n.deleted !== base.deleted,
-    };
-
-    return n;
-  });
-}
-
-// ----------------------------------------------------
-// Load draft (non-realtime)
-// ----------------------------------------------------
+// -------------------------------------------------------------
+// GET CURRENT GAME SNAPSHOT
+// -------------------------------------------------------------
 export async function loadDraftActivities(gameId) {
-  const ref = doc(db, "games", gameId);
-  const snap = await getDoc(ref);
-
+  const snap = await getDoc(doc(db, "games", gameId));
   if (!snap.exists()) return [];
 
   const data = snap.data();
-  const draft = data.activityDraft || [];
-  const baseline = data.baselineDraft || [];
-
-  return diffAgainstBaseline(draft, baseline);
+  return data.activityDraft || [];
 }
 
-// ----------------------------------------------------
-// Real-time subscription for draft + approvals + baseline
-// ----------------------------------------------------
+// -------------------------------------------------------------
+// SUBSCRIBE TO NEGOTIATION STATE
+// Returns: { draft, baseline, approvals, editor, players, roles }
+// -------------------------------------------------------------
 export function subscribeToDraftActivities(gameId, callback) {
-  const ref = doc(db, "games", gameId);
-
-  return onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      callback(null);
-      return;
-    }
+  return onSnapshot(doc(db, "games", gameId), (snap) => {
+    if (!snap.exists()) return;
 
     const data = snap.data();
 
-    const draft = data.activityDraft || [];
-    const baseline = data.baselineDraft || [];
-    const approvals = data.approvals || {
-      playerOne: false,
-      playerTwo: false
-    };
-
-    const diffed = diffAgainstBaseline(draft, baseline);
-
     callback({
-      draft: diffed,
-      baseline,
-      approvals
+      draft: data.activityDraft || [],
+      baseline: data.finalActivities || [],
+      approvals: data.approvals || { playerOne: false, playerTwo: false },
+      editor: data.editor ?? null,
+      players: data.players || [],
+      roles: data.roles || {},
     });
   });
 }
 
-// ----------------------------------------------------
-// SUBMIT PROPOSAL — resets BOTH approvals
-// ----------------------------------------------------
-export async function submitActivityProposal(gameId, rawDraftList) {
+// -------------------------------------------------------------
+// SET THE ACTIVE EDITOR (identity token)
+// ALSO RESETS APPROVALS
+// -------------------------------------------------------------
+export async function setEditor(gameId, editorToken) {
   const ref = doc(db, "games", gameId);
 
-  // Always normalize locally before writing
-  const normalized = rawDraftList.map(normalizeActivity);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const data = snap.data();
+  const approvals = { playerOne: false, playerTwo: false };
 
   await updateDoc(ref, {
-    activityDraft: normalized,
-    approvals: { playerOne: false, playerTwo: false }
+    editor: editorToken,
+    approvals,
   });
 }
 
-// ----------------------------------------------------
-// saveDraftActivities() — PlayerOne initial creation
-// ----------------------------------------------------
-export async function saveDraftActivities(gameId, rawDraftList) {
-  const ref = doc(db, "games", gameId);
-
-  const normalized = rawDraftList.map(normalizeActivity);
-
-  await setDoc(
-    ref,
-    {
-      activityDraft: normalized,
-      approvals: { playerOne: false, playerTwo: false }
-    },
-    { merge: true }
-  );
+// -------------------------------------------------------------
+// CLEAR EDITOR WHEN BOTH APPROVED
+// -------------------------------------------------------------
+export async function clearEditor(gameId) {
+  await updateDoc(doc(db, "games", gameId), {
+    editor: null,
+  });
 }
 
-// ----------------------------------------------------
-// APPROVE — When both approve → baselineDraft = activityDraft
-// ----------------------------------------------------
-export async function approveActivities(gameId, playerKey) {
+// -------------------------------------------------------------
+// APPROVE FINAL ACTIVITIES (identity-aware)
+// token → resolves to playerOne/playerTwo
+// -------------------------------------------------------------
+export async function approveActivities(gameId, identityToken) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
-  if (!snap.exists()) return false;
+  if (!snap.exists()) return;
 
   const data = snap.data();
-  const approvals = data.approvals || {
-    playerOne: false,
-    playerTwo: false
-  };
+  const roles = data.roles || {};
 
-  const updated = {
-    ...approvals,
-    [playerKey]: true
-  };
+  let playerRole = null;
 
-  // Write the approval
-  await updateDoc(ref, { approvals: updated });
+  if (identityToken === roles.playerOne) playerRole = "playerOne";
+  if (identityToken === roles.playerTwo) playerRole = "playerTwo";
 
-  // If BOTH approved → save baselineDraft
-  if (updated.playerOne && updated.playerTwo) {
-    const baseline = (data.activityDraft || []).map(normalizeActivity);
-
-    await updateDoc(ref, { baselineDraft: baseline });
-    return true;
+  if (!playerRole) {
+    console.error("Identity mismatch during approval.");
+    return;
   }
 
-  return false;
+  const newApprovals = {
+    ...data.approvals,
+    [playerRole]: true,
+  };
+
+  await updateDoc(ref, {
+    approvals: newApprovals,
+  });
 }
 
-// ----------------------------------------------------
-// FINALIZE LIST — after both approve on final screen
-// ----------------------------------------------------
+// -------------------------------------------------------------
+// WRITE A NEW DRAFT AFTER EDITING
+// ALSO RESETS APPROVALS + SETS EDITOR = editing token
+// -------------------------------------------------------------
+export async function saveDraftActivities(gameId, draft, editorToken) {
+  const ref = doc(db, "games", gameId);
+
+  await updateDoc(ref, {
+    activityDraft: draft,
+    approvals: {
+      playerOne: false,
+      playerTwo: false,
+    },
+    editor: editorToken,
+  });
+}
+
+// -------------------------------------------------------------
+// FINALIZE ACTIVITIES WHEN BOTH APPROVE
+// This locks the negotiated list
+// -------------------------------------------------------------
 export async function finalizeActivities(gameId) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
-
-  if (!snap.exists()) return [];
+  if (!snap.exists()) return;
 
   const data = snap.data();
-  const draft = data.activityDraft || [];
-  const normalized = draft.map(normalizeActivity);
+  const approvals = data.approvals || {};
+
+  const bothApproved =
+    approvals.playerOne === true && approvals.playerTwo === true;
+
+  if (!bothApproved) {
+    console.warn("Attempted finalize without both approvals.");
+    return;
+  }
 
   await updateDoc(ref, {
-    finalActivities: normalized
+    finalActivities: data.activityDraft || [],
   });
-
-  return normalized;
-}
-
-// ----------------------------------------------------
-// Load final list
-// ----------------------------------------------------
-export async function loadFinalActivities(gameId) {
-  const ref = doc(db, "games", gameId);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) return [];
-  return (snap.data().finalActivities || []).map(normalizeActivity);
-}
-
-// ----------------------------------------------------
-// Editor Locking
-// ----------------------------------------------------
-export async function setEditor(gameId, playerKey) {
-  const ref = doc(db, "games", gameId);
-  await updateDoc(ref, { editor: playerKey });
-}
-
-export async function clearEditor(gameId) {
-  const ref = doc(db, "games", gameId);
-  await updateDoc(ref, { editor: null });
 }

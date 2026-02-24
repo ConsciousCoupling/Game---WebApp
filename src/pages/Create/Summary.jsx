@@ -1,14 +1,17 @@
-// src/pages/Create/Summary.jsx
+// -----------------------------------------------------------
+// SUMMARY — FINAL CHECK BEFORE GAME STARTS
+// IDENTITY-SAFE, APPROVAL-SAFE, STABLE
+// -----------------------------------------------------------
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { loadGameFromCloud } from "../../services/gameStore";
+import { loadGameFromCloud, saveGameToCloud } from "../../services/gameStore";
 import { loadSetup } from "../../services/setupStorage";
-import { loadFinalActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
 
-import { db } from "../../services/firebase";
-import { updateDoc } from "firebase/firestore";
+import { loadFinalActivities } from "../../services/activityStore";
+import { initialGameState } from "../../game/initialGameState";
 
 import "./Summary.css";
 
@@ -16,34 +19,34 @@ export default function Summary() {
   const navigate = useNavigate();
   const { gameId } = useParams();
 
-  const [playerOneName, setPlayerOneName] = useState("");
-  const [playerTwoName, setPlayerTwoName] = useState("");
-  const [playerOneColor, setPlayerOneColor] = useState("#ffffff");
-  const [playerTwoColor, setPlayerTwoColor] = useState("#ffffff");
-
+  const [players, setPlayers] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [approvals, setApprovals] = useState({
+    playerOne: false,
+    playerTwo: false,
+  });
 
-  // --------------------------------------------------------
-  // LOAD ALL REQUIRED DATA
-  // --------------------------------------------------------
+  const identity = loadIdentity(gameId);
+
+  // -------------------------------------------------------
+  // LOAD CLOUD DATA — names, colors, approvals, final list
+  // -------------------------------------------------------
   useEffect(() => {
     async function load() {
       const cloud = await loadGameFromCloud(gameId);
-      const setup = loadSetup();
+      const setup = loadSetup() || {};
 
-      // -------- Player Names + Colors --------
-      if (cloud?.players?.length === 2) {
-        setPlayerOneName(cloud.players[0].name || setup?.playerOneName || "");
-        setPlayerTwoName(cloud.players[1].name || setup?.playerTwoName || "");
+      if (!cloud) return;
 
-        setPlayerOneColor(cloud.players[0].color || setup?.playerOneColor);
-        setPlayerTwoColor(cloud.players[1].color || setup?.playerTwoColor);
-      } else {
-        setPlayerOneName(setup?.playerOneName || "");
-        setPlayerTwoName(setup?.playerTwoName || "");
-      }
+      // Players array contains: name, color, token, inventory, tokens
+      setPlayers(cloud.players || []);
 
-      // -------- Negotiated Activity List --------
+      setApprovals(cloud.approvals || {
+        playerOne: false,
+        playerTwo: false,
+      });
+
+      // Load finalized activity list
       const finalList = await loadFinalActivities(gameId);
       setActivities(finalList || []);
     }
@@ -51,46 +54,80 @@ export default function Summary() {
     load();
   }, [gameId]);
 
-  // --------------------------------------------------------
-  // START GAME — merge only gameplay fields
-  // --------------------------------------------------------
-  async function startGame() {
-    const identity = loadIdentity(gameId);
+  // -------------------------------------------------------
+  // DETERMINE ROLE OF THIS DEVICE
+  // -------------------------------------------------------
+  let playerRole = null;
+  if (identity && players[0]?.token === identity.token) {
+    playerRole = "playerOne";
+  } else if (identity && players[1]?.token === identity.token) {
+    playerRole = "playerTwo";
+  }
 
-    if (!identity || identity.role !== "playerOne") {
+  // Only Player One can start the game
+  const canStartGame = playerRole === "playerOne";
+
+  const playerOneName = players[0]?.name || "Player One";
+  const playerTwoName = players[1]?.name || "Player Two";
+
+  // -------------------------------------------------------
+  // SAFETY CHECK — both players must approve
+  // -------------------------------------------------------
+  const bothApproved =
+    approvals.playerOne === true && approvals.playerTwo === true;
+
+  // -------------------------------------------------------
+  // START GAME
+  // -------------------------------------------------------
+  async function startGame() {
+    if (!canStartGame) {
       alert("Only Player One can start the game.");
       return;
     }
 
-    const newFields = {
-      gameStarted: true,
+    if (!bothApproved) {
+      alert("Both players must approve the activity list before starting.");
+      return;
+    }
 
-      // The game begins with turn start
-      phase: "TURN_START",
-      currentPlayerId: 0,
+    // Build game state
+    const state = structuredClone(initialGameState);
+    state.gameId = gameId;
 
-      // Negotiated activities live inside the game for the shop
-      negotiatedActivities: activities,
+    // Inject names, colors, and identity tokens
+    state.players[0].name = players[0].name;
+    state.players[0].color = players[0].color;
+    state.players[0].token = players[0].token;
 
-      // DO NOT remove players, roles, or tokens
-    };
+    state.players[1].name = players[1].name;
+    state.players[1].color = players[1].color;
+    state.players[1].token = players[1].token;
 
-    await updateDoc(db.collection("games").doc(gameId), newFields);
+    // Insert final activities
+    state.negotiatedActivities = activities;
 
+    // Save to cloud + local fallback
+    await saveGameToCloud(gameId, state);
+    localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
+
+    // Continue to game board
     navigate(`/game/${gameId}`);
   }
 
+  // -------------------------------------------------------
+  // UI
+  // -------------------------------------------------------
   return (
     <div className="summary-page">
       <div className="summary-card">
         <h2 className="summary-title">Ready to Begin?</h2>
 
         <div className="summary-players">
-          <p style={{ color: playerOneColor }}>
-            <strong>Player 1:</strong> {playerOneName}
+          <p style={{ color: players[0]?.color }}>
+            <strong>{playerOneName}:</strong> Player One
           </p>
-          <p style={{ color: playerTwoColor }}>
-            <strong>Player 2:</strong> {playerTwoName}
+          <p style={{ color: players[1]?.color }}>
+            <strong>{playerTwoName}:</strong> Player Two
           </p>
         </div>
 
@@ -103,7 +140,7 @@ export default function Summary() {
             <ul>
               {activities.map((a) => (
                 <li key={a.id}>
-                  <strong>{a.name}</strong> — {a.duration}
+                  <strong>{a.name}</strong> — {a.duration}{" "}
                   <span className="cost">({a.cost} tokens)</span>
                 </li>
               ))}
@@ -111,9 +148,17 @@ export default function Summary() {
           )}
         </div>
 
-        <button className="summary-start-btn" onClick={startGame}>
-          Start Game →
-        </button>
+        {!canStartGame && (
+          <p className="approved-note">
+            Waiting for {playerOneName} to start the game…
+          </p>
+        )}
+
+        {canStartGame && (
+          <button className="summary-start-btn" onClick={startGame}>
+            Start Game →
+          </button>
+        )}
       </div>
     </div>
   );

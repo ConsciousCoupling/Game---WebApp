@@ -1,133 +1,75 @@
-// src/pages/Create/PlayerTwoWaitingRoom.jsx
+// -----------------------------------------------------------
+// PLAYER TWO WAITING ROOM — IDENTITY SAFE
+// -----------------------------------------------------------
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { db } from "../../services/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { subscribeToDraftActivities } from "../../services/activityStore";
+import { loadIdentity } from "../../services/setupStorage";
 
-import {
-  loadIdentity,
-  ensureIdentityForGame,
-  saveIdentity
-} from "../../services/setupStorage";
-
-import "./PlayerTwoWaitingRoom.css";
+import "./WaitingRoom.css";
 
 export default function PlayerTwoWaitingRoom() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState("");
+  const identity = loadIdentity(gameId);
+  const [state, setState] = useState({
+    players: [],
+    editor: null,
+    approvals: {},
+    draft: [],
+    roles: {},
+  });
 
-  // ---------------------------------------------------
-  // VALIDATE IDENTITY ON MOUNT
-  // Ensures this browser is truly Player Two
-  // ---------------------------------------------------
   useEffect(() => {
-    if (!gameId) return;
-
-    const identity = loadIdentity(gameId);
-
-    // If no identity exists, the player should not be here
-    if (!identity || identity.role !== "playerTwo") {
-      setError("Identity mismatch. Please rejoin the game.");
-      return;
-    }
-  }, [gameId]);
-
-  // ---------------------------------------------------
-  // SUBSCRIBE TO GAME TO KNOW WHEN P1 IS READY
-  // ---------------------------------------------------
-  useEffect(() => {
-    if (!gameId) return;
-
-    const ref = doc(db, "games", gameId);
-
-    const unsub = onSnapshot(ref, (snap) => {
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-
-      // Additional safety: ensure PlayerTwo is not overwritten
-      const identity = loadIdentity(gameId);
-      if (!identity || identity.role !== "playerTwo") {
-        setError("Identity mismatch. Please rejoin the game.");
-        return;
-      }
-
-      const myToken = identity.token;
-      const cloudToken = data.roles?.playerTwo;
-
-      // Cloud and local token mismatch = identity corruption
-      if (cloudToken && cloudToken !== myToken) {
-        setError("Another Player Two has already joined this game.");
-        return;
-      }
-
-      // P1 has submitted the opening proposal
-      if (data.activityDraft?.length > 0 && data.approvals?.playerOne === true) {
-        setReady(true);
-      }
+    const unsub = subscribeToDraftActivities(gameId, (data) => {
+      setState(data);
     });
-
     return () => unsub();
   }, [gameId]);
 
-  // ---------------------------------------------------
-  // AUTO-NAVIGATE WHEN READY
-  // ---------------------------------------------------
-  useEffect(() => {
-    if (ready) {
-      navigate(`/create/activities-review/${gameId}`);
-    }
-  }, [ready, navigate, gameId]);
+  const { players, editor, approvals, draft, roles } = state;
 
-  // ---------------------------------------------------
-  // RENDER UI
-  // ---------------------------------------------------
-  if (error) {
+  // Determine P2 role
+  let playerRole = null;
+  if (identity?.token === roles.playerTwo) playerRole = "playerTwo";
+  if (identity?.token === roles.playerOne) playerRole = "playerOne";
+
+  const partnerName = players[0]?.name || "Player One";
+
+  // -------------------------------------------------------
+  // NAVIGATION LOGIC
+  // -------------------------------------------------------
+
+  // If P1 has finished editing and submitted the draft → P2 must review
+  if (draft.length > 0 && editor === null) {
+    navigate(`/create/activities-review/${gameId}`);
+    return null;
+  }
+
+  // If partner is editing (P1 editing for first round or later rounds)
+  if (editor && editor !== identity?.token) {
     return (
-      <div className="waiting-room-page">
-        <div className="waiting-room-card">
-          <h1 className="waiting-title">Error</h1>
-          <p className="waiting-subtext">{error}</p>
-
-          <button className="back-btn" onClick={() => navigate("/menu")}>
-            Exit to Menu
-          </button>
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Waiting for {partnerName}…</h2>
+          <p>Your partner is preparing the activity list.</p>
         </div>
       </div>
     );
   }
 
+  // Default: waiting for partner to send the initial draft
   return (
-    <div className="waiting-room-page">
-      <div className="waiting-room-card">
-
-        <h1 className="waiting-title">Waiting for Player One</h1>
-
-        <p className="waiting-subtext">
-          Player One is preparing the activity list.
-          <br />
-          You’ll be redirected as soon as they're done.
+    <div className="waiting-screen">
+      <div className="waiting-card">
+        <h2>Waiting for {partnerName}…</h2>
+        <p>
+          Your partner is editing the first activity list.  
+          When they're done, you’ll be able to review and propose changes.
         </p>
-
-        <div className="waiting-area">
-          {!ready ? (
-            <>
-              <p className="waiting-text">Waiting…</p>
-              <div className="spinner" />
-            </>
-          ) : (
-            <p className="ready-text">Player One is ready! Redirecting…</p>
-          )}
-        </div>
-
-        <button className="back-btn" onClick={() => navigate("/menu")}>
-          Exit to Menu
-        </button>
-
       </div>
     </div>
   );

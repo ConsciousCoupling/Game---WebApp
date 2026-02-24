@@ -1,4 +1,6 @@
-// src/pages/Create/PlayerTwo.jsx
+// -----------------------------------------------------------
+// PLAYER TWO SETUP (LOCAL PLAY) — IDENTITY SAFE
+// -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +9,6 @@ import { saveSetup, loadSetup } from "../../services/setupStorage";
 import {
   ensureIdentityForGame,
   saveIdentity,
-  loadIdentity
 } from "../../services/setupStorage";
 
 import { db } from "../../services/firebase";
@@ -22,18 +23,13 @@ export default function PlayerTwo() {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
 
-  // If no gameId, redirect
   if (!setup?.gameId) {
     return (
       <div className="create-container">
         <div className="create-card">
           <h2>Error</h2>
           <p>No game found. Please restart setup.</p>
-
-          <button
-            className="primary-btn"
-            onClick={() => navigate("/onboarding")}
-          >
+          <button className="primary-btn" onClick={() => navigate("/onboarding")}>
             Restart
           </button>
         </div>
@@ -48,63 +44,71 @@ export default function PlayerTwo() {
     "#37d67a",
     "#ff00cc",
     "#9b59ff",
-    "#ff7a2f"
+    "#ff7a2f",
   ];
 
+  // ---------------------------------------------------------
+  // JOIN GAME AS PLAYER TWO (LOCAL DEVICE)
+  // ---------------------------------------------------------
   async function handleContinue() {
     if (!name.trim()) return;
 
     const gameId = setup.gameId;
 
-    // Assign identity token for PlayerTwo
+    // Ensure P2 identity token exists
     const identity = ensureIdentityForGame(gameId, "playerTwo");
     const token = identity.token;
 
-    // Save PlayerTwo setup locally
+    // Save local setup data
     saveSetup({
       ...setup,
       playerTwoName: name,
-      playerTwoColor: color
+      playerTwoColor: color,
     });
 
-    // Save identity to local identity map
+    // Save identity in identity map
     saveIdentity(gameId, "playerTwo", token);
 
-    // Load cloud game to check P1 identity if needed
+    // Update Firestore game document
     const ref = doc(db, "games", gameId);
     const snap = await getDoc(ref);
-    const cloud = snap.data() || {};
 
-    // Update Firestore
+    if (!snap.exists()) {
+      alert("Game not found. Please restart.");
+      return;
+    }
+
+    const cloud = snap.data();
+
+    const updatedPlayers = [...(cloud.players || [])];
+
+    updatedPlayers[1] = {
+      name,
+      color,
+      tokens: 0,
+      inventory: [],
+      token,
+    };
+
     await updateDoc(ref, {
+      players: updatedPlayers,
       roles: {
         ...cloud.roles,
-        playerTwo: token
+        playerTwo: token,
       },
-      players: [
-        cloud.players?.[0],
-        {
-          name,
-          color,
-          tokens: 0,
-          inventory: [],
-          token
-        }
-      ]
     });
 
-    // Go to waiting room
+    // Navigate to P2 waiting room
     navigate(`/create/waiting/player-two/${gameId}`);
   }
 
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
   return (
     <div className="create-container">
       <div className="create-card">
-
-        <button
-          className="secondary-btn"
-          onClick={() => navigate("/onboarding")}
-        >
+        <button className="secondary-btn" onClick={() => navigate("/onboarding")}>
           ← Back
         </button>
 

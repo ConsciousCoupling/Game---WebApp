@@ -1,12 +1,16 @@
-// src/pages/Join/Join.jsx
+// -----------------------------------------------------------
+// JOIN EXISTING GAME — REMOTE PLAYER TWO (IDENTITY SAFE)
+// -----------------------------------------------------------
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { loadGameFromCloud } from "../../services/gameStore";
 import {
   saveSetup,
   ensureIdentityForGame,
-  saveIdentity
+  saveIdentity,
+  loadIdentity,
 } from "../../services/setupStorage";
 
 import { db } from "../../services/firebase";
@@ -16,24 +20,32 @@ import "./Join.css";
 
 export default function Join() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [code, setCode] = useState("");
+  const inviteCode = (searchParams.get("code") || "").trim().toUpperCase();
+
+  const [code, setCode] = useState(inviteCode);
   const [error, setError] = useState("");
 
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
 
+  const [step, setStep] = useState(inviteCode ? 2 : 1);
+  const [game, setGame] = useState(null);
+
   const colors = [
-    "#ff3e84", "#3e8bff", "#ffd34f",
-    "#37d67a", "#ff00cc", "#9b59ff", "#ff7a2f"
+    "#ff3e84",
+    "#3e8bff",
+    "#ffd34f",
+    "#37d67a",
+    "#ff00cc",
+    "#9b59ff",
+    "#ff7a2f",
   ];
 
-  const [game, setGame] = useState(null);
-  const [step, setStep] = useState(1);
-
-  // ----------------------------------------------------------
-  // STEP 1 — Validate game code and load game object
-  // ----------------------------------------------------------
+  // -----------------------------------------------------------
+  // STEP 1 → Validate game code
+  // -----------------------------------------------------------
   async function handleCodeSubmit() {
     setError("");
 
@@ -44,12 +56,13 @@ export default function Join() {
     }
 
     const gameData = await loadGameFromCloud(cleaned);
+
     if (!gameData) {
-      setError("Game not found. Check the code and try again.");
+      setError("Game not found.");
       return;
     }
 
-    // Prevent joining a game where PlayerTwo is already claimed
+    // Prevent double-join
     if (gameData.roles?.playerTwo) {
       setError("Player Two has already joined this game.");
       return;
@@ -59,45 +72,54 @@ export default function Join() {
     setStep(2);
   }
 
-  // ----------------------------------------------------------
-  // STEP 2 — Assign identity + join as Player Two
-  // ----------------------------------------------------------
+  // -----------------------------------------------------------
+  // STEP 2 → Player enters name/color and JOIN
+  // -----------------------------------------------------------
   async function handleJoin() {
+    const cleaned = code.trim().toUpperCase();
+
     if (!name.trim()) {
       setError("Please enter your name.");
       return;
     }
 
-    const gameId = code.trim().toUpperCase();
-
-    // Create identity token for THIS game as PlayerTwo
-    const identity = ensureIdentityForGame(gameId, "playerTwo");
+    // Create identity token for THIS game / THIS device
+    const identity = ensureIdentityForGame(cleaned, "playerTwo");
     const token = identity.token;
 
-    // Save in local setup storage
+    // Save setup (names/colors)
     saveSetup({
-      gameId,
+      gameId: cleaned,
       playerTwoName: name,
-      playerTwoColor: color
+      playerTwoColor: color,
+      localPlay: false,
     });
 
-    // Save identity to local identity map
-    saveIdentity(gameId, "playerTwo", token);
+    // Save identity in identity map
+    saveIdentity(cleaned, "playerTwo", token);
 
-    // Load cloud copy again to double-check P1 hasn't claimed the role since last check
-    const cloud = await loadGameFromCloud(gameId);
-    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
-      setError("Another Player Two has already joined.");
+    // Reload cloud copy to avoid race conditions
+    const cloud = await loadGameFromCloud(cleaned);
+
+    if (!cloud) {
+      setError("Game not found.");
       return;
     }
 
-    // ------------------------------------------
-    // UPDATE FIRESTORE: claim PlayerTwo role
-    // ------------------------------------------
-    await updateDoc(doc(db, "games", gameId), {
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      setError("Another Player Two joined first.");
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // Update Firestore with Player Two info
+    // ---------------------------------------------------------
+    const ref = doc(db, "games", cleaned);
+
+    await updateDoc(ref, {
       roles: {
         ...cloud.roles,
-        playerTwo: token
+        playerTwo: token,
       },
       players: [
         cloud.players?.[0] ?? {
@@ -105,56 +127,70 @@ export default function Join() {
           color: "",
           tokens: 0,
           inventory: [],
-          token: null
+          token: cloud.roles?.playerOne ?? null,
         },
         {
           name,
           color,
           tokens: 0,
           inventory: [],
-          token
-        }
-      ]
+          token,
+        },
+      ],
     });
 
-    // --------------------------------------------------------
-    // DETERMINE NEXT SCREEN
-    // --------------------------------------------------------
+    // ---------------------------------------------------------
+    // Determine the correct NEXT SCREEN
+    // ---------------------------------------------------------
 
     const draft = cloud.activityDraft || [];
     const approvals = cloud.approvals || {};
+    const editor = cloud.editor || null;
 
-    const offerReady =
-      draft.length > 0 &&
-      approvals.playerOne === true;
-
-    if (!offerReady) {
-      // Player One has NOT yet submitted draft → wait
-      navigate(`/create/waiting/player-two/${gameId}`);
+    // CASE 1 — Player One has NOT finished editing yet
+    if (editor === "playerOne" || draft.length === 0) {
+      navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
 
-    // Player One finished → Player Two reviews, NOT edits
-    navigate(`/create/activities-review/${gameId}`);
+    // CASE 2 — Player One finished and is waiting for P2 review
+    if (draft.length > 0 && approvals.playerOne === false) {
+      navigate(`/create/waiting/player-two/${cleaned}`);
+      return;
+    }
+
+    // CASE 3 — P1 approved and is awaiting P2 review
+    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
+      navigate(`/create/review/${cleaned}`);
+      return;
+    }
+
+    // CASE 4 — Both approved? → Go straight to Summary
+    if (approvals.playerOne && approvals.playerTwo) {
+      navigate(`/create/summary/${cleaned}`);
+      return;
+    }
+
+    // Fallback (should rarely happen)
+    navigate(`/create/waiting/player-two/${cleaned}`);
   }
 
+  // -----------------------------------------------------------
+  // UI
+  // -----------------------------------------------------------
   return (
     <div className="join-page">
       <div className="join-card">
-
-        {/* STEP 1 — ENTER CODE */}
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
-            <p className="join-subtitle">
-              Enter the code your partner shared.
-            </p>
+            <p className="join-subtitle">Enter the code your partner shared.</p>
 
             <input
               className="join-input"
               placeholder="e.g. ROSE-143"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
             />
 
             {error && <p className="join-error">{error}</p>}
@@ -169,7 +205,6 @@ export default function Join() {
           </>
         )}
 
-        {/* STEP 2 — ENTER NAME + COLOR */}
         {step === 2 && (
           <>
             <h2 className="join-title">Welcome!</h2>

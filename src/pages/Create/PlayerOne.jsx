@@ -1,12 +1,17 @@
-// src/pages/Create/PlayerOne.jsx
+// -----------------------------------------------------------
+// PLAYER ONE SETUP — IDENTITY-SAFE GAME CREATION
+// -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup } from "../../services/setupStorage";
-import { ensureIdentityForGame, saveIdentity } from "../../services/setupStorage";
-import generateGameId from "../../services/gameId";
+import {
+  saveSetup,
+  ensureIdentityForGame,
+  saveIdentity,
+} from "../../services/setupStorage";
 
+import generateGameId from "../../services/gameId";
 import { db } from "../../services/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -25,46 +30,57 @@ export default function PlayerOne() {
     "#37d67a",
     "#ff00cc",
     "#9b59ff",
-    "#ff7a2f"
+    "#ff7a2f",
   ];
 
   // ---------------------------------------------------------
-  // HELPERS
+  // Initialize the Firestore game shell
   // ---------------------------------------------------------
-
-  async function initializeGameShell(gameId, token) {
+  async function initializeGame(gameId, token) {
     await setDoc(
       doc(db, "games", gameId),
       {
         players: [
-          { name: name, color: color, tokens: 0, inventory: [], token: token },
-          { name: "", color: "", tokens: 0, inventory: [], token: null }
+          {
+            name,
+            color,
+            tokens: 0,
+            inventory: [],
+            token, // <-- Identity token for P1
+          },
+          {
+            name: "",
+            color: "",
+            tokens: 0,
+            inventory: [],
+            token: null, // P2 joins later
+          },
         ],
         roles: {
           playerOne: token,
-          playerTwo: null
+          playerTwo: null,
         },
         activityDraft: [],
         approvals: {
           playerOne: false,
-          playerTwo: false
+          playerTwo: false,
         },
         finalActivities: [],
-        editor: null
+        editor: null,
       },
       { merge: true }
     );
   }
 
   // ---------------------------------------------------------
-  // LOCAL FLOW
+  // LOCAL PLAY — both players on the same device
   // ---------------------------------------------------------
   async function startLocalFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
 
-    // Assign identity token for PlayerOne
+    // Identity token for Player One
     const identity = ensureIdentityForGame(gameId, "playerOne");
     const token = identity.token;
 
@@ -72,27 +88,27 @@ export default function PlayerOne() {
       gameId,
       playerOneName: name,
       playerOneColor: color,
-      localPlay: true
+      localPlay: true,
     });
 
-    // Create the game in Firestore with identity token included
-    await initializeGameShell(gameId, token);
+    // Initialize Firestore
+    await initializeGame(gameId, token);
 
-    // Store identity for this game locally
+    // Store identity
     saveIdentity(gameId, "playerOne", token);
 
+    // Move to Player Two setup (local)
     navigate("/create/player-two");
   }
 
   // ---------------------------------------------------------
-  // REMOTE FLOW
+  // REMOTE PLAY — partner joins via code/link
   // ---------------------------------------------------------
   async function startRemoteFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
 
-    // Assign identity token for P1
     const identity = ensureIdentityForGame(gameId, "playerOne");
     const token = identity.token;
 
@@ -100,16 +116,22 @@ export default function PlayerOne() {
       gameId,
       playerOneName: name,
       playerOneColor: color,
-      localPlay: false
+      localPlay: false,
     });
 
-    await initializeGameShell(gameId, token);
+    // Initialize Firestore
+    await initializeGame(gameId, token);
 
+    // Store identity
     saveIdentity(gameId, "playerOne", token);
 
+    // Navigate to invite screen
     navigate(`/create/remote-invite/${gameId}`);
   }
 
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
   return (
     <div className="create-container">
       <div className="create-card">

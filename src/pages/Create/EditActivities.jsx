@@ -1,21 +1,17 @@
-// src/pages/Create/EditActivities.jsx
+// -----------------------------------------------------------
+// EDIT ACTIVITIES — IDENTITY-SAFE NEGOTIATION ENGINE
+// -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
-  loadDraftActivities,
-  submitActivityProposal,
   saveDraftActivities,
   subscribeToDraftActivities,
-  approveActivities,
   setEditor,
-  clearEditor
 } from "../../services/activityStore";
 
-import { loadSetup } from "../../services/setupStorage";
-import { ACTIVITIES } from "../../game/data/activityList";
-import { ensureIdentity } from "../../utils/ensureIdentity";
+import { loadIdentity } from "../../services/setupStorage";
 
 import "./EditActivities.css";
 
@@ -23,226 +19,155 @@ export default function EditActivities() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  const player = localStorage.getItem("player") || "playerOne";
-  const other = player === "playerOne" ? "playerTwo" : "playerOne";
-  ensureIdentity(player);
+  // Identity token for this device
+  const identity = loadIdentity(gameId);
 
-  const setup = loadSetup() || {};
-  const playerOneName = setup.playerOneName || "Player 1";
-  const playerTwoName = setup.playerTwoName || "Player 2";
-
+  // -------------------------------------------------------
+  // Local state
+  // -------------------------------------------------------
   const [activities, setActivities] = useState([]);
-  const [baseline, setBaseline] = useState([]);
-  const [editor, setEditorState] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ------------------------------
-  // LOAD + SUBSCRIBE
-  // ------------------------------
+  // -------------------------------------------------------
+  // Subscribe to Firestore for existing draft
+  // -------------------------------------------------------
   useEffect(() => {
-    async function loadInitial() {
-      const existing = await loadDraftActivities(gameId);
-
-      // FIX #1 — fallback to default ACTIVITIES correctly
-      const base = existing.length > 0 ? existing : ACTIVITIES;
-      setActivities(base);
-      setLoading(false);
-    }
-
-    loadInitial();
-
     const unsub = subscribeToDraftActivities(gameId, (data) => {
-      if (!data) return;
-
-      // FIX #2 — Do NOT overwrite UI with empty drafts
-      if (data.draft && data.draft.length > 0) {
+      if (data?.draft) {
         setActivities(data.draft);
       }
-
-      if (data.baseline) setBaseline(data.baseline);
-
-      if (data.editor !== undefined) {
-        setEditorState(data.editor);
-      }
+      setLoading(false);
     });
 
     return () => unsub();
   }, [gameId]);
 
-  // ------------------------------
-  // CLAIM EDITOR ROLE
-  // ------------------------------
-  useEffect(() => {
-    if (editor === null) {
-      setEditor(gameId, player);
-      setEditorState(player);
-    }
-  }, [editor, gameId, player]);
+  if (loading) return <div className="loading">Loading…</div>;
 
-  // ------------------------------
-  // LOCAL HELPERS
-  // ------------------------------
-  async function resetApprovals(updatedList) {
-    setActivities(updatedList);
-    await submitActivityProposal(gameId, updatedList);
-  }
+  // -------------------------------------------------------
+  // Edit handlers
+  // -------------------------------------------------------
 
   function updateField(id, field, value) {
-    const safe = value ?? "";
-    resetApprovals(
-      activities.map((a) =>
-        a.id === id ? { ...a, [field]: safe } : a
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              [field]: value,
+              changedFields: {
+                ...a.changedFields,
+                [field]: true,
+              },
+            }
+          : a
       )
     );
   }
 
-  function deleteActivity(id) {
-    resetApprovals(
-      activities.map((a) =>
-        a.id === id ? { ...a, deleted: !a.deleted } : a
+  function toggleDelete(id) {
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              deleted: !a.deleted,
+            }
+          : a
       )
     );
   }
 
   function addActivity() {
-    resetApprovals([
-      ...activities,
+    const newId = Date.now().toString();
+    setActivities((prev) => [
+      ...prev,
       {
-        id: crypto.randomUUID(),
+        id: newId,
         name: "",
-        description: "",
         duration: "",
-        cost: 1,
+        cost: 0,
         deleted: false,
-        changedFields: {}
-      }
+        changedFields: { name: true, duration: true, cost: true },
+      },
     ]);
   }
 
-  async function handleSend() {
-    await saveDraftActivities(gameId, activities);
-    await approveActivities(gameId, player);
-    await clearEditor(gameId);
+  // -------------------------------------------------------
+  // SAVE → writes to Firestore w/ approval reset + editor token
+  // -------------------------------------------------------
+  async function handleSave() {
+    // Set this device/user as the editor
+    await setEditor(gameId, identity.token);
+
+    // Write draft and reset approvals
+    await saveDraftActivities(gameId, activities, identity.token);
+
+    // Return to review screen
     navigate(`/create/activities-review/${gameId}`);
   }
 
-  // ------------------------------
-  // CONDITIONAL UI
-  // ------------------------------
-  // ------------------------------
-// CONDITIONAL UI
-// ------------------------------
-if (loading) return <div className="loading">Loading…</div>;
-
-// 🚨 HARD GUARD: If I am NOT the editor, I should NEVER be in this screen.
-// Redirect immediately back to review.
-if (editor !== null && editor !== player) {
-  navigate(`/create/activities-review/${gameId}`);
-  return null;
-}
-
-const canEdit = editor === null || editor === player;
-const isLockedByOther = editor && editor !== player;
-
-  if (isLockedByOther) {
-    const otherName = other === "playerOne" ? playerOneName : playerTwoName;
-
+  // -------------------------------------------------------
+  // Render a row
+  // -------------------------------------------------------
+  function renderRow(a) {
     return (
-      <div className="edit-activities-page">
-        <div className="edit-card">
-          <h2>{otherName} is editing…</h2>
-          <p>Please wait until they finish proposing changes.</p>
-          <button
-            className="back-btn"
-            onClick={() => navigate(`/create/activities-review/${gameId}`)}
-          >
-            ← Back to Review
-          </button>
-        </div>
+      <div className={`edit-row ${a.deleted ? "deleted-row" : ""}`} key={a.id}>
+        <input
+          className="edit-input name-input"
+          value={a.name}
+          placeholder="Name"
+          onChange={(e) => updateField(a.id, "name", e.target.value)}
+        />
+
+        <input
+          className="edit-input duration-input"
+          value={a.duration}
+          placeholder="Duration"
+          onChange={(e) => updateField(a.id, "duration", e.target.value)}
+        />
+
+        <input
+          type="number"
+          className="edit-input cost-input"
+          value={a.cost}
+          placeholder="Cost"
+          onChange={(e) =>
+            updateField(a.id, "cost", Number(e.target.value) || 0)
+          }
+        />
+
+        <button className="delete-btn" onClick={() => toggleDelete(a.id)}>
+          {a.deleted ? "Undo" : "Delete"}
+        </button>
       </div>
     );
   }
 
-  // ------------------------------
-  // FULL MAIN RENDER
-  // ------------------------------
-
-  const sendLabel =
-    player === "playerOne" ? `Send to ${playerTwoName}` : `Send to ${playerOneName}`;
-
-  const backLabel = player === "playerTwo" ? "← Back to Review" : "← Back";
-
+  // -------------------------------------------------------
+  // Main UI
+  // -------------------------------------------------------
   return (
-    <div className="edit-activities-page">
+    <div className="edit-page">
       <div className="edit-card">
         <h2>Edit Activities</h2>
-        <p className="edit-subtext">
-          You are currently editing. Your partner cannot edit until you send your proposal.
-        </p>
+        <p>Make any changes you wish. When finished, save and return to review.</p>
 
-        <div className="activity-list">
-          {activities.map((a) => {
-            const changed = a.changedFields || {};
+        <div className="edit-list">{activities.map(renderRow)}</div>
 
-            return (
-              <div className={`activity-item ${a.deleted ? "deleted" : ""}`} key={a.id}>
-                <input
-  className={`activity-input ${changed.name ? "changed" : ""}`}
-  value={a.name ?? ""}
-  placeholder="Name"
-  onChange={(e) => canEdit && updateField(a.id, "name", e.target.value)}
-/>
-
-<input
-  className={`activity-input number ${changed.cost ? "changed" : ""}`}
-  type="number"
-  value={a.cost ?? ""}
-  onChange={(e) =>
-    canEdit &&
-    updateField(a.id, "cost", e.target.value === "" ? "" : Number(e.target.value))
-  }
-/>
-
-<textarea
-  className={`activity-textarea ${changed.description ? "changed" : ""}`}
-  value={a.description ?? ""}
-  placeholder="Description"
-  onChange={(e) => canEdit && updateField(a.id, "description", e.target.value)}
-/>
-
-<input
-  className={`activity-input ${changed.duration ? "changed" : ""}`}
-  value={a.duration ?? ""}
-  placeholder="Duration"
-  onChange={(e) => canEdit && updateField(a.id, "duration", e.target.value)}
-/>
-
-                <button
-                  className={`delete-btn ${changed.deleted ? "changed" : ""}`}
-                  onClick={() => canEdit && deleteActivity(a.id)}
-                >
-                  {a.deleted ? "↺" : "✕"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        <button className="add-btn" onClick={() => canEdit && addActivity()}>
+        <button className="add-btn" onClick={addActivity}>
           + Add Activity
         </button>
 
-        <button className="ready-btn" onClick={handleSend}>{sendLabel}</button>
+        <button className="save-btn" onClick={handleSave}>
+          Save Changes →
+        </button>
 
         <button
           className="back-btn"
-          onClick={() =>
-            player === "playerTwo"
-              ? navigate(`/create/activities-review/${gameId}`)
-              : navigate(`/create/player-one`)
-          }
+          onClick={() => navigate(`/create/activities-review/${gameId}`)}
         >
-          {backLabel}
+          ← Back
         </button>
       </div>
     </div>
