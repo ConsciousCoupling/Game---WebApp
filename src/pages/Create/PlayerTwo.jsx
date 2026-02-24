@@ -1,15 +1,11 @@
 // -----------------------------------------------------------
-// PLAYER TWO SETUP (LOCAL PLAY) — IDENTITY SAFE
+// LOCAL PLAYER TWO — IDENTITY SAFE FINAL VERSION
 // -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup, loadSetup } from "../../services/setupStorage";
-import {
-  ensureIdentityForGame,
-  saveIdentity,
-} from "../../services/setupStorage";
+import { saveSetup, loadSetup, ensureIdentityForGame } from "../../services/setupStorage";
 
 import { db } from "../../services/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -29,6 +25,7 @@ export default function PlayerTwo() {
         <div className="create-card">
           <h2>Error</h2>
           <p>No game found. Please restart setup.</p>
+
           <button className="primary-btn" onClick={() => navigate("/onboarding")}>
             Restart
           </button>
@@ -36,6 +33,8 @@ export default function PlayerTwo() {
       </div>
     );
   }
+
+  const gameId = setup.gameId;
 
   const colors = [
     "#ff3e84",
@@ -48,28 +47,25 @@ export default function PlayerTwo() {
   ];
 
   // ---------------------------------------------------------
-  // JOIN GAME AS PLAYER TWO (LOCAL DEVICE)
+  // LOCAL PLAYER TWO → JOIN GAME
   // ---------------------------------------------------------
   async function handleContinue() {
     if (!name.trim()) return;
 
-    const gameId = setup.gameId;
+    // Ensure this device has a token for THIS game
+    const identity = ensureIdentityForGame(gameId);
+    const myToken = identity.token;
 
-    // Ensure P2 identity token exists
-    const identity = ensureIdentityForGame(gameId, "playerTwo");
-    const token = identity.token;
-
-    // Save local setup data
+    // Save local setup (names & colors)
     saveSetup({
       ...setup,
       playerTwoName: name,
       playerTwoColor: color,
     });
 
-    // Save identity in identity map
-    saveIdentity(gameId, "playerTwo", token);
-
-    // Update Firestore game document
+    // ---------------------------------------------------------
+    // Read latest Firestore document
+    // ---------------------------------------------------------
     const ref = doc(db, "games", gameId);
     const snap = await getDoc(ref);
 
@@ -80,6 +76,19 @@ export default function PlayerTwo() {
 
     const cloud = snap.data();
 
+    // ---------------------------------------------------------
+    // BUILD CLEAN ROLES OBJECT
+    // We DO NOT preserve legacy fields.
+    // We rebuild this cleanly using stored playerOne token.
+    // ---------------------------------------------------------
+    const newRoles = {
+      playerOne: cloud.roles?.playerOne ?? null,
+      playerTwo: myToken,
+    };
+
+    // ---------------------------------------------------------
+    // BUILD CLEAN PLAYERS ARRAY
+    // ---------------------------------------------------------
     const updatedPlayers = [...(cloud.players || [])];
 
     updatedPlayers[1] = {
@@ -87,18 +96,20 @@ export default function PlayerTwo() {
       color,
       tokens: 0,
       inventory: [],
-      token,
+      token: myToken,
     };
 
+    // ---------------------------------------------------------
+    // UPDATE FIRESTORE WITHOUT CORRUPTING ANY EXISTING FIELDS
+    // ---------------------------------------------------------
     await updateDoc(ref, {
+      roles: newRoles,
       players: updatedPlayers,
-      roles: {
-        ...cloud.roles,
-        playerTwo: token,
-      },
     });
 
-    // Navigate to P2 waiting room
+    // ---------------------------------------------------------
+    // SEND LOCAL PLAYER TWO INTO WAITING ROOM
+    // ---------------------------------------------------------
     navigate(`/create/waiting/player-two/${gameId}`);
   }
 
@@ -108,6 +119,7 @@ export default function PlayerTwo() {
   return (
     <div className="create-container">
       <div className="create-card">
+
         <button className="secondary-btn" onClick={() => navigate("/onboarding")}>
           ← Back
         </button>

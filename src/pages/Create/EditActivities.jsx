@@ -1,13 +1,13 @@
 // -----------------------------------------------------------
-// EDIT ACTIVITIES — IDENTITY-SAFE NEGOTIATION ENGINE
+// EDIT ACTIVITIES — FINAL, IDENTITY-SAFE NEGOTIATION ENGINE
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
-  saveDraftActivities,
   subscribeToDraftActivities,
+  saveDraftActivities,
   setEditor,
 } from "../../services/activityStore";
 
@@ -19,23 +19,28 @@ export default function EditActivities() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  // Identity token for this device
+  // Local identity token only
   const identity = loadIdentity(gameId);
+  const myToken = identity?.token || null;
 
   // -------------------------------------------------------
   // Local state
   // -------------------------------------------------------
   const [activities, setActivities] = useState([]);
+  const [roles, setRoles] = useState({});
+  const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // -------------------------------------------------------
-  // Subscribe to Firestore for existing draft
+  // Subscribe to Firestore
   // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
-      if (data?.draft) {
-        setActivities(data.draft);
-      }
+      if (!data) return;
+
+      setActivities(data.draft || []);
+      setRoles(data.roles || {});
+      setPlayers(data.players || []);
       setLoading(false);
     });
 
@@ -45,9 +50,26 @@ export default function EditActivities() {
   if (loading) return <div className="loading">Loading…</div>;
 
   // -------------------------------------------------------
-  // Edit handlers
+  // Determine role
   // -------------------------------------------------------
+  let playerRole = null;
+  if (roles.playerOne === myToken) playerRole = "playerOne";
+  if (roles.playerTwo === myToken) playerRole = "playerTwo";
 
+  // -------------------------------------------------------
+  // Enforce editor lock: only the editor can be on this page
+  // -------------------------------------------------------
+  // If Firestore says someone else is the editor → redirect
+  // NOTE: subscribeToDraftActivities() populates editor inside data
+  const actualEditor = players?.editor;
+  if (actualEditor && actualEditor !== myToken) {
+    navigate(`/create/waiting/${playerRole}/${gameId}`);
+    return null;
+  }
+
+  // -------------------------------------------------------
+  // Field update handlers
+  // -------------------------------------------------------
   function updateField(id, field, value) {
     setActivities((prev) =>
       prev.map((a) =>
@@ -72,6 +94,10 @@ export default function EditActivities() {
           ? {
               ...a,
               deleted: !a.deleted,
+              changedFields: {
+                ...a.changedFields,
+                deleted: true,
+              },
             }
           : a
       )
@@ -88,40 +114,46 @@ export default function EditActivities() {
         duration: "",
         cost: 0,
         deleted: false,
-        changedFields: { name: true, duration: true, cost: true },
+        changedFields: {
+          name: true,
+          duration: true,
+          cost: true,
+        },
       },
     ]);
   }
 
   // -------------------------------------------------------
-  // SAVE → writes to Firestore w/ approval reset + editor token
+  // SAVE CHANGES
   // -------------------------------------------------------
   async function handleSave() {
-    // Set this device/user as the editor
-    await setEditor(gameId, identity.token);
+    // 1. Mark this device as the editor in Firestore
+    await setEditor(gameId, myToken);
 
-    // Write draft and reset approvals
-    await saveDraftActivities(gameId, activities, identity.token);
+    // 2. Save edited draft + automatically reset approvals
+    await saveDraftActivities(gameId, activities, myToken);
 
-    // Return to review screen
+    // 3. Return to review screen
     navigate(`/create/activities-review/${gameId}`);
   }
 
   // -------------------------------------------------------
-  // Render a row
+  // Render activity row
   // -------------------------------------------------------
   function renderRow(a) {
+    const changed = a.changedFields || {};
+
     return (
       <div className={`edit-row ${a.deleted ? "deleted-row" : ""}`} key={a.id}>
         <input
-          className="edit-input name-input"
+          className={`edit-input name-input ${changed.name ? "changed-field" : ""}`}
           value={a.name}
           placeholder="Name"
           onChange={(e) => updateField(a.id, "name", e.target.value)}
         />
 
         <input
-          className="edit-input duration-input"
+          className={`edit-input duration-input ${changed.duration ? "changed-field" : ""}`}
           value={a.duration}
           placeholder="Duration"
           onChange={(e) => updateField(a.id, "duration", e.target.value)}
@@ -129,7 +161,7 @@ export default function EditActivities() {
 
         <input
           type="number"
-          className="edit-input cost-input"
+          className={`edit-input cost-input ${changed.cost ? "changed-field" : ""}`}
           value={a.cost}
           placeholder="Cost"
           onChange={(e) =>
@@ -145,13 +177,18 @@ export default function EditActivities() {
   }
 
   // -------------------------------------------------------
-  // Main UI
+  // MAIN UI
   // -------------------------------------------------------
+  const partnerName =
+    playerRole === "playerOne"
+      ? players[1]?.name || "your partner"
+      : players[0]?.name || "your partner";
+
   return (
     <div className="edit-page">
       <div className="edit-card">
         <h2>Edit Activities</h2>
-        <p>Make any changes you wish. When finished, save and return to review.</p>
+        <p>Make any changes you want. When you save, {partnerName} will review them.</p>
 
         <div className="edit-list">{activities.map(renderRow)}</div>
 

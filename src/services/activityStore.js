@@ -1,6 +1,6 @@
-// -------------------------------------------------------------
-// ACTIVITY NEGOTIATION ENGINE (FIXED, IDENTITY-SAFE, LOOP-SAFE)
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ACTIVITY NEGOTIATION ENGINE (IDENTITY-SAFE, LOOP-SAFE, RACE-SAFE EDITION)
+// ---------------------------------------------------------------------------
 
 import { db } from "../services/firebase";
 import {
@@ -8,28 +8,55 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 
-// -------------------------------------------------------------
-// GET CURRENT GAME SNAPSHOT
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Ensure negotiation fields exist on the game doc
+// ---------------------------------------------------------------------------
+async function ensureNegotiationFields(ref, data) {
+  const patch = {};
+
+  if (!Array.isArray(data.activityDraft)) patch.activityDraft = [];
+  if (!Array.isArray(data.finalActivities)) patch.finalActivities = [];
+
+  if (!data.approvals) {
+    patch.approvals = { playerOne: false, playerTwo: false };
+  }
+
+  if (typeof data.editor === "undefined") patch.editor = null;
+
+  if (Object.keys(patch).length > 0) {
+    await updateDoc(ref, patch);
+    return { ...data, ...patch };
+  }
+
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// LOAD CURRENT DRAFT LIST ONLY
+// ---------------------------------------------------------------------------
 export async function loadDraftActivities(gameId) {
-  const snap = await getDoc(doc(db, "games", gameId));
+  const ref = doc(db, "games", gameId);
+  const snap = await getDoc(ref);
+
   if (!snap.exists()) return [];
 
-  const data = snap.data();
+  const data = await ensureNegotiationFields(ref, snap.data());
   return data.activityDraft || [];
 }
 
-// -------------------------------------------------------------
-// SUBSCRIBE TO NEGOTIATION STATE
-// Returns: { draft, baseline, approvals, editor, players, roles }
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// REALTIME SUBSCRIPTION TO NEGOTIATION STATE
+// ---------------------------------------------------------------------------
 export function subscribeToDraftActivities(gameId, callback) {
-  return onSnapshot(doc(db, "games", gameId), (snap) => {
+  const ref = doc(db, "games", gameId);
+
+  return onSnapshot(ref, async (snap) => {
     if (!snap.exists()) return;
 
-    const data = snap.data();
+    const data = await ensureNegotiationFields(ref, snap.data());
 
     callback({
       draft: data.activityDraft || [],
@@ -37,64 +64,59 @@ export function subscribeToDraftActivities(gameId, callback) {
       approvals: data.approvals || { playerOne: false, playerTwo: false },
       editor: data.editor ?? null,
       players: data.players || [],
-      roles: data.roles || {},
+      roles: data.roles || {}, // Legacy compatibility — still used for approval resolution
     });
   });
 }
 
-// -------------------------------------------------------------
-// SET THE ACTIVE EDITOR (identity token)
-// ALSO RESETS APPROVALS
-// -------------------------------------------------------------
-export async function setEditor(gameId, editorToken) {
+// ---------------------------------------------------------------------------
+// SET EDITOR TOKEN & RESET APPROVALS
+// ---------------------------------------------------------------------------
+export async function setEditor(gameId, token) {
   const ref = doc(db, "games", gameId);
-
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
-  const data = snap.data();
-  const approvals = { playerOne: false, playerTwo: false };
+  const data = await ensureNegotiationFields(ref, snap.data());
 
   await updateDoc(ref, {
-    editor: editorToken,
-    approvals,
+    editor: token,
+    approvals: { playerOne: false, playerTwo: false },
   });
 }
 
-// -------------------------------------------------------------
-// CLEAR EDITOR WHEN BOTH APPROVED
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// CLEAR EDITOR TOKEN
+// ---------------------------------------------------------------------------
 export async function clearEditor(gameId) {
   await updateDoc(doc(db, "games", gameId), {
     editor: null,
   });
 }
 
-// -------------------------------------------------------------
-// APPROVE FINAL ACTIVITIES (identity-aware)
-// token → resolves to playerOne/playerTwo
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// APPROVE DRAFT CHANGES (token → role resolution)
+// ---------------------------------------------------------------------------
 export async function approveActivities(gameId, identityToken) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
-  const data = snap.data();
+  const data = await ensureNegotiationFields(ref, snap.data());
   const roles = data.roles || {};
 
-  let playerRole = null;
+  let role = null;
+  if (identityToken === roles.playerOne) role = "playerOne";
+  if (identityToken === roles.playerTwo) role = "playerTwo";
 
-  if (identityToken === roles.playerOne) playerRole = "playerOne";
-  if (identityToken === roles.playerTwo) playerRole = "playerTwo";
-
-  if (!playerRole) {
-    console.error("Identity mismatch during approval.");
+  if (!role) {
+    console.error("Approval blocked: Token does not match either role.");
     return;
   }
 
   const newApprovals = {
     ...data.approvals,
-    [playerRole]: true,
+    [role]: true,
   };
 
   await updateDoc(ref, {
@@ -102,44 +124,42 @@ export async function approveActivities(gameId, identityToken) {
   });
 }
 
-// -------------------------------------------------------------
-// WRITE A NEW DRAFT AFTER EDITING
-// ALSO RESETS APPROVALS + SETS EDITOR = editing token
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// SAVE DRAFT CHANGES (atomic update) + RESET APPROVALS
+// ---------------------------------------------------------------------------
 export async function saveDraftActivities(gameId, draft, editorToken) {
   const ref = doc(db, "games", gameId);
 
   await updateDoc(ref, {
     activityDraft: draft,
-    approvals: {
-      playerOne: false,
-      playerTwo: false,
-    },
+    approvals: { playerOne: false, playerTwo: false },
     editor: editorToken,
   });
 }
 
-// -------------------------------------------------------------
-// FINALIZE ACTIVITIES WHEN BOTH APPROVE
-// This locks the negotiated list
-// -------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// FINALIZE NEGOTIATED ACTIVITIES (both approved)
+// ---------------------------------------------------------------------------
 export async function finalizeActivities(gameId) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
+
   if (!snap.exists()) return;
 
-  const data = snap.data();
+  const data = await ensureNegotiationFields(ref, snap.data());
   const approvals = data.approvals || {};
 
   const bothApproved =
     approvals.playerOne === true && approvals.playerTwo === true;
 
   if (!bothApproved) {
-    console.warn("Attempted finalize without both approvals.");
+    console.warn("Finalize blocked: Both players have not approved.");
     return;
   }
 
+  // Lock in the final list
   await updateDoc(ref, {
     finalActivities: data.activityDraft || [],
+    // NOTE: We do NOT clear draft here — Summary still displays it
   });
 }

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// JOIN EXISTING GAME — REMOTE PLAYER TWO (IDENTITY SAFE)
+// JOIN EXISTING GAME — REMOTE PLAYER TWO (FINAL, IDENTITY SAFE)
 // -----------------------------------------------------------
 
 import { useState } from "react";
@@ -9,12 +9,11 @@ import { loadGameFromCloud } from "../../services/gameStore";
 import {
   saveSetup,
   ensureIdentityForGame,
-  saveIdentity,
   loadIdentity,
 } from "../../services/setupStorage";
 
 import { db } from "../../services/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 
 import "./Join.css";
 
@@ -31,16 +30,10 @@ export default function Join() {
   const [color, setColor] = useState("#3e8bff");
 
   const [step, setStep] = useState(inviteCode ? 2 : 1);
-  const [game, setGame] = useState(null);
 
   const colors = [
-    "#ff3e84",
-    "#3e8bff",
-    "#ffd34f",
-    "#37d67a",
-    "#ff00cc",
-    "#9b59ff",
-    "#ff7a2f",
+    "#ff3e84", "#3e8bff", "#ffd34f",
+    "#37d67a", "#ff00cc", "#9b59ff", "#ff7a2f",
   ];
 
   // -----------------------------------------------------------
@@ -68,12 +61,11 @@ export default function Join() {
       return;
     }
 
-    setGame(gameData);
     setStep(2);
   }
 
   // -----------------------------------------------------------
-  // STEP 2 → Player enters name/color and JOIN
+  // STEP 2 → Player enters name + JOIN GAME
   // -----------------------------------------------------------
   async function handleJoin() {
     const cleaned = code.trim().toUpperCase();
@@ -83,11 +75,11 @@ export default function Join() {
       return;
     }
 
-    // Create identity token for THIS game / THIS device
-    const identity = ensureIdentityForGame(cleaned, "playerTwo");
-    const token = identity.token;
+    // Create identity token for THIS device + THIS game
+    const identity = ensureIdentityForGame(cleaned);
+    const myToken = identity.token;
 
-    // Save setup (names/colors)
+    // Save user's local settings
     saveSetup({
       gameId: cleaned,
       playerTwoName: name,
@@ -95,84 +87,65 @@ export default function Join() {
       localPlay: false,
     });
 
-    // Save identity in identity map
-    saveIdentity(cleaned, "playerTwo", token);
+    // Re-fetch from Firestore to avoid stale data
+    const ref = doc(db, "games", cleaned);
+    const snap = await getDoc(ref);
 
-    // Reload cloud copy to avoid race conditions
-    const cloud = await loadGameFromCloud(cleaned);
-
-    if (!cloud) {
+    if (!snap.exists()) {
       setError("Game not found.");
       return;
     }
 
-    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
-      setError("Another Player Two joined first.");
-      return;
-    }
+    const cloud = snap.data();
 
     // ---------------------------------------------------------
-    // Update Firestore with Player Two info
+    // SAFELY BUILD NEW ROLES OBJECT
+    // No legacy data preserved — we rebuild fresh
     // ---------------------------------------------------------
-    const ref = doc(db, "games", cleaned);
+    const newRoles = {
+      playerOne: cloud.roles?.playerOne ?? null,
+      playerTwo: myToken,
+    };
+
+    // ---------------------------------------------------------
+    // Update Firestore with Player Two data
+    // ---------------------------------------------------------
+    const updatedPlayers = [...(cloud.players || [])];
+
+    updatedPlayers[1] = {
+      name,
+      color,
+      tokens: 0,
+      inventory: [],
+      token: myToken,
+    };
 
     await updateDoc(ref, {
-      roles: {
-        ...cloud.roles,
-        playerTwo: token,
-      },
-      players: [
-        cloud.players?.[0] ?? {
-          name: "",
-          color: "",
-          tokens: 0,
-          inventory: [],
-          token: cloud.roles?.playerOne ?? null,
-        },
-        {
-          name,
-          color,
-          tokens: 0,
-          inventory: [],
-          token,
-        },
-      ],
+      roles: newRoles,
+      players: updatedPlayers,
     });
 
     // ---------------------------------------------------------
-    // Determine the correct NEXT SCREEN
+    // DETERMINE CORRECT NEXT SCREEN
     // ---------------------------------------------------------
-
     const draft = cloud.activityDraft || [];
     const approvals = cloud.approvals || {};
     const editor = cloud.editor || null;
 
-    // CASE 1 — Player One has NOT finished editing yet
-    if (editor === "playerOne" || draft.length === 0) {
+    // CASE 1 — No draft yet → P1 still editing
+    if (!draft.length) {
       navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
 
-    // CASE 2 — Player One finished and is waiting for P2 review
-    if (draft.length > 0 && approvals.playerOne === false) {
+    // CASE 2 — Draft exists but P1 hasn't approved yet
+    if (!approvals.playerOne) {
       navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
 
-    // CASE 3 — P1 approved and is awaiting P2 review
-    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
-      navigate(`/create/review/${cleaned}`);
-      return;
-    }
-
-    // CASE 4 — Both approved? → Go straight to Summary
-    if (approvals.playerOne && approvals.playerTwo) {
-      navigate(`/create/summary/${cleaned}`);
-      return;
-    }
-
-    // Fallback (should rarely happen)
-    navigate(`/create/waiting/player-two/${cleaned}`);
+    // CASE 3 — P1 approved, P2 must review
+    navigate(`/create/activities-review/${cleaned}`);
   }
 
   // -----------------------------------------------------------
@@ -181,6 +154,7 @@ export default function Join() {
   return (
     <div className="join-page">
       <div className="join-card">
+
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
@@ -244,6 +218,7 @@ export default function Join() {
             </button>
           </>
         )}
+
       </div>
     </div>
   );

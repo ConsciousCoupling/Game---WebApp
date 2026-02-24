@@ -1,17 +1,13 @@
 // -----------------------------------------------------------
-// SUMMARY — FINAL CHECK BEFORE GAME STARTS
-// IDENTITY-SAFE, APPROVAL-SAFE, STABLE
+// SUMMARY — FINAL IDENTITY-SAFE VERSION
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { loadGameFromCloud, saveGameToCloud } from "../../services/gameStore";
-import { loadSetup } from "../../services/setupStorage";
 import { loadIdentity } from "../../services/setupStorage";
-
-import { loadFinalActivities } from "../../services/activityStore";
-import { initialGameState } from "../../game/initialGameState";
+import { loadSetup } from "../../services/setupStorage";
 
 import "./Summary.css";
 
@@ -19,98 +15,78 @@ export default function Summary() {
   const navigate = useNavigate();
   const { gameId } = useParams();
 
-  const [players, setPlayers] = useState([]);
-  const [activities, setActivities] = useState([]);
-  const [approvals, setApprovals] = useState({
-    playerOne: false,
-    playerTwo: false,
-  });
-
   const identity = loadIdentity(gameId);
+  const myToken = identity?.token || null;
 
   // -------------------------------------------------------
-  // LOAD CLOUD DATA — names, colors, approvals, final list
+  // Local state
+  // -------------------------------------------------------
+  const [players, setPlayers] = useState([]);
+  const [roles, setRoles] = useState({});
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const setup = loadSetup() || {};
+
+  // -------------------------------------------------------
+  // LOAD FINAL GAME STATE FROM CLOUD
   // -------------------------------------------------------
   useEffect(() => {
     async function load() {
       const cloud = await loadGameFromCloud(gameId);
-      const setup = loadSetup() || {};
+      if (!cloud) {
+        alert("Game not found.");
+        return;
+      }
 
-      if (!cloud) return;
-
-      // Players array contains: name, color, token, inventory, tokens
       setPlayers(cloud.players || []);
-
-      setApprovals(cloud.approvals || {
-        playerOne: false,
-        playerTwo: false,
-      });
-
-      // Load finalized activity list
-      const finalList = await loadFinalActivities(gameId);
-      setActivities(finalList || []);
+      setRoles(cloud.roles || {});
+      setActivities(cloud.finalActivities || []);
+      setLoading(false);
     }
 
     load();
   }, [gameId]);
 
+  if (loading) return <div className="loading">Loading…</div>;
+
   // -------------------------------------------------------
-  // DETERMINE ROLE OF THIS DEVICE
+  // DETERMINE ROLE FROM FIRESTORE
   // -------------------------------------------------------
   let playerRole = null;
-  if (identity && players[0]?.token === identity.token) {
-    playerRole = "playerOne";
-  } else if (identity && players[1]?.token === identity.token) {
-    playerRole = "playerTwo";
-  }
+  if (roles.playerOne === myToken) playerRole = "playerOne";
+  if (roles.playerTwo === myToken) playerRole = "playerTwo";
 
-  // Only Player One can start the game
-  const canStartGame = playerRole === "playerOne";
+  // ONLY PlayerOne can start the game
+  const isPlayerOne = playerRole === "playerOne";
 
-  const playerOneName = players[0]?.name || "Player One";
-  const playerTwoName = players[1]?.name || "Player Two";
+  const p1 = players[0] || { name: setup.playerOneName, color: setup.playerOneColor };
+  const p2 = players[1] || { name: setup.playerTwoName, color: setup.playerTwoColor };
 
   // -------------------------------------------------------
-  // SAFETY CHECK — both players must approve
-  // -------------------------------------------------------
-  const bothApproved =
-    approvals.playerOne === true && approvals.playerTwo === true;
-
-  // -------------------------------------------------------
-  // START GAME
+  // START GAME (Player One ONLY)
   // -------------------------------------------------------
   async function startGame() {
-    if (!canStartGame) {
+    if (!isPlayerOne) {
       alert("Only Player One can start the game.");
       return;
     }
 
-    if (!bothApproved) {
-      alert("Both players must approve the activity list before starting.");
-      return;
-    }
+    const state = {
+      gameId,
+      players,
+      negotiatedActivities: activities,
+      turn: 0,
+      round: 1,
+      currentActivityIndex: 0,
+    };
 
-    // Build game state
-    const state = structuredClone(initialGameState);
-    state.gameId = gameId;
-
-    // Inject names, colors, and identity tokens
-    state.players[0].name = players[0].name;
-    state.players[0].color = players[0].color;
-    state.players[0].token = players[0].token;
-
-    state.players[1].name = players[1].name;
-    state.players[1].color = players[1].color;
-    state.players[1].token = players[1].token;
-
-    // Insert final activities
-    state.negotiatedActivities = activities;
-
-    // Save to cloud + local fallback
+    // Save game state to Firestore
     await saveGameToCloud(gameId, state);
+
+    // Save in localStorage for fast game state access
     localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
 
-    // Continue to game board
     navigate(`/game/${gameId}`);
   }
 
@@ -123,11 +99,11 @@ export default function Summary() {
         <h2 className="summary-title">Ready to Begin?</h2>
 
         <div className="summary-players">
-          <p style={{ color: players[0]?.color }}>
-            <strong>{playerOneName}:</strong> Player One
+          <p style={{ color: p1.color }}>
+            <strong>Player 1:</strong> {p1.name}
           </p>
-          <p style={{ color: players[1]?.color }}>
-            <strong>{playerTwoName}:</strong> Player Two
+          <p style={{ color: p2.color }}>
+            <strong>Player 2:</strong> {p2.name}
           </p>
         </div>
 
@@ -140,24 +116,22 @@ export default function Summary() {
             <ul>
               {activities.map((a) => (
                 <li key={a.id}>
-                  <strong>{a.name}</strong> — {a.duration}{" "}
-                  <span className="cost">({a.cost} tokens)</span>
+                  <strong>{a.name}</strong> — {a.duration}
+                  <span className="cost"> ({a.cost} tokens)</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        {!canStartGame && (
-          <p className="approved-note">
-            Waiting for {playerOneName} to start the game…
-          </p>
-        )}
-
-        {canStartGame && (
+        {isPlayerOne ? (
           <button className="summary-start-btn" onClick={startGame}>
             Start Game →
           </button>
+        ) : (
+          <p className="approved-note">
+            Waiting for Player One ({p1.name}) to start the game…
+          </p>
         )}
       </div>
     </div>

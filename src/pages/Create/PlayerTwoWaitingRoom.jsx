@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// PLAYER TWO WAITING ROOM — IDENTITY SAFE
+// PLAYER TWO WAITING ROOM — FINAL, IDENTITY SAFE VERSION
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -14,62 +14,108 @@ export default function PlayerTwoWaitingRoom() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
+  // Local identity token for THIS device
   const identity = loadIdentity(gameId);
+  const myToken = identity?.token || null;
+
   const [state, setState] = useState({
     players: [],
-    editor: null,
-    approvals: {},
-    draft: [],
     roles: {},
+    draft: [],
+    approvals: {},
+    editor: null,
   });
 
+  // -------------------------------------------------------
+  // Subscribe to Firestore for all negotiation updates
+  // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
-      setState(data);
+      if (!data) return;
+
+      setState({
+        players: data.players || [],
+        roles: data.roles || {},
+        draft: data.draft || [],
+        approvals: data.approvals || {},
+        editor: data.editor ?? null,
+      });
     });
+
     return () => unsub();
   }, [gameId]);
 
-  const { players, editor, approvals, draft, roles } = state;
+  const { players, roles, draft, approvals, editor } = state;
 
-  // Determine P2 role
+  // -------------------------------------------------------
+  // DETERMINE ROLE FROM FIRESTORE
+  // -------------------------------------------------------
   let playerRole = null;
-  if (identity?.token === roles.playerTwo) playerRole = "playerTwo";
-  if (identity?.token === roles.playerOne) playerRole = "playerOne";
+  if (roles.playerTwo === myToken) playerRole = "playerTwo";
+  if (roles.playerOne === myToken) playerRole = "playerOne";
 
-  const partnerName = players[0]?.name || "Player One";
+  // Fallback safety name
+  const partnerName =
+    playerRole === "playerTwo"
+      ? players[0]?.name || "your partner"
+      : players[1]?.name || "your partner";
 
   // -------------------------------------------------------
-  // NAVIGATION LOGIC
+  // ROUTING LOGIC — STRICT, DETERMINISTIC
   // -------------------------------------------------------
 
-  // If P1 has finished editing and submitted the draft → P2 must review
-  if (draft.length > 0 && editor === null) {
-    navigate(`/create/activities-review/${gameId}`);
-    return null;
-  }
-
-  // If partner is editing (P1 editing for first round or later rounds)
-  if (editor && editor !== identity?.token) {
+  // CASE 0 — If role cannot be determined → user is not actually joined
+  if (!playerRole) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
-          <h2>Waiting for {partnerName}…</h2>
-          <p>Your partner is preparing the activity list.</p>
+          <h2>Joining Game…</h2>
+          <p>Waiting for identity to sync.</p>
         </div>
       </div>
     );
   }
 
-  // Default: waiting for partner to send the initial draft
+  // CASE 1 — No draft yet: P1 is editing the first list
+  if (draft.length === 0) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Waiting for {partnerName}…</h2>
+          <p>Your partner is preparing the first activity list.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // CASE 2 — Someone is editing (editor contains a token)
+  // If it's NOT you, you must wait.
+  if (editor && editor !== myToken) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Waiting for {partnerName}…</h2>
+          <p>Your partner is updating the activity list.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // CASE 3 — Draft exists AND no editor → review phase begins
+  // P2 must now review the list.
+  if (draft.length > 0 && !editor) {
+    navigate(`/create/activities-review/${gameId}`);
+    return null;
+  }
+
+  // -------------------------------------------------------
+  // Default fallback (should rarely occur)
+  // -------------------------------------------------------
   return (
     <div className="waiting-screen">
       <div className="waiting-card">
-        <h2>Waiting for {partnerName}…</h2>
-        <p>
-          Your partner is editing the first activity list.  
-          When they're done, you’ll be able to review and propose changes.
-        </p>
+        <h2>Waiting…</h2>
+        <p>Your game is syncing. You will continue automatically.</p>
       </div>
     </div>
   );

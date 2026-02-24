@@ -1,17 +1,14 @@
 // -----------------------------------------------------------
-// PLAYER ONE SETUP — IDENTITY-SAFE GAME CREATION
+// PLAYER ONE — FINAL IDENTITY-SAFE GAME CREATION
 // -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  saveSetup,
-  ensureIdentityForGame,
-  saveIdentity,
-} from "../../services/setupStorage";
-
+import { saveSetup } from "../../services/setupStorage";
+import { ensureIdentityForGame } from "../../services/setupStorage";
 import generateGameId from "../../services/gameId";
+
 import { db } from "../../services/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -34,56 +31,69 @@ export default function PlayerOne() {
   ];
 
   // ---------------------------------------------------------
-  // Initialize the Firestore game shell
+  // Initialize Firestore game shell — CLEAN, FINAL VERSION
   // ---------------------------------------------------------
-  async function initializeGame(gameId, token) {
+  async function initializeGameShell(gameId, token) {
     await setDoc(
       doc(db, "games", gameId),
       {
+        // ---------------------------------------------
+        // NEW CLEAN ROLES OBJECT (no legacy fields)
+        // ---------------------------------------------
+        roles: {
+          playerOne: token,
+          playerTwo: null,
+        },
+
+        // ---------------------------------------------
+        // Players array — P1 fully defined, P2 empty
+        // ---------------------------------------------
         players: [
           {
             name,
             color,
             tokens: 0,
             inventory: [],
-            token, // <-- Identity token for P1
+            token, // identity token for P1
           },
           {
             name: "",
             color: "",
             tokens: 0,
             inventory: [],
-            token: null, // P2 joins later
+            token: null,
           },
         ],
-        roles: {
-          playerOne: token,
-          playerTwo: null,
-        },
+
+        // ---------------------------------------------
+        // Negotiation scaffolding — all reset clean
+        // ---------------------------------------------
         activityDraft: [],
+        baseline: [],
         approvals: {
           playerOne: false,
           playerTwo: false,
         },
+        editor: null, // no one is editing yet
         finalActivities: [],
-        editor: null,
       },
-      { merge: true }
+      { merge: false } // FULL OVERWRITE — wipes legacy values
     );
   }
 
   // ---------------------------------------------------------
-  // LOCAL PLAY — both players on the same device
+  // LOCAL FLOW — both players on same device
   // ---------------------------------------------------------
   async function startLocalFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
 
-    // Identity token for Player One
-    const identity = ensureIdentityForGame(gameId, "playerOne");
+    // Create identity token for P1
+    const identity = ensureIdentityForGame(gameId);
     const token = identity.token;
 
+    // Store initial setup info locally
     saveSetup({
       gameId,
       playerOneName: name,
@@ -91,27 +101,26 @@ export default function PlayerOne() {
       localPlay: true,
     });
 
-    // Initialize Firestore
-    await initializeGame(gameId, token);
+    // Build Firestore game document
+    await initializeGameShell(gameId, token);
 
-    // Store identity
-    saveIdentity(gameId, "playerOne", token);
-
-    // Move to Player Two setup (local)
+    // Move P1 to P2 local join screen
     navigate("/create/player-two");
   }
 
   // ---------------------------------------------------------
-  // REMOTE PLAY — partner joins via code/link
+  // REMOTE FLOW — P2 joins from another device
   // ---------------------------------------------------------
   async function startRemoteFlow() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
 
-    const identity = ensureIdentityForGame(gameId, "playerOne");
+    // Create identity token for P1
+    const identity = ensureIdentityForGame(gameId);
     const token = identity.token;
 
+    // Save local setup
     saveSetup({
       gameId,
       playerOneName: name,
@@ -119,13 +128,10 @@ export default function PlayerOne() {
       localPlay: false,
     });
 
-    // Initialize Firestore
-    await initializeGame(gameId, token);
+    // Create Firestore game shell
+    await initializeGameShell(gameId, token);
 
-    // Store identity
-    saveIdentity(gameId, "playerOne", token);
-
-    // Navigate to invite screen
+    // Navigate to invite page
     navigate(`/create/remote-invite/${gameId}`);
   }
 

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// REVIEW ACTIVITIES — FINAL IDENTITY-SAFE NEGOTIATION LOOP
+// REVIEW ACTIVITIES — FINAL IDENTITY-SAFE NEGOTIATION ENGINE
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -21,32 +21,34 @@ export default function ReviewActivities() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  // Identity token for this device
+  // Get this device's identity token
   const identity = loadIdentity(gameId);
-  const myToken = identity?.token;
+  const myToken = identity?.token || null;
 
   // -------------------------------------------------------
-  // State
+  // Local state
   // -------------------------------------------------------
   const [activities, setActivities] = useState([]);
   const [baseline, setBaseline] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [roles, setRoles] = useState({});
   const [approvals, setApprovals] = useState({
     playerOne: false,
     playerTwo: false,
   });
   const [editor, setEditorState] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [roles, setRoles] = useState({});
   const [loading, setLoading] = useState(true);
 
   // -------------------------------------------------------
-  // Subscribe to negotiation state from Firestore
+  // Subscribe to Firestore negotiation state
   // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
+      if (!data) return;
+
       setActivities(data.draft || []);
       setBaseline(data.baseline || []);
-      setApprovals(data.approvals || { playerOne: false, playerTwo: false });
+      setApprovals(data.approvals || {});
       setEditorState(data.editor ?? null);
       setPlayers(data.players || []);
       setRoles(data.roles || {});
@@ -59,39 +61,33 @@ export default function ReviewActivities() {
   if (loading) return <div className="loading">Loading…</div>;
 
   // -------------------------------------------------------
-  // Determine which role this identity belongs to
+  // Determine current player's role using tokens
   // -------------------------------------------------------
   let playerRole = null;
-
-  if (myToken === roles.playerOne) playerRole = "playerOne";
-  if (myToken === roles.playerTwo) playerRole = "playerTwo";
+  if (roles.playerOne === myToken) playerRole = "playerOne";
+  if (roles.playerTwo === myToken) playerRole = "playerTwo";
 
   const otherRole = playerRole === "playerOne" ? "playerTwo" : "playerOne";
 
-  const playerName =
-    playerRole === "playerOne"
-      ? players[0]?.name || "Player One"
-      : players[1]?.name || "Player Two";
+  const playerName = playerRole === "playerOne"
+    ? players[0]?.name || "Player One"
+    : players[1]?.name || "Player Two";
 
-  const otherName =
-    playerRole === "playerOne"
-      ? players[1]?.name || "Player Two"
-      : players[0]?.name || "Player One";
+  const otherName = playerRole === "playerOne"
+    ? players[1]?.name || "Player Two"
+    : players[0]?.name || "Player One";
 
   // -------------------------------------------------------
-  // EDITOR ENFORCEMENT (CRITICAL)
+  // If editor is someone else — go back to waiting room
+  // This prevents duplicate review UIs showing incorrectly.
   // -------------------------------------------------------
-  // If *I* am the editor → I MUST go to EditActivities
-  if (editor && editor === myToken) {
-    navigate(`/create/activities/${gameId}`);
+  if (editor && editor !== myToken) {
+    navigate(`/create/waiting/${playerRole}/${gameId}`);
     return null;
   }
 
-  // If the other player is editing → I stay in REVIEW mode
-  // and UI continues below.
-
   // -------------------------------------------------------
-  // If both approved → finalize and continue to Summary
+  // BOTH APPROVED → finalize activities + continue
   // -------------------------------------------------------
   const bothApproved = approvals.playerOne && approvals.playerTwo;
 
@@ -106,8 +102,7 @@ export default function ReviewActivities() {
       <div className="review-page">
         <div className="review-card">
           <h2>Review Activities</h2>
-          <p>Both players have approved the final list.</p>
-
+          <p>Both players approved the final list.</p>
           <button className="continue-btn" onClick={handleContinueAfterApproval}>
             Continue →
           </button>
@@ -117,14 +112,14 @@ export default function ReviewActivities() {
   }
 
   // -------------------------------------------------------
-  // Approve button
+  // Approve this list
   // -------------------------------------------------------
   async function handleApprove() {
     await approveActivities(gameId, myToken);
   }
 
   // -------------------------------------------------------
-  // Propose changes → I become the editor
+  // Propose changes → send player to editor screen
   // -------------------------------------------------------
   async function handleProposeChanges() {
     await setEditor(gameId, myToken);
@@ -132,27 +127,22 @@ export default function ReviewActivities() {
   }
 
   // -------------------------------------------------------
-  // Render activity row
+  // Render an individual activity row
   // -------------------------------------------------------
   function renderRow(a) {
     const changed = a.changedFields || {};
 
-    const nameStyle = changed.name ? "changed-field" : "";
-    const durationStyle = changed.duration ? "changed-field" : "";
-    const costStyle = changed.cost ? "changed-field" : "";
-    const deletionStyle = a.deleted ? "deleted-row" : "";
-
     return (
-      <div className={`review-row ${deletionStyle}`} key={a.id}>
-        <div className={`review-name ${nameStyle}`}>
+      <div className={`review-row ${a.deleted ? "deleted-row" : ""}`} key={a.id}>
+        <div className={`review-name ${changed.name ? "changed-field" : ""}`}>
           {a.name || <em>(no name)</em>}
         </div>
 
-        <div className={`review-duration ${durationStyle}`}>
+        <div className={`review-duration ${changed.duration ? "changed-field" : ""}`}>
           {a.duration || <em>—</em>}
         </div>
 
-        <div className={`review-cost ${costStyle}`}>
+        <div className={`review-cost ${changed.cost ? "changed-field" : ""}`}>
           {a.cost} tokens
         </div>
 
@@ -162,7 +152,7 @@ export default function ReviewActivities() {
   }
 
   // -------------------------------------------------------
-  // Main UI
+  // MAIN UI
   // -------------------------------------------------------
   const playerApproved = approvals[playerRole];
   const otherApproved = approvals[otherRole];
@@ -176,19 +166,21 @@ export default function ReviewActivities() {
           You must both approve the final list before continuing.
         </p>
 
-        <div className="review-list">{activities.map(renderRow)}</div>
+        <div className="review-list">
+          {activities.map(renderRow)}
+        </div>
 
         <div className="approval-status">
           <p>
             {players[0]?.name || "Player One"}:{" "}
-            {approvals.playerOne ? "✓ Approved" : "Waiting…"}
+            {approvals.playerOne ? "✓ Approved" : "Waiting…"}  
             {" | "}
             {players[1]?.name || "Player Two"}:{" "}
             {approvals.playerTwo ? "✓ Approved" : "Waiting…"}
           </p>
         </div>
 
-        {!playerApproved && !editor && (
+        {!playerApproved && (
           <>
             <button className="approve-btn" onClick={handleApprove}>
               Approve Final List
@@ -203,13 +195,6 @@ export default function ReviewActivities() {
         {playerApproved && (
           <p className="approved-note">
             You have approved. Waiting for {otherName}…
-          </p>
-        )}
-
-        {/* If the OTHER player is actively editing, show a waiting message */}
-        {editor && editor !== myToken && !playerApproved && (
-          <p className="approved-note">
-            {otherName} is editing the activity list…
           </p>
         )}
       </div>
