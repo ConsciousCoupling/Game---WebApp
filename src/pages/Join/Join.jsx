@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// JOIN EXISTING GAME — SAFE ROLE RECLAIM + CORRECT ROUTING
+// JOIN EXISTING GAME — SAFE ROLE RECLAIM + DEBUG EDITION
 // -----------------------------------------------------------
 
 import { useState } from "react";
@@ -41,7 +41,7 @@ export default function Join() {
   ];
 
   // -----------------------------------------------------------
-  // STEP 1 — VALIDATE CODE (WITH SAFE ROLE RECLAIM RULE)
+  // STEP 1 — VALIDATE CODE
   // -----------------------------------------------------------
   async function handleCodeSubmit() {
     setError("");
@@ -62,11 +62,9 @@ export default function Join() {
     const localIdentity = loadIdentity(cleaned) || {};
     const localToken = localIdentity.token;
 
-    // SAFE RULE:
-    // PlayerTwo slot is “occupied” ONLY IF the token belongs to another device
+    // SAFE RULE: PlayerTwo slot is only "taken" if the token is by another device
     const claimedByOtherDevice =
-      roles.playerTwo &&
-      roles.playerTwo !== localToken;
+      roles.playerTwo && roles.playerTwo !== localToken;
 
     if (claimedByOtherDevice) {
       setError("Player Two has already joined this game from another device.");
@@ -78,21 +76,22 @@ export default function Join() {
   }
 
   // -----------------------------------------------------------
-  // STEP 2 — JOIN (OR RECLAIM) AS PLAYER TWO
+  // STEP 2 — JOIN WITH DEBUG LOGGING
   // -----------------------------------------------------------
   async function handleJoin() {
-    const cleaned = code.trim().toUpperCase();
+    console.log("JOIN: clicked");
 
+    const cleaned = code.trim().toUpperCase();
     if (!name.trim()) {
       setError("Please enter your name.");
       return;
     }
 
-    // Ensure we have a persistent identity token
     const identity = ensureIdentityForGame(cleaned);
+    console.log("JOIN: identity OK", identity);
+
     const token = identity.token;
 
-    // Save local setup information
     saveSetup({
       gameId: cleaned,
       playerTwoName: name,
@@ -100,78 +99,88 @@ export default function Join() {
       localPlay: false,
     });
 
-    // Reload latest cloud snapshot
     const cloud = await loadGameFromCloud(cleaned);
+    console.log("JOIN: cloud snapshot", cloud);
+
     if (!cloud) {
       setError("Game not found.");
       return;
     }
 
-    // Update Firestore with PlayerTwo info
     const ref = doc(db, "games", cleaned);
 
-    await updateDoc(ref, {
-      roles: {
-        ...cloud.roles,
-        playerTwo: token,
-      },
-      players: [
-        cloud.players?.[0] ?? {
-          name: "",
-          color: "",
-          tokens: 0,
-          inventory: [],
-          token: cloud.roles?.playerOne ?? null,
+    console.log("JOIN: updating Firestore...");
+    try {
+      await updateDoc(ref, {
+        roles: {
+          ...(cloud.roles || {}),
+          playerTwo: token,
         },
-        {
-          name,
-          color,
-          tokens: 0,
-          inventory: [],
-          token,
-        },
-      ],
-    });
+        players: [
+          cloud.players?.[0] ?? {
+            name: "",
+            color: "",
+            tokens: 0,
+            inventory: [],
+            token: cloud.roles?.playerOne ?? null,
+          },
+          {
+            name,
+            color,
+            tokens: 0,
+            inventory: [],
+            token,
+          },
+        ],
+      });
+    } catch (err) {
+      console.error("JOIN: updateDoc FAILED!", err);
+      setError("Failed to join game. Firestore error.");
+      return;
+    }
 
-    // Extract negotiation state
+    console.log("JOIN: Firestore updated");
+
     const draft = cloud.activityDraft || [];
     const approvals = cloud.approvals || {};
     const editor = cloud.editor || null;
 
-    // -------------------------------------------------------
-    // 🚦 ROUTING LOGIC — MATCHES AppRoutes.jsx EXACTLY
-    // -------------------------------------------------------
+    console.log("JOIN: determining route");
 
-    // CASE 1 — No draft yet or PlayerOne is editing → waiting room
+    // --------------------------------------------
+    // Routing logic (MATCHES AppRoutes.jsx)
+    // --------------------------------------------
+
     if (editor === "playerOne" || draft.length === 0) {
+      console.log("JOIN: go waiting (no draft yet)");
       navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
 
-    // CASE 2 — Draft exists but PlayerOne hasn't approved → still waiting
     if (draft.length > 0 && approvals.playerOne === false) {
+      console.log("JOIN: waiting, P1 not approved");
       navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
 
-    // CASE 3 — P1 approved, P2 has not yet → go review
     if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
+      console.log("JOIN: go review");
       navigate(`/create/activities-review/${cleaned}`);
       return;
     }
 
-    // CASE 4 — Both approved → go summary
     if (approvals.playerOne && approvals.playerTwo) {
+      console.log("JOIN: go summary");
       navigate(`/create/summary/${cleaned}`);
       return;
     }
 
-    // FALLBACK — safe default
+    console.log("JOIN: fallback waiting");
     navigate(`/create/waiting/player-two/${cleaned}`);
   }
 
   // -----------------------------------------------------------
-  // UI — left unchanged
+  // UI
   // -----------------------------------------------------------
   return (
     <div className="join-page">
@@ -180,7 +189,7 @@ export default function Join() {
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
-            <p className="join-subtitle">Enter the game code your partner shared.</p>
+            <p className="join-subtitle">Enter the code your partner shared.</p>
 
             <input
               className="join-input"
@@ -240,6 +249,7 @@ export default function Join() {
             </button>
           </>
         )}
+
       </div>
     </div>
   );
