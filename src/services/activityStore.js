@@ -1,6 +1,6 @@
-// ---------------------------------------------------------------------------
-// ACTIVITY NEGOTIATION ENGINE (IDENTITY-SAFE, LOOP-SAFE, RACE-SAFE EDITION)
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// ACTIVITY NEGOTIATION ENGINE — SAFE, NON-DESTRUCTIVE VERSION
+// -------------------------------------------------------------
 
 import { db } from "../services/firebase";
 import {
@@ -11,52 +11,23 @@ import {
   setDoc,
 } from "firebase/firestore";
 
-// ---------------------------------------------------------------------------
-// Ensure negotiation fields exist on the game doc
-// ---------------------------------------------------------------------------
-async function ensureNegotiationFields(ref, data) {
-  const patch = {};
-
-  if (!Array.isArray(data.activityDraft)) patch.activityDraft = [];
-  if (!Array.isArray(data.finalActivities)) patch.finalActivities = [];
-
-  if (!data.approvals) {
-    patch.approvals = { playerOne: false, playerTwo: false };
-  }
-
-  if (typeof data.editor === "undefined") patch.editor = null;
-
-  if (Object.keys(patch).length > 0) {
-    await updateDoc(ref, patch);
-    return { ...data, ...patch };
-  }
-
-  return data;
-}
-
-// ---------------------------------------------------------------------------
-// LOAD CURRENT DRAFT LIST ONLY
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// Load current draft activities
+// -------------------------------------------------------------
 export async function loadDraftActivities(gameId) {
-  const ref = doc(db, "games", gameId);
-  const snap = await getDoc(ref);
-
+  const snap = await getDoc(doc(db, "games", gameId));
   if (!snap.exists()) return [];
-
-  const data = await ensureNegotiationFields(ref, snap.data());
-  return data.activityDraft || [];
+  return snap.data().activityDraft || [];
 }
 
-// ---------------------------------------------------------------------------
-// REALTIME SUBSCRIPTION TO NEGOTIATION STATE
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// SUBSCRIBE — always returns complete negotiation block
+// -------------------------------------------------------------
 export function subscribeToDraftActivities(gameId, callback) {
-  const ref = doc(db, "games", gameId);
-
-  return onSnapshot(ref, async (snap) => {
+  return onSnapshot(doc(db, "games", gameId), (snap) => {
     if (!snap.exists()) return;
 
-    const data = await ensureNegotiationFields(ref, snap.data());
+    const data = snap.data();
 
     callback({
       draft: data.activityDraft || [],
@@ -64,45 +35,65 @@ export function subscribeToDraftActivities(gameId, callback) {
       approvals: data.approvals || { playerOne: false, playerTwo: false },
       editor: data.editor ?? null,
       players: data.players || [],
-      roles: data.roles || {}, // Legacy compatibility — still used for approval resolution
+      roles: data.roles || {},
     });
   });
 }
 
-// ---------------------------------------------------------------------------
-// SET EDITOR TOKEN & RESET APPROVALS
-// ---------------------------------------------------------------------------
-export async function setEditor(gameId, token) {
+// -------------------------------------------------------------
+// INTERNAL: Safe update helper (NEVER overwrites roles/players)
+// -------------------------------------------------------------
+async function safeUpdate(gameId, fields) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
+
   if (!snap.exists()) return;
 
-  const data = await ensureNegotiationFields(ref, snap.data());
+  const existing = snap.data();
+
+  // We explicitly preserve roles + players
+  const protectedFields = {
+    roles: existing.roles || {},
+    players: existing.players || [],
+  };
 
   await updateDoc(ref, {
-    editor: token,
-    approvals: { playerOne: false, playerTwo: false },
+    ...protectedFields,
+    ...fields,
   });
 }
 
-// ---------------------------------------------------------------------------
-// CLEAR EDITOR TOKEN
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// SET EDITOR — resets approvals
+// -------------------------------------------------------------
+export async function setEditor(gameId, editorToken) {
+  await safeUpdate(gameId, {
+    editor: editorToken,
+    approvals: {
+      playerOne: false,
+      playerTwo: false,
+    },
+  });
+}
+
+// -------------------------------------------------------------
+// CLEAR EDITOR
+// -------------------------------------------------------------
 export async function clearEditor(gameId) {
-  await updateDoc(doc(db, "games", gameId), {
+  await safeUpdate(gameId, {
     editor: null,
   });
 }
 
-// ---------------------------------------------------------------------------
-// APPROVE DRAFT CHANGES (token → role resolution)
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// APPROVE ACTIVITIES — identity aware
+// -------------------------------------------------------------
 export async function approveActivities(gameId, identityToken) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
-  const data = await ensureNegotiationFields(ref, snap.data());
+  const data = snap.data();
   const roles = data.roles || {};
 
   let role = null;
@@ -110,7 +101,7 @@ export async function approveActivities(gameId, identityToken) {
   if (identityToken === roles.playerTwo) role = "playerTwo";
 
   if (!role) {
-    console.error("Approval blocked: Token does not match either role.");
+    console.error("Identity mismatch during approval.");
     return;
   }
 
@@ -119,47 +110,55 @@ export async function approveActivities(gameId, identityToken) {
     [role]: true,
   };
 
-  await updateDoc(ref, {
+  await safeUpdate(gameId, {
     approvals: newApprovals,
   });
 }
 
-// ---------------------------------------------------------------------------
-// SAVE DRAFT CHANGES (atomic update) + RESET APPROVALS
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// SAVE DRAFT ACTIVITIES — resets approvals + sets editor
+// -------------------------------------------------------------
 export async function saveDraftActivities(gameId, draft, editorToken) {
-  const ref = doc(db, "games", gameId);
+  // Ensure changedFields always exists
+  const normalized = draft.map((a) => ({
+    ...a,
+    changedFields: {
+      name: !!(a.changedFields?.name),
+      duration: !!(a.changedFields?.duration),
+      cost: !!(a.changedFields?.cost),
+    },
+  }));
 
-  await updateDoc(ref, {
-    activityDraft: draft,
-    approvals: { playerOne: false, playerTwo: false },
+  await safeUpdate(gameId, {
+    activityDraft: normalized,
+    approvals: {
+      playerOne: false,
+      playerTwo: false,
+    },
     editor: editorToken,
   });
 }
 
-// ---------------------------------------------------------------------------
-// FINALIZE NEGOTIATED ACTIVITIES (both approved)
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------
+// FINALIZE ACTIVITIES
+// -------------------------------------------------------------
 export async function finalizeActivities(gameId) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
-
   if (!snap.exists()) return;
 
-  const data = await ensureNegotiationFields(ref, snap.data());
+  const data = snap.data();
   const approvals = data.approvals || {};
 
   const bothApproved =
     approvals.playerOne === true && approvals.playerTwo === true;
 
   if (!bothApproved) {
-    console.warn("Finalize blocked: Both players have not approved.");
+    console.warn("Finalize attempted without full approval.");
     return;
   }
 
-  // Lock in the final list
-  await updateDoc(ref, {
+  await safeUpdate(gameId, {
     finalActivities: data.activityDraft || [],
-    // NOTE: We do NOT clear draft here — Summary still displays it
   });
 }
