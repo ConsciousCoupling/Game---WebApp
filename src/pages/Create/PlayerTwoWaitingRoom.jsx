@@ -8,7 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
 
-import "./WaitingRoom.css";
+import "./PlayerTwoWaitingRoom.css";
 
 export default function PlayerTwoWaitingRoom() {
   const { gameId } = useParams();
