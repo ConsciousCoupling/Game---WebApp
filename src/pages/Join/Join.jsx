@@ -10,6 +10,7 @@ import {
   saveSetup,
   ensureIdentityForGame,
   loadIdentity,
+  saveIdentity,
 } from "../../services/setupStorage";
 
 import { db } from "../../services/firebase";
@@ -62,7 +63,7 @@ export default function Join() {
     const localIdentity = loadIdentity(cleaned) || {};
     const localToken = localIdentity.token;
 
-    // SAFE RULE: PlayerTwo slot is only "taken" if the token is by another device
+    // SAFE RULE: PlayerTwo slot is only "taken" if the token belongs to another device
     const claimedByOtherDevice =
       roles.playerTwo && roles.playerTwo !== localToken;
 
@@ -87,11 +88,13 @@ export default function Join() {
       return;
     }
 
+    // Ensure this device has a token for this game
     const identity = ensureIdentityForGame(cleaned);
     console.log("JOIN: identity OK", identity);
 
     const token = identity.token;
 
+    // Save local setup
     saveSetup({
       gameId: cleaned,
       playerTwoName: name,
@@ -99,6 +102,10 @@ export default function Join() {
       localPlay: false,
     });
 
+    // Save identity explicitly (token only)
+    saveIdentity(cleaned, token);
+
+    // Reload cloud copy to confirm role availability
     const cloud = await loadGameFromCloud(cleaned);
     console.log("JOIN: cloud snapshot", cloud);
 
@@ -107,32 +114,45 @@ export default function Join() {
       return;
     }
 
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      setError("Another Player Two has already joined.");
+      return;
+    }
+
     const ref = doc(db, "games", cleaned);
+
+    // -----------------------------------------------------
+    // 🔥 DEBUG BLOCK — WHAT WE ARE ABOUT TO WRITE
+    // -----------------------------------------------------
+    const writeData = {
+      roles: {
+        ...(cloud.roles || {}),
+        playerTwo: token,
+      },
+      players: [
+        cloud.players?.[0] ?? {
+          name: "",
+          color: "",
+          tokens: 0,
+          inventory: [],
+          token: cloud.roles?.playerOne ?? null,
+        },
+        {
+          name,
+          color,
+          tokens: 0,
+          inventory: [],
+          token,
+        },
+      ],
+    };
+
+    console.log("JOIN: Attempting write with data:", writeData);
+    // -----------------------------------------------------
 
     console.log("JOIN: updating Firestore...");
     try {
-      await updateDoc(ref, {
-        roles: {
-          ...(cloud.roles || {}),
-          playerTwo: token,
-        },
-        players: [
-          cloud.players?.[0] ?? {
-            name: "",
-            color: "",
-            tokens: 0,
-            inventory: [],
-            token: cloud.roles?.playerOne ?? null,
-          },
-          {
-            name,
-            color,
-            tokens: 0,
-            inventory: [],
-            token,
-          },
-        ],
-      });
+      await updateDoc(ref, writeData);
     } catch (err) {
       console.error("JOIN: updateDoc FAILED!", err);
       setError("Failed to join game. Firestore error.");
@@ -141,15 +161,15 @@ export default function Join() {
 
     console.log("JOIN: Firestore updated");
 
+    // --------------------------------------------------------
+    // DETERMINE NEXT SCREEN
+    // --------------------------------------------------------
+
     const draft = cloud.activityDraft || [];
     const approvals = cloud.approvals || {};
     const editor = cloud.editor || null;
 
     console.log("JOIN: determining route");
-
-    // --------------------------------------------
-    // Routing logic (MATCHES AppRoutes.jsx)
-    // --------------------------------------------
 
     if (editor === "playerOne" || draft.length === 0) {
       console.log("JOIN: go waiting (no draft yet)");
@@ -158,7 +178,7 @@ export default function Join() {
     }
 
     if (draft.length > 0 && approvals.playerOne === false) {
-      console.log("JOIN: waiting, P1 not approved");
+      console.log("JOIN: waiting (P1 not approved)");
       navigate(`/create/waiting/player-two/${cleaned}`);
       return;
     }
