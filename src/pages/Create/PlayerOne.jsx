@@ -1,16 +1,17 @@
 // -----------------------------------------------------------
-// PLAYER ONE — FINAL IDENTITY-SAFE GAME CREATION
+// PLAYER ONE — FINAL IDENTITY-SAFE GAME CREATION + ACTIVITIES
 // -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup } from "../../services/setupStorage";
-import { ensureIdentityForGame } from "../../services/setupStorage";
+import { saveSetup, ensureIdentityForGame } from "../../services/setupStorage";
 import generateGameId from "../../services/gameId";
 
 import { db } from "../../services/firebase";
 import { doc, setDoc } from "firebase/firestore";
+
+import { initializeActivities } from "../../services/activityStore";
 
 import "./Create.css";
 
@@ -31,30 +32,27 @@ export default function PlayerOne() {
   ];
 
   // ---------------------------------------------------------
-  // Initialize Firestore game shell — CLEAN, FINAL VERSION
+  // Initialize Firestore game shell — CLEAN + COMPATIBLE
   // ---------------------------------------------------------
   async function initializeGameShell(gameId, token) {
     await setDoc(
       doc(db, "games", gameId),
       {
-        // ---------------------------------------------
-        // NEW CLEAN ROLES OBJECT (no legacy fields)
-        // ---------------------------------------------
+        // -------------------------------
+        // Identity + player seating
+        // -------------------------------
         roles: {
           playerOne: token,
           playerTwo: null,
         },
 
-        // ---------------------------------------------
-        // Players array — P1 fully defined, P2 empty
-        // ---------------------------------------------
         players: [
           {
             name,
             color,
             tokens: 0,
             inventory: [],
-            token, // identity token for P1
+            token,
           },
           {
             name: "",
@@ -65,20 +63,29 @@ export default function PlayerOne() {
           },
         ],
 
-        // ---------------------------------------------
-        // Negotiation scaffolding — all reset clean
-        // ---------------------------------------------
+        // -------------------------------
+        // Negotiation scaffolding
+        // -------------------------------
         activityDraft: [],
-        baseline: [],
+        baselineDraft: [],
+        finalActivities: [],
+
         approvals: {
           playerOne: false,
           playerTwo: false,
         },
-        editor: null, // no one is editing yet
-        finalActivities: [],
+
+        editor: null,
       },
-      { merge: false } // FULL OVERWRITE — wipes legacy values
+      { merge: false }
     );
+
+    // -----------------------------------------------
+    // SEED ACTIVITIES — REQUIRED FOR GAME TO FUNCTION
+    // -----------------------------------------------
+    await initializeActivities(gameId);
+
+    console.log("Game shell + activities initialized:", gameId);
   }
 
   // ---------------------------------------------------------
@@ -88,12 +95,9 @@ export default function PlayerOne() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
-
-    // Create identity token for P1
     const identity = ensureIdentityForGame(gameId);
     const token = identity.token;
 
-    // Store initial setup info locally
     saveSetup({
       gameId,
       playerOneName: name,
@@ -101,10 +105,8 @@ export default function PlayerOne() {
       localPlay: true,
     });
 
-    // Build Firestore game document
     await initializeGameShell(gameId, token);
 
-    // Move P1 to P2 local join screen
     navigate("/create/player-two");
   }
 
@@ -115,12 +117,9 @@ export default function PlayerOne() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
-
-    // Create identity token for P1
     const identity = ensureIdentityForGame(gameId);
     const token = identity.token;
 
-    // Save local setup
     saveSetup({
       gameId,
       playerOneName: name,
@@ -128,10 +127,8 @@ export default function PlayerOne() {
       localPlay: false,
     });
 
-    // Create Firestore game shell
     await initializeGameShell(gameId, token);
 
-    // Navigate to invite page
     navigate(`/create/remote-invite/${gameId}`);
   }
 
@@ -149,9 +146,7 @@ export default function PlayerOne() {
         </button>
 
         <h1 className="create-title">Player One</h1>
-        <p className="create-subtitle">
-          Enter your name and choose your color.
-        </p>
+        <p className="create-subtitle">Enter your name and choose your color.</p>
 
         <input
           className="create-input"

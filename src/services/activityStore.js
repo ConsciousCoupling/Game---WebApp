@@ -1,5 +1,5 @@
 // -------------------------------------------------------------
-// ACTIVITY NEGOTIATION ENGINE — SAFE, NON-DESTRUCTIVE VERSION
+// ACTIVITY NEGOTIATION ENGINE — FULLY MODERNIZED VERSION
 // -------------------------------------------------------------
 
 import { db } from "../services/firebase";
@@ -11,8 +11,49 @@ import {
   setDoc,
 } from "firebase/firestore";
 
+import { ACTIVITIES } from "../game/data/activityList";
+
 // -------------------------------------------------------------
-// Load current draft activities
+// NORMALIZER — ensures every activity has required fields
+// -------------------------------------------------------------
+function normalizeActivity(a) {
+  return {
+    id: a.id,
+    name: a.name || "",
+    cost: Number(a.cost || 0),
+    description: a.description || "",
+    changedFields: {
+      name: !!(a.changedFields?.name),
+      cost: !!(a.changedFields?.cost),
+      description: !!(a.changedFields?.description),
+    },
+  };
+}
+
+// -------------------------------------------------------------
+// CREATE INITIAL ACTIVITY DRAFT FOR A NEW GAME
+// -------------------------------------------------------------
+export async function initializeActivities(gameId) {
+  const ref = doc(db, "games", gameId);
+
+  const draft = ACTIVITIES.map((a) => normalizeActivity(a));
+
+  await updateDoc(ref, {
+    activityDraft: draft,
+    baselineDraft: draft,  // <— allows reverting or reviewing later
+    finalActivities: [],
+    approvals: {
+      playerOne: false,
+      playerTwo: false,
+    },
+    editor: null,
+  });
+
+  console.log("Activities initialized for game:", gameId);
+}
+
+// -------------------------------------------------------------
+// LOAD DRAFT ACTIVITIES (one-time read)
 // -------------------------------------------------------------
 export async function loadDraftActivities(gameId) {
   const snap = await getDoc(doc(db, "games", gameId));
@@ -21,7 +62,7 @@ export async function loadDraftActivities(gameId) {
 }
 
 // -------------------------------------------------------------
-// SUBSCRIBE — always returns complete negotiation block
+// SUBSCRIBE: Stream updates to negotiation UI
 // -------------------------------------------------------------
 export function subscribeToDraftActivities(gameId, callback) {
   return onSnapshot(doc(db, "games", gameId), (snap) => {
@@ -31,7 +72,8 @@ export function subscribeToDraftActivities(gameId, callback) {
 
     callback({
       draft: data.activityDraft || [],
-      baseline: data.finalActivities || [],
+      baseline: data.baselineDraft || [],
+      finalActivities: data.finalActivities || [],
       approvals: data.approvals || { playerOne: false, playerTwo: false },
       editor: data.editor ?? null,
       players: data.players || [],
@@ -41,30 +83,24 @@ export function subscribeToDraftActivities(gameId, callback) {
 }
 
 // -------------------------------------------------------------
-// INTERNAL: Safe update helper (NEVER overwrites roles/players)
+// INTERNAL SAFE UPDATE (does not overwrite roles/players)
 // -------------------------------------------------------------
 async function safeUpdate(gameId, fields) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return;
-
   const existing = snap.data();
 
-  // We explicitly preserve roles + players
-  const protectedFields = {
+  await updateDoc(ref, {
     roles: existing.roles || {},
     players: existing.players || [],
-  };
-
-  await updateDoc(ref, {
-    ...protectedFields,
     ...fields,
   });
 }
 
 // -------------------------------------------------------------
-// SET EDITOR — resets approvals
+// SET EDITOR (locks editing to one player)
 // -------------------------------------------------------------
 export async function setEditor(gameId, editorToken) {
   await safeUpdate(gameId, {
@@ -77,7 +113,7 @@ export async function setEditor(gameId, editorToken) {
 }
 
 // -------------------------------------------------------------
-// CLEAR EDITOR
+// CLEAR EDITOR LOCK
 // -------------------------------------------------------------
 export async function clearEditor(gameId) {
   await safeUpdate(gameId, {
@@ -86,7 +122,7 @@ export async function clearEditor(gameId) {
 }
 
 // -------------------------------------------------------------
-// APPROVE ACTIVITIES — identity aware
+// APPROVE ACTIVITIES (identity → role mapping)
 // -------------------------------------------------------------
 export async function approveActivities(gameId, identityToken) {
   const ref = doc(db, "games", gameId);
@@ -100,34 +136,21 @@ export async function approveActivities(gameId, identityToken) {
   if (identityToken === roles.playerOne) role = "playerOne";
   if (identityToken === roles.playerTwo) role = "playerTwo";
 
-  if (!role) {
-    console.error("Identity mismatch during approval.");
-    return;
-  }
-
-  const newApprovals = {
-    ...data.approvals,
-    [role]: true,
-  };
+  if (!role) return console.error("Identity mismatch during approval.");
 
   await safeUpdate(gameId, {
-    approvals: newApprovals,
+    approvals: {
+      ...data.approvals,
+      [role]: true,
+    },
   });
 }
 
 // -------------------------------------------------------------
-// SAVE DRAFT ACTIVITIES — resets approvals + sets editor
+// SAVE UPDATED ACTIVITY DRAFT
 // -------------------------------------------------------------
 export async function saveDraftActivities(gameId, draft, editorToken) {
-  // Ensure changedFields always exists
-  const normalized = draft.map((a) => ({
-    ...a,
-    changedFields: {
-      name: !!(a.changedFields?.name),
-      duration: !!(a.changedFields?.duration),
-      cost: !!(a.changedFields?.cost),
-    },
-  }));
+  const normalized = draft.map((a) => normalizeActivity(a));
 
   await safeUpdate(gameId, {
     activityDraft: normalized,
@@ -140,7 +163,7 @@ export async function saveDraftActivities(gameId, draft, editorToken) {
 }
 
 // -------------------------------------------------------------
-// FINALIZE ACTIVITIES
+// FINALIZE ACTIVITIES — After both players approve
 // -------------------------------------------------------------
 export async function finalizeActivities(gameId) {
   const ref = doc(db, "games", gameId);
@@ -154,11 +177,12 @@ export async function finalizeActivities(gameId) {
     approvals.playerOne === true && approvals.playerTwo === true;
 
   if (!bothApproved) {
-    console.warn("Finalize attempted without full approval.");
+    console.warn("Finalize attempted without both approvals.");
     return;
   }
 
   await safeUpdate(gameId, {
     finalActivities: data.activityDraft || [],
+    editor: null,
   });
 }
