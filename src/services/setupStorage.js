@@ -13,7 +13,7 @@ function loadIdentityMap() {
   try {
     const raw = localStorage.getItem(IDENTITY_KEY);
     return raw ? JSON.parse(raw) : {};
-  } catch (e) {
+  } catch {
     return {};
   }
 }
@@ -82,7 +82,7 @@ export function loadSetup() {
   try {
     const raw = localStorage.getItem(SETUP_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

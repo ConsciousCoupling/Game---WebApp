@@ -8,7 +8,6 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
-  setDoc,
 } from "firebase/firestore";
 
 import { ACTIVITIES } from "../game/data/activityList";

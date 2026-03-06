@@ -42,7 +42,7 @@ export default function Summary() {
     return () => unsub();
   }, [gameId]);
 
-  const { finalActivities, approvals, players, roles } = state;
+  const { finalActivities, approvals, roles } = state;
 
   // -------------------------------------------------------
   // Identity check

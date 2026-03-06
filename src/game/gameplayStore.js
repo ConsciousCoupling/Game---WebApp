@@ -5,7 +5,6 @@
 
 import {
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   onSnapshot,
@@ -13,7 +12,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../services/firebase";
-import { initialGameplayState, buildPromptDecks } from "./initialGameplayState";
+import { initialGameplayState, buildPromptDecks } from "./initialGameState";
 import { getRandomMovementCard } from "./data/movementCards";
 import { PROMPT_CARDS } from "./data/promptCards";
 

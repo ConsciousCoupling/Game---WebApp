@@ -2,7 +2,7 @@
 // GAME BOARD — FINAL IDENTITY-SAFE VERSION
 // -----------------------------------------------------------
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import useGameState from "../../game/useGameState";
@@ -43,8 +43,13 @@ export default function GameBoard({ gameId }) {
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
 
-  const [validated, setValidated] = useState(false);
-  const [myIndex, setMyIndex] = useState(null);
+  const myIndex = useMemo(() => {
+    if (!state?.players || state.players.length !== 2 || !myToken) return null;
+
+    if (state.players[0]?.token === myToken) return 0;
+    if (state.players[1]?.token === myToken) return 1;
+    return -1;
+  }, [state, myToken]);
 
   useEffect(() => {
     if (!identity) {
@@ -53,25 +58,13 @@ export default function GameBoard({ gameId }) {
       return;
     }
 
-    // When game state loads, determine which player we are
-    if (state?.players?.length === 2) {
-      const p1 = state.players[0];
-      const p2 = state.players[1];
-
-      if (p1.token === myToken) {
-        setMyIndex(0);
-        setValidated(true);
-      } else if (p2.token === myToken) {
-        setMyIndex(1);
-        setValidated(true);
-      } else {
-        console.error("Token mismatch — this device does not belong to this game.");
-        navigate("/menu");
-      }
+    if (myIndex === -1) {
+      console.error("Token mismatch — this device does not belong to this game.");
+      navigate("/menu");
     }
-  }, [identity, state, navigate]);
+  }, [identity, myIndex, navigate]);
 
-  if (!validated || !state) {
+  if (myIndex === null || !state) {
     return (
       <div className="game-missing">
         <p>Loading game…</p>
@@ -88,7 +81,6 @@ export default function GameBoard({ gameId }) {
   const isPlayerOne = myIndex === 0;
   const isPlayerTwo = myIndex === 1;
 
-  const me = isPlayerOne ? p1 : p2;
   const partner = isPlayerOne ? p2 : p1;
 
   // -------------------------------------------------------
