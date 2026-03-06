@@ -8,7 +8,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   subscribeToDraftActivities,
   approveActivities,
-  setEditor,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
@@ -51,7 +50,7 @@ export default function ReviewActivities() {
     return () => unsub();
   }, [gameId]);
 
-  const { draft, baseline, approvals, editor, players, roles } = state;
+  const { draft, baseline, editor, roles } = state;
 
   // -------------------------------------------------------
   // DETERMINE ROLE

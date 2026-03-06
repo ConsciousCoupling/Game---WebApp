@@ -45,7 +45,7 @@ export default function PlayerTwoWaitingRoom() {
     return () => unsub();
   }, [gameId]);
 
-  const { players, roles, draft, approvals, editor } = state;
+  const { players, roles, draft, editor } = state;
 
   // -------------------------------------------------------
   // Determine which player we are

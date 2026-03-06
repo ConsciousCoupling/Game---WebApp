@@ -43,20 +43,26 @@ export default function EditActivities() {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
 
-      setState({
+      const nextState = {
         draft: data.draft || [],
         baseline: data.baseline || [],
         approvals: data.approvals || {},
         editor: data.editor || null,
         players: data.players || [],
         roles: data.roles || {},
-      });
+      };
+
+      setState(nextState);
+
+      if (nextState.editor === myToken) {
+        setLocalDraft(JSON.parse(JSON.stringify(nextState.draft)));
+      }
     });
 
     return () => unsub();
-  }, [gameId]);
+  }, [gameId, myToken]);
 
-  const { draft, baseline, approvals, editor, players, roles } = state;
+  const { editor, roles } = state;
 
   // -------------------------------------------------------
   // DETERMINE IF THIS DEVICE IS EDITOR
@@ -64,6 +70,17 @@ export default function EditActivities() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+
+
+  // -------------------------------------------------------
+  // If no one is editing, take control once
+  // -------------------------------------------------------
+  useEffect(() => {
+    if (role && !editor) {
+      setEditor(gameId, myToken);
+    }
+  }, [role, editor, gameId, myToken]);
+
 
   if (!role) {
     return (
@@ -76,36 +93,12 @@ export default function EditActivities() {
     );
   }
 
-  const isEditor = editor === myToken;
-
   // -------------------------------------------------------
   // If someone else is editing → YOU WAIT
   // -------------------------------------------------------
   if (editor && editor !== myToken) {
     navigate(`/create/waiting/${role}/${gameId}`);
     return null;
-  }
-
-  // -------------------------------------------------------
-  // Initialize local editable draft once editor is acquired
-  // -------------------------------------------------------
-  useEffect(() => {
-    if (isEditor) {
-      // Deep clone to avoid accidental mutations
-      setLocalDraft(JSON.parse(JSON.stringify(draft)));
-    }
-  }, [isEditor, draft]);
-
-  // -------------------------------------------------------
-  // START EDITING
-  // -------------------------------------------------------
-  async function beginEditing() {
-    await setEditor(gameId, myToken);
-  }
-
-  // If no one is editing → take control
-  if (!editor) {
-    beginEditing();
   }
 
   // -------------------------------------------------------

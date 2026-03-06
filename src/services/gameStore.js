@@ -3,7 +3,7 @@
 // -------------------------------------------------------------
 
 import { db } from "./firebase";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 // Fields that should NEVER be overwritten by game state writes
 const PROTECTED_FIELDS = [
