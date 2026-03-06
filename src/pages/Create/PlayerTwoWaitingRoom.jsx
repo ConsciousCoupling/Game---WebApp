@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// PLAYER TWO WAITING ROOM — FINAL, IDENTITY SAFE VERSION
+// PLAYER TWO WAITING ROOM — TWO-DOCUMENT, IDENTITY-SAFE
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -27,7 +27,7 @@ export default function PlayerTwoWaitingRoom() {
   });
 
   // -------------------------------------------------------
-  // Subscribe to Firestore for all negotiation updates
+  // Subscribe to negotiation doc ONLY
   // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
@@ -48,24 +48,13 @@ export default function PlayerTwoWaitingRoom() {
   const { players, roles, draft, approvals, editor } = state;
 
   // -------------------------------------------------------
-  // DETERMINE ROLE FROM FIRESTORE
+  // Determine which player we are
   // -------------------------------------------------------
-  let playerRole = null;
-  if (roles.playerTwo === myToken) playerRole = "playerTwo";
-  if (roles.playerOne === myToken) playerRole = "playerOne";
+  let role = null;
+  if (roles.playerTwo === myToken) role = "playerTwo";
+  if (roles.playerOne === myToken) role = "playerOne";
 
-  // Fallback safety name
-  const partnerName =
-    playerRole === "playerTwo"
-      ? players[0]?.name || "your partner"
-      : players[1]?.name || "your partner";
-
-  // -------------------------------------------------------
-  // ROUTING LOGIC — STRICT, DETERMINISTIC
-  // -------------------------------------------------------
-
-  // CASE 0 — If role cannot be determined → user is not actually joined
-  if (!playerRole) {
+  if (!role) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
@@ -76,7 +65,17 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // CASE 1 — No draft yet: P1 is editing the first list
+  // Partner's name
+  const partnerName =
+    role === "playerTwo"
+      ? players[0]?.name || "your partner"
+      : players[1]?.name || "your partner";
+
+  // -------------------------------------------------------
+  // ROUTING LOGIC — NEGOTIATION-ONLY FIELDS
+  // -------------------------------------------------------
+
+  // CASE 1 — No draft yet → P1 is editing first list
   if (draft.length === 0) {
     return (
       <div className="waiting-screen">
@@ -88,8 +87,7 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // CASE 2 — Someone is editing (editor contains a token)
-  // If it's NOT you, you must wait.
+  // CASE 2 — Someone is editing, and it isn’t you
   if (editor && editor !== myToken) {
     return (
       <div className="waiting-screen">
@@ -101,15 +99,14 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // CASE 3 — Draft exists AND no editor → review phase begins
-  // P2 must now review the list.
+  // CASE 3 — No editor → P2 must now review
   if (draft.length > 0 && !editor) {
     navigate(`/create/activities-review/${gameId}`);
     return null;
   }
 
   // -------------------------------------------------------
-  // Default fallback (should rarely occur)
+  // Default fallback
   // -------------------------------------------------------
   return (
     <div className="waiting-screen">

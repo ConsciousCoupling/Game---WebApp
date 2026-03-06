@@ -1,92 +1,93 @@
 // -----------------------------------------------------------
-// SUMMARY — FINAL IDENTITY-SAFE VERSION
+// SUMMARY — FINAL NEGOTIATION SUMMARY (TWO-DOC SAFE VERSION)
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { loadGameFromCloud, saveGameToCloud } from "../../services/gameStore";
+import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
-import { loadSetup } from "../../services/setupStorage";
 
 import "./Summary.css";
 
 export default function Summary() {
-  const navigate = useNavigate();
   const { gameId } = useParams();
+  const navigate = useNavigate();
 
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
 
-  // -------------------------------------------------------
-  // Local state
-  // -------------------------------------------------------
-  const [players, setPlayers] = useState([]);
-  const [roles, setRoles] = useState({});
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const setup = loadSetup() || {};
+  const [state, setState] = useState({
+    finalActivities: [],
+    approvals: {},
+    players: [],
+    roles: {},
+  });
 
   // -------------------------------------------------------
-  // LOAD FINAL GAME STATE FROM CLOUD
+  // Subscribe to negotiation doc only
   // -------------------------------------------------------
   useEffect(() => {
-    async function load() {
-      const cloud = await loadGameFromCloud(gameId);
-      if (!cloud) {
-        alert("Game not found.");
-        return;
-      }
+    const unsub = subscribeToDraftActivities(gameId, (data) => {
+      if (!data) return;
 
-      setPlayers(cloud.players || []);
-      setRoles(cloud.roles || {});
-      setActivities(cloud.finalActivities || []);
-      setLoading(false);
-    }
+      setState({
+        finalActivities: data.baseline || data.finalActivities || [],
+        approvals: data.approvals || {},
+        players: data.players || [],
+        roles: data.roles || {},
+      });
+    });
 
-    load();
+    return () => unsub();
   }, [gameId]);
 
-  if (loading) return <div className="loading">Loading…</div>;
+  const { finalActivities, approvals, players, roles } = state;
 
   // -------------------------------------------------------
-  // DETERMINE ROLE FROM FIRESTORE
+  // Identity check
   // -------------------------------------------------------
-  let playerRole = null;
-  if (roles.playerOne === myToken) playerRole = "playerOne";
-  if (roles.playerTwo === myToken) playerRole = "playerTwo";
+  let role = null;
+  if (roles.playerOne === myToken) role = "playerOne";
+  if (roles.playerTwo === myToken) role = "playerTwo";
 
-  // ONLY PlayerOne can start the game
-  const isPlayerOne = playerRole === "playerOne";
-
-  const p1 = players[0] || { name: setup.playerOneName, color: setup.playerOneColor };
-  const p2 = players[1] || { name: setup.playerTwoName, color: setup.playerTwoColor };
+  if (!role) {
+    return (
+      <div className="summary-screen">
+        <div className="summary-card">
+          <h2>Loading…</h2>
+          <p>Verifying your identity.</p>
+        </div>
+      </div>
+    );
+  }
 
   // -------------------------------------------------------
-  // START GAME (Player One ONLY)
+  // Ensure both approvals exist
   // -------------------------------------------------------
-  async function startGame() {
-    if (!isPlayerOne) {
-      alert("Only Player One can start the game.");
-      return;
-    }
+  if (!approvals.playerOne || !approvals.playerTwo) {
+    navigate(`/create/waiting/${role}/${gameId}`);
+    return null;
+  }
 
-    const state = {
-      gameId,
-      players,
-      negotiatedActivities: activities,
-      turn: 0,
-      round: 1,
-      currentActivityIndex: 0,
-    };
+  // -------------------------------------------------------
+  // Ensure final activities exist
+  // -------------------------------------------------------
+  if (!finalActivities || finalActivities.length === 0) {
+    return (
+      <div className="summary-screen">
+        <div className="summary-card">
+          <h2>Preparing Summary…</h2>
+          <p>Your final list is being generated.</p>
+        </div>
+      </div>
+    );
+  }
 
-    // Save game state to Firestore
-    await saveGameToCloud(gameId, state);
-
-    // Save in localStorage for fast game state access
-    localStorage.setItem(`game-${gameId}`, JSON.stringify(state));
-
+  // -------------------------------------------------------
+  // Start game
+  // -------------------------------------------------------
+  function startGame() {
     navigate(`/game/${gameId}`);
   }
 
@@ -94,45 +95,23 @@ export default function Summary() {
   // UI
   // -------------------------------------------------------
   return (
-    <div className="summary-page">
+    <div className="summary-screen">
       <div className="summary-card">
-        <h2 className="summary-title">Ready to Begin?</h2>
+        <h2>Final Activity List</h2>
+        <p>This is the list you will use in the game.</p>
 
-        <div className="summary-players">
-          <p style={{ color: p1.color }}>
-            <strong>Player 1:</strong> {p1.name}
-          </p>
-          <p style={{ color: p2.color }}>
-            <strong>Player 2:</strong> {p2.name}
-          </p>
+        <div className="summary-list">
+          {finalActivities.map((activity) => (
+            <div className="summary-item" key={activity.id}>
+              <div className="summary-name">{activity.name}</div>
+              <div className="summary-cost">{activity.cost} tokens</div>
+            </div>
+          ))}
         </div>
 
-        <div className="summary-activities">
-          <h3>Agreed Activity List</h3>
-
-          {activities.length === 0 ? (
-            <p>No activities found — something went wrong.</p>
-          ) : (
-            <ul>
-              {activities.map((a) => (
-                <li key={a.id}>
-                  <strong>{a.name}</strong> — {a.duration}
-                  <span className="cost"> ({a.cost} tokens)</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {isPlayerOne ? (
-          <button className="summary-start-btn" onClick={startGame}>
-            Start Game →
-          </button>
-        ) : (
-          <p className="approved-note">
-            Waiting for Player One ({p1.name}) to start the game…
-          </p>
-        )}
+        <button className="start-game-btn" onClick={startGame}>
+          Start Game →
+        </button>
       </div>
     </div>
   );

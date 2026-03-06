@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// REVIEW ACTIVITIES — STRONG VISUAL DIFF + SAFE ROLE LOGIC
+// REVIEW ACTIVITIES — TWO-DOC, SAFE, FINAL VERSION
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -9,8 +9,6 @@ import {
   subscribeToDraftActivities,
   approveActivities,
   setEditor,
-  clearEditor,
-  finalizeActivities,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
@@ -21,84 +19,92 @@ export default function ReviewActivities() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  // Identity token for THIS device
   const identity = loadIdentity(gameId);
+  const myToken = identity?.token || null;
 
-  // -------------------------------------------------------
-  // State
-  // -------------------------------------------------------
-  const [activities, setActivities] = useState([]);
-  const [baseline, setBaseline] = useState([]);
-  const [approvals, setApprovals] = useState({
-    playerOne: false,
-    playerTwo: false,
+  const [state, setState] = useState({
+    draft: [],
+    baseline: [],
+    approvals: {},
+    editor: null,
+    players: [],
+    roles: {},
   });
-  const [editor, setEditorState] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [roles, setRoles] = useState({});
-  const [loading, setLoading] = useState(true);
 
   // -------------------------------------------------------
-  // Resolve roles from Firestore tokens
-  // -------------------------------------------------------
-  let playerRole = null;
-
-  if (identity && roles.playerOne === identity.token) playerRole = "playerOne";
-  if (identity && roles.playerTwo === identity.token) playerRole = "playerTwo";
-
-  const otherRole = playerRole === "playerOne" ? "playerTwo" : "playerOne";
-
-  const playerName =
-    playerRole === "playerOne"
-      ? players[0]?.name || "Player One"
-      : players[1]?.name || "Player Two";
-
-  const otherName =
-    playerRole === "playerOne"
-      ? players[1]?.name || "Player Two"
-      : players[0]?.name || "Player One";
-
-  // -------------------------------------------------------
-  // SUBSCRIBE to Firestore negotiation updates
+  // Subscribe to NEGOTIATION doc only
   // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
 
-      setActivities(data.draft || []);
-      setBaseline(data.baseline || []);
-      setApprovals(data.approvals || {});
-      setEditorState(data.editor ?? null);
-      setPlayers(data.players || []);
-      setRoles(data.roles || {});
-      setLoading(false);
+      setState({
+        draft: data.draft || [],
+        baseline: data.baseline || [], // (this is finalActivities)
+        approvals: data.approvals || {},
+        editor: data.editor || null,
+        players: data.players || [],
+        roles: data.roles || {},
+      });
     });
 
     return () => unsub();
   }, [gameId]);
 
-  if (loading) return <div className="loading">Loading…</div>;
+  const { draft, baseline, approvals, editor, players, roles } = state;
 
   // -------------------------------------------------------
-  // DIFF LOGIC — baseline vs current
+  // DETERMINE ROLE
+  // -------------------------------------------------------
+  let role = null;
+  if (roles.playerOne === myToken) role = "playerOne";
+  if (roles.playerTwo === myToken) role = "playerTwo";
+
+  if (!role) {
+    return (
+      <div className="review-screen">
+        <div className="review-card">
+          <h2>Loading...</h2>
+          <p>Verifying your identity.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------
+  // If someone else is editing, YOU cannot be here
+  // -------------------------------------------------------
+  if (editor && editor !== myToken) {
+    navigate(`/create/waiting/${role}/${gameId}`);
+    return null;
+  }
+
+  // -------------------------------------------------------
+  // If no draft exists → redirect to waiting
+  // -------------------------------------------------------
+  if (draft.length === 0) {
+    navigate(`/create/waiting/${role}/${gameId}`);
+    return null;
+  }
+
+  // -------------------------------------------------------
+  // Difference computation
   // -------------------------------------------------------
   function getChangeStatus(activity, baselineActivity) {
-    // New Activity (no baseline entry)
     if (!baselineActivity) {
       return { added: true };
     }
 
-    return {
+    const changes = {
       name: activity.name !== baselineActivity.name,
       duration: activity.duration !== baselineActivity.duration,
       cost: activity.cost !== baselineActivity.cost,
       deleted: !!activity.deleted,
     };
+
+    return changes;
   }
 
-  // -------------------------------------------------------
-  // RENDER ONE ACTIVITY ROW
-  // -------------------------------------------------------
   function renderRow(a, index) {
     const base = baseline[index];
     const status = getChangeStatus(a, base);
@@ -111,118 +117,54 @@ export default function ReviewActivities() {
 
     return (
       <div className={rowClass} key={a.id}>
-        {/* NAME */}
         <div className={`review-name ${status.name ? "changed-field" : ""}`}>
           {a.name || <em>(no name)</em>}
         </div>
 
-        {/* DURATION */}
-        <div
-          className={`review-duration ${
-            status.duration ? "changed-field" : ""
-          }`}
-        >
+        <div className={`review-duration ${status.duration ? "changed-field" : ""}`}>
           {a.duration || <em>—</em>}
         </div>
 
-        {/* COST */}
         <div className={`review-cost ${status.cost ? "changed-field" : ""}`}>
           {a.cost} tokens
         </div>
 
-        {/* FLAGS */}
-        {status.deleted && (
-          <div className="review-deleted-flag">Deleted</div>
-        )}
-        {status.added && <div className="review-added-flag">New</div>}
+        {status.deleted && <div className="review-deleted-flag">DELETED</div>}
+        {status.added && <div className="review-added-flag">NEW</div>}
       </div>
     );
   }
 
   // -------------------------------------------------------
-  // Both players approved → go finalize
-  // -------------------------------------------------------
-  const bothApproved = approvals.playerOne && approvals.playerTwo;
-
-  async function handleContinueAfterApproval() {
-    await finalizeActivities(gameId);
-    await clearEditor(gameId);
-    navigate(`/create/summary/${gameId}`);
-  }
-
-  if (bothApproved) {
-    return (
-      <div className="review-page">
-        <div className="review-card">
-          <h2>Review Activities</h2>
-          <p>Both players have approved the final list.</p>
-
-          <button className="continue-btn" onClick={handleContinueAfterApproval}>
-            Continue →
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // -------------------------------------------------------
-  // Approve or propose changes
+  // APPROVE
   // -------------------------------------------------------
   async function handleApprove() {
-    await approveActivities(gameId, identity.token);
-  }
+    await approveActivities(gameId, myToken);
 
-  async function handleProposeChanges() {
-    await setEditor(gameId, identity.token);
-    navigate(`/create/activities/${gameId}`);
+    // After approval:
+    if (role === "playerTwo") {
+      navigate(`/create/waiting/player-two/${gameId}`);
+    } else {
+      navigate(`/create/waiting/player-one/${gameId}`);
+    }
   }
-
-  const playerApproved = approvals[playerRole];
-  const otherApproved = approvals[otherRole];
 
   // -------------------------------------------------------
   // UI
   // -------------------------------------------------------
   return (
-    <div className="review-page">
+    <div className="review-screen">
       <div className="review-card">
-        <h2>Review Activities</h2>
-        <p>
-          Review changes below.  
-          Both players must approve the list before continuing.
-        </p>
+        <h2>Review Your Activity List</h2>
+        <p>Please confirm the list below. Changes are highlighted.</p>
 
-        <div className="review-list">
-          {activities.map((a, i) => renderRow(a, i))}
+        <div className="review-table">
+          {draft.map((a, i) => renderRow(a, i))}
         </div>
 
-        <div className="approval-status">
-          <p>
-            {players[0]?.name || "Player One"}:{" "}
-            {approvals.playerOne ? "✓ Approved" : "Waiting…"}{" "}
-            {" | "}
-            {players[1]?.name || "Player Two"}:{" "}
-            {approvals.playerTwo ? "✓ Approved" : "Waiting…"}
-          </p>
-        </div>
-
-        {!playerApproved && (
-          <>
-            <button className="approve-btn" onClick={handleApprove}>
-              Approve Final List
-            </button>
-
-            <button className="back-btn" onClick={handleProposeChanges}>
-              ← Propose Changes
-            </button>
-          </>
-        )}
-
-        {playerApproved && !otherApproved && (
-          <p className="approved-note">
-            You have approved. Waiting for {otherName}…
-          </p>
-        )}
+        <button className="approve-btn" onClick={handleApprove}>
+          Approve →
+        </button>
       </div>
     </div>
   );

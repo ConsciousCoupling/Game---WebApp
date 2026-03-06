@@ -1,12 +1,11 @@
 // -----------------------------------------------------------
-// LOCAL PLAYER TWO — IDENTITY SAFE FINAL VERSION
+// PLAYER TWO — NEGOTIATION-DOC ONLY, IDENTITY-SAFE
 // -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup, loadSetup, ensureIdentityForGame } from "../../services/setupStorage";
-
+import { saveSetup, ensureIdentityForGame, loadSetup } from "../../services/setupStorage";
 import { db } from "../../services/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 
@@ -14,27 +13,14 @@ import "./Create.css";
 
 export default function PlayerTwo() {
   const navigate = useNavigate();
+
+  // Load gameId saved by PlayerOne
   const setup = loadSetup();
+  const gameId = setup?.gameId;
 
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
-
-  if (!setup?.gameId) {
-    return (
-      <div className="create-container">
-        <div className="create-card">
-          <h2>Error</h2>
-          <p>No game found. Please restart setup.</p>
-
-          <button className="primary-btn" onClick={() => navigate("/onboarding")}>
-            Restart
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const gameId = setup.gameId;
+  const [error, setError] = useState("");
 
   const colors = [
     "#ff3e84",
@@ -46,91 +32,123 @@ export default function PlayerTwo() {
     "#ff7a2f",
   ];
 
-  // ---------------------------------------------------------
-  // LOCAL PLAYER TWO → JOIN GAME
-  // ---------------------------------------------------------
-  async function handleContinue() {
-    if (!name.trim()) return;
+  if (!gameId) {
+    return (
+      <div className="create-container">
+        <div className="create-card">
+          <h2>Error</h2>
+          <p>No active game was found. Please start over.</p>
+          <button onClick={() => navigate("/")}>Return Home</button>
+        </div>
+      </div>
+    );
+  }
 
-    // Ensure this device has a token for THIS game
+  // -----------------------------------------------------------
+  // SAVE PLAYER TWO INTO NEGOTIATION DOC
+  // -----------------------------------------------------------
+  async function handleJoinLocal() {
+    if (!name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    // Make PlayerTwo identity token
     const identity = ensureIdentityForGame(gameId);
-    const myToken = identity.token;
+    const token = identity.token;
 
-    // Save local setup (names & colors)
+    // Save local display settings
     saveSetup({
-      ...setup,
       playerTwoName: name,
       playerTwoColor: color,
+      localPlay: true,
     });
 
-    // ---------------------------------------------------------
-    // Read latest Firestore document
-    // ---------------------------------------------------------
     const ref = doc(db, "games", gameId);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      alert("Game not found. Please restart.");
+      setError("Game document missing — please restart.");
       return;
     }
 
     const cloud = snap.data();
 
-    // ---------------------------------------------------------
-    // BUILD CLEAN ROLES OBJECT
-    // We DO NOT preserve legacy fields.
-    // We rebuild this cleanly using stored playerOne token.
-    // ---------------------------------------------------------
-    const newRoles = {
-      playerOne: cloud.roles?.playerOne ?? null,
-      playerTwo: myToken,
-    };
+    // Prevent overwriting P2 if testing restart
+    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
+      setError("Player Two has already joined on another device.");
+      return;
+    }
 
-    // ---------------------------------------------------------
-    // BUILD CLEAN PLAYERS ARRAY
-    // ---------------------------------------------------------
-    const updatedPlayers = [...(cloud.players || [])];
-
-    updatedPlayers[1] = {
-      name,
-      color,
-      tokens: 0,
-      inventory: [],
-      token: myToken,
-    };
-
-    // ---------------------------------------------------------
-    // UPDATE FIRESTORE WITHOUT CORRUPTING ANY EXISTING FIELDS
-    // ---------------------------------------------------------
+    // Update ONLY negotiation fields
     await updateDoc(ref, {
-      roles: newRoles,
-      players: updatedPlayers,
+      roles: {
+        ...cloud.roles,
+        playerTwo: token,
+      },
+      players: [
+        cloud.players?.[0] || {
+          name: "",
+          color: "",
+          tokens: 0,
+          inventory: [],
+          token: cloud.roles?.playerOne ?? null,
+        },
+        {
+          name,
+          color,
+          tokens: 0,
+          inventory: [],
+          token,
+        },
+      ],
     });
 
-    // ---------------------------------------------------------
-    // SEND LOCAL PLAYER TWO INTO WAITING ROOM
-    // ---------------------------------------------------------
+    // Proceed depending on whether P1 already began editing
+    const draft = cloud.activityDraft || [];
+    const editor = cloud.editor || null;
+    const approvals = cloud.approvals || {};
+
+    // No draft yet → wait for P1  
+    if (editor === "playerOne" || draft.length === 0) {
+      navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
+
+    // P1 submitted draft but not approved
+    if (draft.length > 0 && approvals.playerOne === false) {
+      navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
+
+    // P1 approved → P2 reviews
+    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
+      navigate(`/create/activities-review/${gameId}`);
+      return;
+    }
+
+    // Both approved? → Summary
+    if (approvals.playerOne && approvals.playerTwo) {
+      navigate(`/create/summary/${gameId}`);
+      return;
+    }
+
+    // Fallback
     navigate(`/create/waiting/player-two/${gameId}`);
   }
 
-  // ---------------------------------------------------------
+  // -----------------------------------------------------------
   // UI
-  // ---------------------------------------------------------
+  // -----------------------------------------------------------
   return (
     <div className="create-container">
       <div className="create-card">
-
-        <button className="secondary-btn" onClick={() => navigate("/onboarding")}>
+        <button className="secondary-btn" onClick={() => navigate("/create/player-one")}>
           ← Back
         </button>
 
         <h1 className="create-title">Player Two</h1>
-
-        <p className="create-subtitle">
-          Enter your name and choose your color.
-          <br />
-          Player One has already started the game.
-        </p>
+        <p className="create-subtitle">Enter your name and choose your color.</p>
 
         <input
           className="create-input"
@@ -152,9 +170,11 @@ export default function PlayerTwo() {
           ))}
         </div>
 
+        {error && <p className="join-error">{error}</p>}
+
         <button
-          className={`create-btn primary-btn ${!name.trim() ? "disabled" : ""}`}
-          onClick={handleContinue}
+          className={`presence-btn ${!name.trim() ? "disabled" : ""}`}
+          onClick={handleJoinLocal}
         >
           Join Game →
         </button>

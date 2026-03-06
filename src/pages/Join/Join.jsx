@@ -1,202 +1,175 @@
 // -----------------------------------------------------------
-// JOIN EXISTING GAME — SAFE ROLE RECLAIM + DEBUG EDITION
+// JOIN EXISTING GAME — TWO-DOCUMENT, IDENTITY-SAFE EDITION
 // -----------------------------------------------------------
 
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { loadGameFromCloud } from "../../services/gameStore";
-import {
-  saveSetup,
-  ensureIdentityForGame,
-  loadIdentity,
-  saveIdentity,
-} from "../../services/setupStorage";
-
+import { ensureIdentityForGame, loadIdentity, saveSetup } from "../../services/setupStorage";
 import { db } from "../../services/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+
+import "./Join.css";
 
 export default function Join() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [params] = useSearchParams();
 
-  const inviteCode = (searchParams.get("code") || "").trim().toUpperCase();
+  // Support URLs like /join?code=ROSE-123
+  const prefill = (params.get("code") || "").trim().toUpperCase();
 
-  const [code, setCode] = useState(inviteCode);
+  const [code, setCode] = useState(prefill);
+  const [step, setStep] = useState(prefill ? 2 : 1);
+
   const [error, setError] = useState("");
-
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
 
-  const [step, setStep] = useState(inviteCode ? 2 : 1);
-  const [game, setGame] = useState(null);
-
   const colors = [
-    "#ff3e84",
-    "#3e8bff",
-    "#ffd34f",
-    "#37d67a",
-    "#ff00cc",
-    "#9b59ff",
-    "#ff7a2f",
+    "#ff3e84", "#3e8bff", "#ffd34f", "#37d67a",
+    "#ff00cc", "#9b59ff", "#ff7a2f",
   ];
 
   // -----------------------------------------------------------
-  // STEP 1 — VALIDATE CODE
+  // STEP 1 — VALIDATE GAME CODE (Negotiation doc only)
   // -----------------------------------------------------------
   async function handleCodeSubmit() {
     setError("");
 
-    const cleaned = code.trim().toUpperCase();
-    if (!cleaned) {
+    const gameId = code.trim().toUpperCase();
+    if (!gameId) {
       setError("Please enter a game code.");
       return;
     }
 
-    const gameData = await loadGameFromCloud(cleaned);
-    if (!gameData) {
+    const ref = doc(db, "games", gameId);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
       setError("Game not found.");
       return;
     }
 
-    const roles = gameData.roles || {};
-    const localIdentity = loadIdentity(cleaned) || {};
-    const localToken = localIdentity.token;
+    const data = snap.data();
+    const roles = data.roles || {};
 
-    // SAFE RULE: PlayerTwo slot is only "taken" if the token belongs to another device
-    const claimedByOtherDevice =
-      roles.playerTwo && roles.playerTwo !== localToken;
+    // Identity token stored locally
+    const identity = loadIdentity(gameId);
+    const localToken = identity?.token || null;
 
-    if (claimedByOtherDevice) {
+    // If someone else already claimed PlayerTwo slot
+    const slotTaken =
+      roles.playerTwo &&
+      roles.playerTwo !== localToken;
+
+    if (slotTaken) {
       setError("Player Two has already joined this game from another device.");
       return;
     }
 
-    setGame(gameData);
+    // At this point:
+    // - Either playerTwo is null → open
+    // - Or playerTwo === localToken → reclaim
+
     setStep(2);
   }
 
   // -----------------------------------------------------------
-  // STEP 2 — JOIN WITH DEBUG LOGGING
+  // STEP 2 — JOIN AS PLAYER TWO (write only negotiation fields)
   // -----------------------------------------------------------
   async function handleJoin() {
-    console.log("JOIN: clicked");
+    const gameId = code.trim().toUpperCase();
 
-    const cleaned = code.trim().toUpperCase();
     if (!name.trim()) {
       setError("Please enter your name.");
       return;
     }
 
     // Ensure this device has a token for this game
-    const identity = ensureIdentityForGame(cleaned);
-    console.log("JOIN: identity OK", identity);
-
+    const identity = ensureIdentityForGame(gameId);
     const token = identity.token;
 
-    // Save local setup
+    // Store PlayerTwo local metadata for UI
     saveSetup({
-      gameId: cleaned,
+      gameId,
       playerTwoName: name,
       playerTwoColor: color,
       localPlay: false,
     });
 
-    // Save identity explicitly (token only)
-    saveIdentity(cleaned, token);
+    // Load negotiation doc directly (DO NOT use loadGameFromCloud)
+    const ref = doc(db, "games", gameId);
+    const snap = await getDoc(ref);
 
-    // Reload cloud copy to confirm role availability
-    const cloud = await loadGameFromCloud(cleaned);
-    console.log("JOIN: cloud snapshot", cloud);
-
-    if (!cloud) {
+    if (!snap.exists()) {
       setError("Game not found.");
       return;
     }
 
-    if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
-      setError("Another Player Two has already joined.");
-      return;
-    }
+    const data = snap.data();
+    const roles = data.roles || {};
 
-    const ref = doc(db, "games", cleaned);
-
-    // -----------------------------------------------------
-    // 🔥 DEBUG BLOCK — WHAT WE ARE ABOUT TO WRITE
-    // -----------------------------------------------------
-    const writeData = {
-      roles: {
-        ...(cloud.roles || {}),
-        playerTwo: token,
-      },
-      players: [
-        cloud.players?.[0] ?? {
-          name: "",
-          color: "",
-          tokens: 0,
-          inventory: [],
-          token: cloud.roles?.playerOne ?? null,
-        },
-        {
-          name,
-          color,
-          tokens: 0,
-          inventory: [],
-          token,
-        },
-      ],
+    // Protect PlayerOne’s identity
+    const p1 = data.players?.[0] || {
+      name: "",
+      color: "",
+      tokens: 0,
+      inventory: [],
+      token: roles.playerOne ?? null,
     };
 
-    console.log("JOIN: Attempting write with data:", writeData);
-    // -----------------------------------------------------
+    // Prepare PlayerTwo entry
+    const p2 = {
+      name,
+      color,
+      tokens: 0,
+      inventory: [],
+      token,
+    };
 
-    console.log("JOIN: updating Firestore...");
-    try {
-      await updateDoc(ref, writeData);
-    } catch (err) {
-      console.error("JOIN: updateDoc FAILED!", err);
-      setError("Failed to join game. Firestore error.");
-      return;
-    }
+    // Apply negotiation-only update
+    await updateDoc(ref, {
+      roles: {
+        ...roles,
+        playerTwo: token,
+      },
+      players: [p1, p2],
+    });
 
-    console.log("JOIN: Firestore updated");
-
-    // --------------------------------------------------------
+    // ----------------------------
     // DETERMINE NEXT SCREEN
-    // --------------------------------------------------------
+    // ----------------------------
+    const draft = data.activityDraft || [];
+    const approvals = data.approvals || {};
+    const editor = data.editor || null;
 
-    const draft = cloud.activityDraft || [];
-    const approvals = cloud.approvals || {};
-    const editor = cloud.editor || null;
-
-    console.log("JOIN: determining route");
-
-    if (editor === "playerOne" || draft.length === 0) {
-      console.log("JOIN: go waiting (no draft yet)");
-      navigate(`/create/waiting/player-two/${cleaned}`);
+    // Case 1 — No draft yet → wait for P1 to begin
+    if (draft.length === 0 || editor === "playerOne") {
+      navigate(`/create/waiting/player-two/${gameId}`);
       return;
     }
 
-    if (draft.length > 0 && approvals.playerOne === false) {
-      console.log("JOIN: waiting (P1 not approved)");
-      navigate(`/create/waiting/player-two/${cleaned}`);
+    // Case 2 — P1 submitted draft but has NOT approved
+    if (approvals.playerOne === false) {
+      navigate(`/create/waiting/player-two/${gameId}`);
       return;
     }
 
-    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
-      console.log("JOIN: go review");
-      navigate(`/create/activities-review/${cleaned}`);
+    // Case 3 — P1 approved → P2 must review
+    if (approvals.playerOne === true && !approvals.playerTwo) {
+      navigate(`/create/activities-review/${gameId}`);
       return;
     }
 
+    // Case 4 — Both approved → Summary
     if (approvals.playerOne && approvals.playerTwo) {
-      console.log("JOIN: go summary");
-      navigate(`/create/summary/${cleaned}`);
+      navigate(`/create/summary/${gameId}`);
       return;
     }
 
-    console.log("JOIN: fallback waiting");
-    navigate(`/create/waiting/player-two/${cleaned}`);
+    // Fallback
+    navigate(`/create/waiting/player-two/${gameId}`);
   }
 
   // -----------------------------------------------------------
@@ -213,7 +186,7 @@ export default function Join() {
 
             <input
               className="join-input"
-              placeholder="e.g. ROSE-143"
+              placeholder="e.g. ROSE-123"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
             />

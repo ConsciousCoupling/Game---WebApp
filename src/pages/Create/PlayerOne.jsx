@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// PLAYER ONE — FINAL IDENTITY-SAFE GAME CREATION + ACTIVITIES
+// PLAYER ONE — CLEAN NEGOTIATION-DOC CREATION (TWO-DOC MODEL)
 // -----------------------------------------------------------
 
 import { useState } from "react";
@@ -32,15 +32,17 @@ export default function PlayerOne() {
   ];
 
   // ---------------------------------------------------------
-  // Initialize Firestore game shell — CLEAN + COMPATIBLE
+  // Create NEGOTIATION doc only — no gameplay state here
   // ---------------------------------------------------------
-  async function initializeGameShell(gameId, token) {
+  async function createNegotiationDocument(gameId, token) {
+    const ref = doc(db, "games", gameId);
+
     await setDoc(
-      doc(db, "games", gameId),
+      ref,
       {
-        // -------------------------------
-        // Identity + player seating
-        // -------------------------------
+        // -------------------------
+        // Identity
+        // -------------------------
         roles: {
           playerOne: token,
           playerTwo: null,
@@ -63,33 +65,32 @@ export default function PlayerOne() {
           },
         ],
 
-        // -------------------------------
+        // -------------------------
         // Negotiation scaffolding
-        // -------------------------------
+        // -------------------------
         activityDraft: [],
         baselineDraft: [],
         finalActivities: [],
-
         approvals: {
           playerOne: false,
           playerTwo: false,
         },
-
         editor: null,
+
+        // -------------------------
+        // Marker for Summary.jsx
+        // -------------------------
+        gameReady: false,
       },
       { merge: false }
     );
 
-    // -----------------------------------------------
-    // SEED ACTIVITIES — REQUIRED FOR GAME TO FUNCTION
-    // -----------------------------------------------
+    // Seed activities AFTER document exists
     await initializeActivities(gameId);
-
-    console.log("Game shell + activities initialized:", gameId);
   }
 
   // ---------------------------------------------------------
-  // LOCAL FLOW — both players on same device
+  // LOCAL FLOW — P2 on same device
   // ---------------------------------------------------------
   async function startLocalFlow() {
     if (!name.trim()) return;
@@ -105,13 +106,13 @@ export default function PlayerOne() {
       localPlay: true,
     });
 
-    await initializeGameShell(gameId, token);
+    await createNegotiationDocument(gameId, token);
 
     navigate("/create/player-two");
   }
 
   // ---------------------------------------------------------
-  // REMOTE FLOW — P2 joins from another device
+  // REMOTE FLOW — P2 joins externally
   // ---------------------------------------------------------
   async function startRemoteFlow() {
     if (!name.trim()) return;
@@ -127,7 +128,7 @@ export default function PlayerOne() {
       localPlay: false,
     });
 
-    await initializeGameShell(gameId, token);
+    await createNegotiationDocument(gameId, token);
 
     navigate(`/create/remote-invite/${gameId}`);
   }

@@ -1,57 +1,68 @@
 // -----------------------------------------------------------
-// INITIAL GAME STATE — COMPATIBLE WITH NEW ENGINE & IDENTITY SYSTEM
+// INITIAL GAMEPLAY STATE — CLEAN, FINAL, TWO-DOC ARCHITECTURE
 // -----------------------------------------------------------
 
 import { PROMPT_CARDS } from "./data/promptCards";
-import { getRandomMovementCard } from "./data/movementCards";
 
-// Helpers
+// Utility: shallow shuffle
 function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
-// Build prompt decks by category
-function buildPromptDecks() {
-  const decks = {
+// Build the 4 category prompt decks
+export function buildPromptDecks() {
+  return {
     1: shuffle(PROMPT_CARDS.filter((p) => p.category === 1)),
     2: shuffle(PROMPT_CARDS.filter((p) => p.category === 2)),
     3: shuffle(PROMPT_CARDS.filter((p) => p.category === 3)),
     4: shuffle(PROMPT_CARDS.filter((p) => p.category === 4)),
   };
-  return decks;
 }
 
-export const initialGameState = {
-  // Injected when starting game from Summary.jsx
+/*
+IMPORTANT:
+This file defines the FULL and EXACT Firestore shape
+that gameplay/{gameId} must contain.
+
+No negotiation fields. No roles. No approvals.
+Completely isolated gameplay state.
+*/
+
+export const initialGameplayState = {
+  // Injected at runtime
   gameId: null,
 
   // -------------------------------------------------------
-  // PLAYER STRUCTURE (Token & name injected at game start)
+  // PLAYER STATE — filled at game start using negotiation doc
   // -------------------------------------------------------
   players: [
     {
       name: "",
-      color: "#ff55aa",
-      tokens: 10,
-      inventory: [],      // movement cards
-      token: null,        // identity token inserted at start
+      color: "",
+      tokens: 10,             // confirmed by user
+      inventory: [],          // movement cards earned during game
+      token: null,            // identity token
     },
     {
       name: "",
-      color: "#55aaff",
+      color: "",
       tokens: 10,
       inventory: [],
       token: null,
     },
   ],
 
-  // Whose turn starts the game
-  currentPlayerId: 0,
+  // -------------------------------------------------------
+  // TURN CONTROL
+  // -------------------------------------------------------
+  currentPlayerId: 0,         // 0 = P1 begins, can change later
 
   // -------------------------------------------------------
   // GAME PHASE MACHINE
   // -------------------------------------------------------
-  phase: "TURN_START",    // TURN_START → ROLLING → PROMPT → AWARD → etc.
+  // TURN_START → ROLLING → PROMPT → AWARD → MOVEMENT_AWARD →
+  // ACTIVITY_SHOP → COIN_TOSS → COIN_OUTCOME → TURN_START
+  phase: "TURN_START",
 
   // -------------------------------------------------------
   // PROMPT SYSTEM
@@ -66,22 +77,19 @@ export const initialGameState = {
   // MOVEMENT CARDS
   // -------------------------------------------------------
   awardedMovementCard: null,
-
-  // Bonus systems used by movement cards
   reversePrompt: false,
   doubleReward: false,
 
   // -------------------------------------------------------
-  // ACTIVITY NEGOTIATION RESULTS (injected at start)
+  // ACTIVITIES (copied in from negotiation finalActivities)
   // -------------------------------------------------------
-  negotiatedActivities: [],  // Final negotiated list injected from Summary.jsx
-
-  activityShop: null,        // Shop UI state
-  pendingActivity: null,     // Activity waiting for coin flip
-  activityResult: null,      // Final outcome after flip
+  negotiatedActivities: [],     // final list imported from games/{id}
+  activityShop: null,           // { message }
+  pendingActivity: null,        // an activity awaiting coin flip
+  activityResult: null,         // { activityName, outcome, performer }
 
   // -------------------------------------------------------
-  // COIN FLIP
+  // COIN FLIP STATE
   // -------------------------------------------------------
   coin: {
     isFlipping: false,

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------
-// EDIT ACTIVITIES — FINAL, IDENTITY-SAFE NEGOTIATION ENGINE
+// EDIT ACTIVITIES — SAFE, TWO-DOCUMENT NEGOTIATION VERSION
 // -----------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -9,9 +9,11 @@ import {
   subscribeToDraftActivities,
   saveDraftActivities,
   setEditor,
+  clearEditor,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
+import { ACTIVITIES } from "../../game/data/activityList";
 
 import "./EditActivities.css";
 
@@ -19,193 +21,209 @@ export default function EditActivities() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  // Local identity token only
+  // Identity token for this device
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
 
-  // -------------------------------------------------------
-  // Local state
-  // -------------------------------------------------------
-  const [activities, setActivities] = useState([]);
-  const [roles, setRoles] = useState({});
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState({
+    draft: [],
+    baseline: [],
+    approvals: {},
+    editor: null,
+    players: [],
+    roles: {},
+  });
+
+  const [localDraft, setLocalDraft] = useState([]);
 
   // -------------------------------------------------------
-  // Subscribe to Firestore
+  // SUBSCRIBE to NEGOTIATION DOC ONLY
   // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
 
-      setActivities(data.draft || []);
-      setRoles(data.roles || {});
-      setPlayers(data.players || []);
-      setLoading(false);
+      setState({
+        draft: data.draft || [],
+        baseline: data.baseline || [],
+        approvals: data.approvals || {},
+        editor: data.editor || null,
+        players: data.players || [],
+        roles: data.roles || {},
+      });
     });
 
     return () => unsub();
   }, [gameId]);
 
-  if (loading) return <div className="loading">Loading…</div>;
+  const { draft, baseline, approvals, editor, players, roles } = state;
 
   // -------------------------------------------------------
-  // Determine role
+  // DETERMINE IF THIS DEVICE IS EDITOR
   // -------------------------------------------------------
-  let playerRole = null;
-  if (roles.playerOne === myToken) playerRole = "playerOne";
-  if (roles.playerTwo === myToken) playerRole = "playerTwo";
+  let role = null;
+  if (roles.playerOne === myToken) role = "playerOne";
+  if (roles.playerTwo === myToken) role = "playerTwo";
 
-  // -------------------------------------------------------
-  // Enforce editor lock: only the editor can be on this page
-  // -------------------------------------------------------
-  // If Firestore says someone else is the editor → redirect
-  // NOTE: subscribeToDraftActivities() populates editor inside data
-  const actualEditor = players?.editor;
-  if (actualEditor && actualEditor !== myToken) {
-    navigate(`/create/waiting/${playerRole}/${gameId}`);
-    return null;
-  }
-
-  // -------------------------------------------------------
-  // Field update handlers
-  // -------------------------------------------------------
-  function updateField(id, field, value) {
-    setActivities((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              [field]: value,
-              changedFields: {
-                ...a.changedFields,
-                [field]: true,
-              },
-            }
-          : a
-      )
-    );
-  }
-
-  function toggleDelete(id) {
-    setActivities((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              deleted: !a.deleted,
-              changedFields: {
-                ...a.changedFields,
-                deleted: true,
-              },
-            }
-          : a
-      )
-    );
-  }
-
-  function addActivity() {
-    const newId = Date.now().toString();
-    setActivities((prev) => [
-      ...prev,
-      {
-        id: newId,
-        name: "",
-        duration: "",
-        cost: 0,
-        deleted: false,
-        changedFields: {
-          name: true,
-          duration: true,
-          cost: true,
-        },
-      },
-    ]);
-  }
-
-  // -------------------------------------------------------
-  // SAVE CHANGES
-  // -------------------------------------------------------
-  async function handleSave() {
-    // 1. Mark this device as the editor in Firestore
-    await setEditor(gameId, myToken);
-
-    // 2. Save edited draft + automatically reset approvals
-    await saveDraftActivities(gameId, activities, myToken);
-
-    // 3. Return to review screen
-    navigate(`/create/activities-review/${gameId}`);
-  }
-
-  // -------------------------------------------------------
-  // Render activity row
-  // -------------------------------------------------------
-  function renderRow(a) {
-    const changed = a.changedFields || {};
-
+  if (!role) {
     return (
-      <div className={`edit-row ${a.deleted ? "deleted-row" : ""}`} key={a.id}>
-        <input
-          className={`edit-input name-input ${changed.name ? "changed-field" : ""}`}
-          value={a.name}
-          placeholder="Name"
-          onChange={(e) => updateField(a.id, "name", e.target.value)}
-        />
-
-        <input
-          className={`edit-input duration-input ${changed.duration ? "changed-field" : ""}`}
-          value={a.duration}
-          placeholder="Duration"
-          onChange={(e) => updateField(a.id, "duration", e.target.value)}
-        />
-
-        <input
-          type="number"
-          className={`edit-input cost-input ${changed.cost ? "changed-field" : ""}`}
-          value={a.cost}
-          placeholder="Cost"
-          onChange={(e) =>
-            updateField(a.id, "cost", Number(e.target.value) || 0)
-          }
-        />
-
-        <button className="delete-btn" onClick={() => toggleDelete(a.id)}>
-          {a.deleted ? "Undo" : "Delete"}
-        </button>
+      <div className="edit-screen">
+        <div className="edit-card">
+          <h2>Loading…</h2>
+          <p>Verifying your identity.</p>
+        </div>
       </div>
     );
   }
 
-  // -------------------------------------------------------
-  // MAIN UI
-  // -------------------------------------------------------
-  const partnerName =
-    playerRole === "playerOne"
-      ? players[1]?.name || "your partner"
-      : players[0]?.name || "your partner";
+  const isEditor = editor === myToken;
 
+  // -------------------------------------------------------
+  // If someone else is editing → YOU WAIT
+  // -------------------------------------------------------
+  if (editor && editor !== myToken) {
+    navigate(`/create/waiting/${role}/${gameId}`);
+    return null;
+  }
+
+  // -------------------------------------------------------
+  // Initialize local editable draft once editor is acquired
+  // -------------------------------------------------------
+  useEffect(() => {
+    if (isEditor) {
+      // Deep clone to avoid accidental mutations
+      setLocalDraft(JSON.parse(JSON.stringify(draft)));
+    }
+  }, [isEditor, draft]);
+
+  // -------------------------------------------------------
+  // START EDITING
+  // -------------------------------------------------------
+  async function beginEditing() {
+    await setEditor(gameId, myToken);
+  }
+
+  // If no one is editing → take control
+  if (!editor) {
+    beginEditing();
+  }
+
+  // -------------------------------------------------------
+  // FIELD CHANGE HANDLERS
+  // -------------------------------------------------------
+  function updateField(index, field, value) {
+    const next = [...localDraft];
+    next[index][field] = value;
+
+    // Mark changed field
+    next[index].changedFields = {
+      ...(next[index].changedFields || {}),
+      [field]: true,
+    };
+
+    setLocalDraft(next);
+  }
+
+  // -------------------------------------------------------
+  // DELETE ITEM
+  // -------------------------------------------------------
+  function deleteActivity(index) {
+    const next = [...localDraft];
+    next[index].deleted = true;
+    setLocalDraft(next);
+  }
+
+  // -------------------------------------------------------
+  // ADD ACTIVITY
+  // -------------------------------------------------------
+  function addActivity(activity) {
+    const next = [...localDraft, {
+      ...activity,
+      changedFields: {
+        name: true,
+        cost: true,
+        duration: true,
+      },
+      added: true,
+    }];
+    setLocalDraft(next);
+  }
+
+  // -------------------------------------------------------
+  // SAVE DRAFT + EXIT EDITOR MODE
+  // -------------------------------------------------------
+  async function saveAndSubmit() {
+    await saveDraftActivities(gameId, localDraft, myToken);
+    await clearEditor(gameId);
+
+    // After submitting draft, P1 → P2 waits; P2 → P1 waits
+    navigate(`/create/waiting/${role}/${gameId}`);
+  }
+
+  // -------------------------------------------------------
+  // UI
+  // -------------------------------------------------------
   return (
-    <div className="edit-page">
+    <div className="edit-screen">
       <div className="edit-card">
-        <h2>Edit Activities</h2>
-        <p>Make any changes you want. When you save, {partnerName} will review them.</p>
+        <h2>Edit Activity List</h2>
+        <p>Modify, remove, or add activities below.</p>
 
-        <div className="edit-list">{activities.map(renderRow)}</div>
+        <div className="activity-list">
+          {localDraft.map((a, i) => (
+            <div key={a.id} className={`activity-row ${a.deleted ? "deleted" : ""}`}>
+              
+              <input
+                className={`activity-input ${a.changedFields?.name ? "changed" : ""}`}
+                value={a.name}
+                onChange={(e) => updateField(i, "name", e.target.value)}
+              />
 
-        <button className="add-btn" onClick={addActivity}>
-          + Add Activity
+              <input
+                className={`activity-input small ${a.changedFields?.duration ? "changed" : ""}`}
+                value={a.duration}
+                onChange={(e) => updateField(i, "duration", e.target.value)}
+                placeholder="Duration"
+              />
+
+              <input
+                className={`activity-input small ${a.changedFields?.cost ? "changed" : ""}`}
+                value={a.cost}
+                onChange={(e) => updateField(i, "cost", Number(e.target.value))}
+                placeholder="Cost"
+              />
+
+              {!a.deleted && (
+                <button
+                  className="delete-btn"
+                  onClick={() => deleteActivity(i)}
+                >
+                  ✕
+                </button>
+              )}
+
+              {a.deleted && <span className="deleted-tag">Deleted</span>}
+            </div>
+          ))}
+        </div>
+
+        <h3>Add New Activity</h3>
+        <div className="add-list">
+          {ACTIVITIES.map((a) => (
+            <button
+              key={a.id}
+              className="add-btn"
+              onClick={() => addActivity(a)}
+            >
+              + {a.name}
+            </button>
+          ))}
+        </div>
+
+        <button className="submit-btn" onClick={saveAndSubmit}>
+          Submit Changes →
         </button>
 
-        <button className="save-btn" onClick={handleSave}>
-          Save Changes →
-        </button>
-
-        <button
-          className="back-btn"
-          onClick={() => navigate(`/create/activities-review/${gameId}`)}
-        >
-          ← Back
-        </button>
       </div>
     </div>
   );
