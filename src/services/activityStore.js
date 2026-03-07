@@ -8,7 +8,6 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
-  setDoc,
 } from "firebase/firestore";
 
 import { ACTIVITIES } from "../game/data/activityList";
@@ -20,14 +19,31 @@ function normalizeActivity(a) {
   return {
     id: a.id,
     name: a.name || "",
+    duration: a.duration ?? "",
     cost: Number(a.cost || 0),
     description: a.description || "",
+    deleted: !!a.deleted,
+    added: !!a.added,
     changedFields: {
       name: !!(a.changedFields?.name),
+      duration: !!(a.changedFields?.duration),
       cost: !!(a.changedFields?.cost),
       description: !!(a.changedFields?.description),
     },
   };
+}
+
+function buildFinalActivities(draft = []) {
+  return draft
+    .map((activity) => normalizeActivity(activity))
+    .filter((activity) => !activity.deleted)
+    .map((activity) => ({
+      id: activity.id,
+      name: activity.name,
+      duration: activity.duration,
+      cost: activity.cost,
+      description: activity.description,
+    }));
 }
 
 // -------------------------------------------------------------
@@ -138,11 +154,28 @@ export async function approveActivities(gameId, identityToken) {
 
   if (!role) return console.error("Identity mismatch during approval.");
 
+  const currentApprovals = data.approvals || {
+    playerOne: false,
+    playerTwo: false,
+  };
+  const nextApprovals = {
+    playerOne: role === "playerOne" ? true : !!currentApprovals.playerOne,
+    playerTwo: role === "playerTwo" ? true : !!currentApprovals.playerTwo,
+  };
+
+  const bothApproved = nextApprovals.playerOne && nextApprovals.playerTwo;
+
+  const nextFields = {
+    approvals: nextApprovals,
+  };
+
+  if (bothApproved) {
+    nextFields.finalActivities = buildFinalActivities(data.activityDraft || []);
+    nextFields.editor = null;
+  }
+
   await safeUpdate(gameId, {
-    approvals: {
-      ...data.approvals,
-      [role]: true,
-    },
+    ...nextFields,
   });
 }
 
@@ -182,7 +215,7 @@ export async function finalizeActivities(gameId) {
   }
 
   await safeUpdate(gameId, {
-    finalActivities: data.activityDraft || [],
+    finalActivities: buildFinalActivities(data.activityDraft || []),
     editor: null,
   });
 }

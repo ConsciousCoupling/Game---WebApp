@@ -1,16 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./CoinFlip.css";
 
 export default function CoinFlip({ coin, onFlip, onComplete, activityResult }) {
   const [isAnimating, setIsAnimating] = useState(false);
-  const [face, setFace] = useState("favor");
-
-  // Detect final outcome & set which face shows
-  useEffect(() => {
-    if (coin?.result) {
-      setFace(coin.result.includes("Favor") ? "favor" : "challenge");
-    }
-  }, [coin]);
+  const face = coin?.result?.includes("Favor") ? "favor" : "challenge";
 
   const handleFlip = () => {
     if (isAnimating || coin.result) return;

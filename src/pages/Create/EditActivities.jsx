@@ -14,6 +14,7 @@ import {
 
 import { loadIdentity } from "../../services/setupStorage";
 import { ACTIVITIES } from "../../game/data/activityList";
+import { waitingRouteForRole } from "./waitingRoute";
 
 import "./EditActivities.css";
 
@@ -43,20 +44,26 @@ export default function EditActivities() {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
 
-      setState({
+      const nextState = {
         draft: data.draft || [],
         baseline: data.baseline || [],
         approvals: data.approvals || {},
         editor: data.editor || null,
         players: data.players || [],
         roles: data.roles || {},
-      });
+      };
+
+      setState(nextState);
+
+      if (nextState.editor === myToken) {
+        setLocalDraft(JSON.parse(JSON.stringify(nextState.draft)));
+      }
     });
 
     return () => unsub();
-  }, [gameId]);
+  }, [gameId, myToken]);
 
-  const { draft, baseline, approvals, editor, players, roles } = state;
+  const { editor, roles } = state;
 
   // -------------------------------------------------------
   // DETERMINE IF THIS DEVICE IS EDITOR
@@ -64,6 +71,25 @@ export default function EditActivities() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+  const waitingRoute = waitingRouteForRole(role, gameId);
+  const shouldRedirectToWaiting = !!(role && editor && editor !== myToken);
+
+
+  // -------------------------------------------------------
+  // If no one is editing, take control once
+  // -------------------------------------------------------
+  useEffect(() => {
+    if (role && !editor) {
+      setEditor(gameId, myToken);
+    }
+  }, [role, editor, gameId, myToken]);
+
+  useEffect(() => {
+    if (shouldRedirectToWaiting && waitingRoute) {
+      navigate(waitingRoute, { replace: true });
+    }
+  }, [shouldRedirectToWaiting, waitingRoute, navigate]);
+
 
   if (!role) {
     return (
@@ -76,36 +102,18 @@ export default function EditActivities() {
     );
   }
 
-  const isEditor = editor === myToken;
-
   // -------------------------------------------------------
   // If someone else is editing → YOU WAIT
   // -------------------------------------------------------
-  if (editor && editor !== myToken) {
-    navigate(`/create/waiting/${role}/${gameId}`);
-    return null;
-  }
-
-  // -------------------------------------------------------
-  // Initialize local editable draft once editor is acquired
-  // -------------------------------------------------------
-  useEffect(() => {
-    if (isEditor) {
-      // Deep clone to avoid accidental mutations
-      setLocalDraft(JSON.parse(JSON.stringify(draft)));
-    }
-  }, [isEditor, draft]);
-
-  // -------------------------------------------------------
-  // START EDITING
-  // -------------------------------------------------------
-  async function beginEditing() {
-    await setEditor(gameId, myToken);
-  }
-
-  // If no one is editing → take control
-  if (!editor) {
-    beginEditing();
+  if (shouldRedirectToWaiting) {
+    return (
+      <div className="edit-screen">
+        <div className="edit-card">
+          <h2>Redirecting…</h2>
+          <p>Opening your waiting room.</p>
+        </div>
+      </div>
+    );
   }
 
   // -------------------------------------------------------
@@ -157,7 +165,9 @@ export default function EditActivities() {
     await clearEditor(gameId);
 
     // After submitting draft, P1 → P2 waits; P2 → P1 waits
-    navigate(`/create/waiting/${role}/${gameId}`);
+    if (waitingRoute) {
+      navigate(waitingRoute);
+    }
   }
 
   // -------------------------------------------------------

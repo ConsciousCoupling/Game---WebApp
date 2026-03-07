@@ -53,6 +53,34 @@ export default function PlayerTwoWaitingRoom() {
   let role = null;
   if (roles.playerTwo === myToken) role = "playerTwo";
   if (roles.playerOne === myToken) role = "playerOne";
+  const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const shouldRedirectToSummary = !!(role && bothApproved);
+  const shouldRedirectToActivities = !!(role && !bothApproved && editor === myToken);
+  const shouldRedirectToReview = !!(
+    role && !bothApproved && draft.length > 0 && !editor
+  );
+
+  useEffect(() => {
+    if (shouldRedirectToSummary) {
+      navigate(`/create/summary/${gameId}`, { replace: true });
+      return;
+    }
+
+    if (shouldRedirectToActivities) {
+      navigate(`/create/activities/${gameId}`, { replace: true });
+      return;
+    }
+
+    if (shouldRedirectToReview) {
+      navigate(`/create/activities-review/${gameId}`, { replace: true });
+    }
+  }, [
+    shouldRedirectToSummary,
+    shouldRedirectToActivities,
+    shouldRedirectToReview,
+    gameId,
+    navigate,
+  ]);
 
   if (!role) {
     return (
@@ -74,6 +102,21 @@ export default function PlayerTwoWaitingRoom() {
   // -------------------------------------------------------
   // ROUTING LOGIC — NEGOTIATION-ONLY FIELDS
   // -------------------------------------------------------
+
+  if (
+    shouldRedirectToSummary ||
+    shouldRedirectToActivities ||
+    shouldRedirectToReview
+  ) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Redirecting…</h2>
+          <p>Preparing your next screen.</p>
+        </div>
+      </div>
+    );
+  }
 
   // CASE 1 — No draft yet → P1 is editing first list
   if (draft.length === 0) {
@@ -97,12 +140,6 @@ export default function PlayerTwoWaitingRoom() {
         </div>
       </div>
     );
-  }
-
-  // CASE 3 — No editor → P2 must now review
-  if (draft.length > 0 && !editor) {
-    navigate(`/create/activities-review/${gameId}`);
-    return null;
   }
 
   // -------------------------------------------------------

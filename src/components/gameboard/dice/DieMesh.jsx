@@ -1,6 +1,6 @@
 // src/components/gameboard/dice/DieMesh.jsx
 
-import React, { forwardRef, useRef, useMemo } from "react";
+import React, { forwardRef, useRef, useMemo, useImperativeHandle } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -38,7 +38,7 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
   // CREATE GLOW MATERIAL ONE TIME
   const glowMaterial = useMemo(() => new InnerGlowMaterial(), []);
 
-  if (ref) ref.current = mesh.current;
+  useImperativeHandle(ref, () => mesh.current, []);
 
   useFrame((_, delta) => {
     if (!engine || !mesh.current) return;

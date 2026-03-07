@@ -7,6 +7,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
+import { ensureGameplayInitialized } from "../../game/gameplayStore";
+import { waitingRouteForRole } from "./waitingRoute";
 
 import "./Summary.css";
 
@@ -23,6 +25,7 @@ export default function Summary() {
     players: [],
     roles: {},
   });
+  const [isStarting, setIsStarting] = useState(false);
 
   // -------------------------------------------------------
   // Subscribe to negotiation doc only
@@ -32,7 +35,7 @@ export default function Summary() {
       if (!data) return;
 
       setState({
-        finalActivities: data.baseline || data.finalActivities || [],
+        finalActivities: data.finalActivities || [],
         approvals: data.approvals || {},
         players: data.players || [],
         roles: data.roles || {},
@@ -50,6 +53,16 @@ export default function Summary() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+  const waitingRoute = waitingRouteForRole(role, gameId);
+  const shouldRedirectToWaiting = !!(
+    role && (!approvals.playerOne || !approvals.playerTwo)
+  );
+
+  useEffect(() => {
+    if (shouldRedirectToWaiting && waitingRoute) {
+      navigate(waitingRoute, { replace: true });
+    }
+  }, [shouldRedirectToWaiting, waitingRoute, navigate]);
 
   if (!role) {
     return (
@@ -65,9 +78,15 @@ export default function Summary() {
   // -------------------------------------------------------
   // Ensure both approvals exist
   // -------------------------------------------------------
-  if (!approvals.playerOne || !approvals.playerTwo) {
-    navigate(`/create/waiting/${role}/${gameId}`);
-    return null;
+  if (shouldRedirectToWaiting) {
+    return (
+      <div className="summary-screen">
+        <div className="summary-card">
+          <h2>Redirecting…</h2>
+          <p>Opening your waiting room.</p>
+        </div>
+      </div>
+    );
   }
 
   // -------------------------------------------------------
@@ -87,8 +106,16 @@ export default function Summary() {
   // -------------------------------------------------------
   // Start game
   // -------------------------------------------------------
-  function startGame() {
-    navigate(`/game/${gameId}`);
+  async function startGame() {
+    if (isStarting) return;
+
+    setIsStarting(true);
+    try {
+      await ensureGameplayInitialized(gameId, players, finalActivities);
+      navigate(`/game/${gameId}`);
+    } finally {
+      setIsStarting(false);
+    }
   }
 
   // -------------------------------------------------------
@@ -109,8 +136,12 @@ export default function Summary() {
           ))}
         </div>
 
-        <button className="start-game-btn" onClick={startGame}>
-          Start Game →
+        <button
+          className="start-game-btn"
+          onClick={startGame}
+          disabled={isStarting}
+        >
+          {isStarting ? "Starting…" : "Start Game →"}
         </button>
       </div>
     </div>

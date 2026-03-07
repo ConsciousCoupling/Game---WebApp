@@ -24,6 +24,7 @@ export default function ActivityShop({
         {/* ACTIVITY CARDS */}
         {activities.map((activity) => {
           const affordable = currentTokens >= activity.cost;
+          const duration = activity.duration ? `${activity.duration} min` : "—";
 
           return (
             <button
@@ -39,7 +40,7 @@ export default function ActivityShop({
               </div>
 
               <p className="activity-card-description">
-                Duration: {activity.duration} min
+                Duration: {duration}
               </p>
             </button>
           );

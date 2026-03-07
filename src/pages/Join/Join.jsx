@@ -144,9 +144,15 @@ export default function Join() {
     const approvals = data.approvals || {};
     const editor = data.editor || null;
 
-    // Case 1 — No draft yet → wait for P1 to begin
-    if (draft.length === 0 || editor === "playerOne") {
+    // Case 1 — No draft yet or partner currently editing
+    if (draft.length === 0 || (editor && editor !== token)) {
       navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
+
+    // Case 1b — This device already owns editor lock
+    if (editor === token) {
+      navigate(`/create/activities/${gameId}`);
       return;
     }
 

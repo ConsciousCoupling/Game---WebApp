@@ -8,10 +8,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   subscribeToDraftActivities,
   approveActivities,
-  setEditor,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
+import { waitingRouteForRole } from "./waitingRoute";
 
 import "./ReviewActivities.css";
 
@@ -51,7 +51,7 @@ export default function ReviewActivities() {
     return () => unsub();
   }, [gameId]);
 
-  const { draft, baseline, approvals, editor, players, roles } = state;
+  const { draft, baseline, editor, roles } = state;
 
   // -------------------------------------------------------
   // DETERMINE ROLE
@@ -59,6 +59,16 @@ export default function ReviewActivities() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+  const waitingRoute = waitingRouteForRole(role, gameId);
+  const shouldRedirectToWaiting = !!(
+    role && ((editor && editor !== myToken) || draft.length === 0)
+  );
+
+  useEffect(() => {
+    if (shouldRedirectToWaiting && waitingRoute) {
+      navigate(waitingRoute, { replace: true });
+    }
+  }, [shouldRedirectToWaiting, waitingRoute, navigate]);
 
   if (!role) {
     return (
@@ -74,17 +84,15 @@ export default function ReviewActivities() {
   // -------------------------------------------------------
   // If someone else is editing, YOU cannot be here
   // -------------------------------------------------------
-  if (editor && editor !== myToken) {
-    navigate(`/create/waiting/${role}/${gameId}`);
-    return null;
-  }
-
-  // -------------------------------------------------------
-  // If no draft exists → redirect to waiting
-  // -------------------------------------------------------
-  if (draft.length === 0) {
-    navigate(`/create/waiting/${role}/${gameId}`);
-    return null;
+  if (shouldRedirectToWaiting) {
+    return (
+      <div className="review-screen">
+        <div className="review-card">
+          <h2>Redirecting…</h2>
+          <p>Opening your waiting room.</p>
+        </div>
+      </div>
+    );
   }
 
   // -------------------------------------------------------

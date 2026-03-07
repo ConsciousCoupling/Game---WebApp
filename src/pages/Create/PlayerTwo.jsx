@@ -109,9 +109,15 @@ export default function PlayerTwo() {
     const editor = cloud.editor || null;
     const approvals = cloud.approvals || {};
 
-    // No draft yet → wait for P1  
-    if (editor === "playerOne" || draft.length === 0) {
+    // No draft yet or partner currently editing → wait
+    if (draft.length === 0 || (editor && editor !== token)) {
       navigate(`/create/waiting/player-two/${gameId}`);
+      return;
+    }
+
+    // If this device already owns the editor lock, return to editing
+    if (editor === token) {
+      navigate(`/create/activities/${gameId}`);
       return;
     }
 

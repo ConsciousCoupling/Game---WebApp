@@ -5,15 +5,15 @@
 
 import {
   doc,
-  getDoc,
   setDoc,
+  getDoc,
   updateDoc,
   onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "../services/firebase";
-import { initialGameplayState, buildPromptDecks } from "./initialGameplayState";
+import { initialGameplayState, buildPromptDecks } from "./initialGameState";
 import { getRandomMovementCard } from "./data/movementCards";
 import { PROMPT_CARDS } from "./data/promptCards";
 
@@ -96,6 +96,22 @@ export async function initGameplay(gameId, players, finalActivities) {
   await setDoc(ref, state, { merge: false });
 
   log("Gameplay initialized:", state);
+}
+
+// ---------------------------------------------------------------------------
+// GUARDED INITIALIZER — only initializes if gameplay doc does not exist
+// ---------------------------------------------------------------------------
+export async function ensureGameplayInitialized(gameId, players, finalActivities) {
+  const ref = gameplayRef(gameId);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    log("Gameplay already exists. Skipping init for:", gameId);
+    return false;
+  }
+
+  await initGameplay(gameId, players, finalActivities);
+  return true;
 }
 
 // ---------------------------------------------------------------------------

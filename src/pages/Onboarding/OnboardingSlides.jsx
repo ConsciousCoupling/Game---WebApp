@@ -1,12 +1,14 @@
 // src/pages/Onboarding/OnboardingSlides.jsx
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "./OnboardingSlides.css";
 
 export default function OnboardingSlides() {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
+
+  const MotionDiv = motion.div;
 
   const slides = [
     {
@@ -36,7 +38,7 @@ export default function OnboardingSlides() {
   return (
     <div className="onboard-slides-page">
       <AnimatePresence mode="wait">
-        <motion.div
+        <MotionDiv
           key={index}
           className="onboard-slide-card"
           initial={{ opacity: 0, y: 30 }}
@@ -56,7 +58,7 @@ export default function OnboardingSlides() {
               {index === slides.length - 1 ? "Continue" : "Next"}
             </button>
           </div>
-        </motion.div>
+        </MotionDiv>
       </AnimatePresence>
     </div>
   );

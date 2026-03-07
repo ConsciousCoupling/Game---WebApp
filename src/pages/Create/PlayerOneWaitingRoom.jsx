@@ -53,6 +53,22 @@ export default function PlayerOneWaitingRoom() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+  const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const shouldRedirectToSummary = !!(role && bothApproved);
+  const shouldRedirectToActivities = !!(
+    role && !bothApproved && (draft.length === 0 || editor === myToken)
+  );
+
+  useEffect(() => {
+    if (shouldRedirectToSummary) {
+      navigate(`/create/summary/${gameId}`, { replace: true });
+      return;
+    }
+
+    if (shouldRedirectToActivities) {
+      navigate(`/create/activities/${gameId}`, { replace: true });
+    }
+  }, [shouldRedirectToSummary, shouldRedirectToActivities, gameId, navigate]);
 
   // If we don’t know who we are yet → show loading
   if (!role) {
@@ -73,19 +89,18 @@ export default function PlayerOneWaitingRoom() {
   // ROUTING LOGIC FOR P1
   // -------------------------------------------------------
 
-  // CASE 1 — P1 should still edit the first draft list
-  if (draft.length === 0) {
-    navigate(`/create/activities/${gameId}`);
-    return null;
+  if (shouldRedirectToSummary || shouldRedirectToActivities) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Redirecting…</h2>
+          <p>Preparing your next screen.</p>
+        </div>
+      </div>
+    );
   }
 
-  // CASE 2 — Editor exists & it is YOU → go edit draft
-  if (editor && editor === myToken) {
-    navigate(`/create/activities/${gameId}`);
-    return null;
-  }
-
-  // CASE 3 — Editor exists & it is NOT you → wait
+  // CASE 1 — Editor exists & it is NOT you → wait
   if (editor && editor !== myToken) {
     return (
       <div className="waiting-screen">
@@ -97,7 +112,7 @@ export default function PlayerOneWaitingRoom() {
     );
   }
 
-  // CASE 4 — No editor & draft exists:
+  // CASE 2 — No editor & draft exists:
   // Means P2 has finished editing but hasn't approved yet.
   if (draft.length > 0 && !editor) {
     // P1 should NOT edit; P1 already submitted.
@@ -109,12 +124,6 @@ export default function PlayerOneWaitingRoom() {
         </div>
       </div>
     );
-  }
-
-  // CASE 5 — Both approved → summary
-  if (approvals.playerOne && approvals.playerTwo) {
-    navigate(`/create/summary/${gameId}`);
-    return null;
   }
 
   // -------------------------------------------------------

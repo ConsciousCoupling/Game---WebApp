@@ -1,6 +1,6 @@
 // src/components/gameboard/InstructionOverlay.jsx
 
-export default function InstructionOverlay({ phase, currentPlayer, prompt }) {
+export default function InstructionOverlay({ phase, currentPlayer }) {
   let text = "";
 
   // --------------------------------------------------
