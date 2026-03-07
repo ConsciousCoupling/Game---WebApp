@@ -2,12 +2,14 @@
 // SETUP STORAGE — FINAL IDENTITY ENGINE (TOKEN ONLY)
 // -----------------------------------------------------------
 
+import { auth, ensureAnonymousAuth } from "./firebase";
+
 // LocalStorage key for per-game identity tokens
 const IDENTITY_KEY = "intimadate.identity";
 
 // -------------------------------------------------------------------
 // Load identity map safely
-// Structure: { [gameId]: { token: "anon_xyz" } }
+// Structure: { [gameId]: { token: "<firebase-auth-uid>" } }
 // -------------------------------------------------------------------
 function loadIdentityMap() {
   try {
@@ -24,15 +26,8 @@ function saveIdentityMap(map) {
 }
 
 // -------------------------------------------------------------------
-// Create a short random token
-// -------------------------------------------------------------------
-function generateToken() {
-  return "anon_" + Math.random().toString(36).substring(2, 10);
-}
-
-// -------------------------------------------------------------------
 // Public: Load identity for a specific game
-// Returns: { token: "anon123" } OR null
+// Returns: { token: "<firebase-auth-uid>" } OR null
 // -------------------------------------------------------------------
 export function loadIdentity(gameId) {
   const map = loadIdentityMap();
@@ -43,14 +38,15 @@ export function loadIdentity(gameId) {
 // Public: Ensure identity token exists for this device + game
 // DOES NOT assign roles — Firestore does that
 // -------------------------------------------------------------------
-export function ensureIdentityForGame(gameId) {
+export async function ensureIdentityForGame(gameId) {
   const map = loadIdentityMap();
+  const user = auth.currentUser || await ensureAnonymousAuth();
+  const token = user.uid;
 
-  if (map[gameId]?.token) {
+  if (map[gameId]?.token === token) {
     return map[gameId];
   }
 
-  const token = generateToken();
   map[gameId] = { token };
 
   saveIdentityMap(map);

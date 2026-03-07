@@ -10,6 +10,7 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 // Safely read config from Vite environment
 const firebaseConfig = {
@@ -43,6 +44,26 @@ const app = !getApps().length
 
 // Export Firestore instance
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+let authPromise = null;
+
+export function ensureAnonymousAuth() {
+  if (auth.currentUser) {
+    return Promise.resolve(auth.currentUser);
+  }
+
+  if (!authPromise) {
+    authPromise = signInAnonymously(auth)
+      .then((credential) => credential.user)
+      .catch((error) => {
+        authPromise = null;
+        throw error;
+      });
+  }
+
+  return authPromise;
+}
 
 // Export the app too (useful for auth/storage in future)
 export { app };

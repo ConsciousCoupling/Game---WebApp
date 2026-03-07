@@ -54,7 +54,7 @@ export default function PlayerTwo() {
     }
 
     // Make PlayerTwo identity token
-    const identity = ensureIdentityForGame(gameId);
+    const identity = await ensureIdentityForGame(gameId);
     const token = identity.token;
 
     // Save local display settings

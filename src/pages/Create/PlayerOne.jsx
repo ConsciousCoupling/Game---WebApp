@@ -96,7 +96,7 @@ export default function PlayerOne() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
-    const identity = ensureIdentityForGame(gameId);
+    const identity = await ensureIdentityForGame(gameId);
     const token = identity.token;
 
     saveSetup({
@@ -118,7 +118,7 @@ export default function PlayerOne() {
     if (!name.trim()) return;
 
     const gameId = generateGameId();
-    const identity = ensureIdentityForGame(gameId);
+    const identity = await ensureIdentityForGame(gameId);
     const token = identity.token;
 
     saveSetup({

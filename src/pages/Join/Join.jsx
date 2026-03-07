@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { ensureIdentityForGame, loadIdentity, saveSetup } from "../../services/setupStorage";
+import { ensureIdentityForGame, saveSetup } from "../../services/setupStorage";
 import { db } from "../../services/firebase";
 
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -54,8 +54,8 @@ export default function Join() {
     const data = snap.data();
     const roles = data.roles || {};
 
-    // Identity token stored locally
-    const identity = loadIdentity(gameId);
+    // Ensure identity token uses Firebase Auth UID
+    const identity = await ensureIdentityForGame(gameId);
     const localToken = identity?.token || null;
 
     // If someone else already claimed PlayerTwo slot
@@ -87,7 +87,7 @@ export default function Join() {
     }
 
     // Ensure this device has a token for this game
-    const identity = ensureIdentityForGame(gameId);
+    const identity = await ensureIdentityForGame(gameId);
     const token = identity.token;
 
     // Store PlayerTwo local metadata for UI
