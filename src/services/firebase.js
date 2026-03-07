@@ -12,10 +12,11 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
+const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY || "").trim();
+
 // Safely read config from Vite environment
 const firebaseConfig = {
- // apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
- apiKey: "AIzaSyBvRciJasrFPscQrFs52mg0Bmxq3LEm1qk",
+  apiKey,
   authDomain: "intima-date.firebaseapp.com",
   projectId: "intima-date",
   storageBucket: "intima-date.firebasestorage.app",
@@ -29,6 +30,17 @@ function validateConfig(config) {
   if (!config.apiKey) {
     console.error(
       "%cFirebase Error:%c Missing environment variables (VITE_FIREBASE_API_KEY).",
+      "color:red;font-weight:bold;", ""
+    );
+    return;
+  }
+
+  if (
+    config.apiKey.includes("OUR_KEY_HERE")
+    || !config.apiKey.startsWith("AIza")
+  ) {
+    console.error(
+      "%cFirebase Error:%c Invalid API key format. Check VITE_FIREBASE_API_KEY.",
       "color:red;font-weight:bold;", ""
     );
   }
