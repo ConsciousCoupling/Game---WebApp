@@ -14,7 +14,8 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 
 // Safely read config from Vite environment
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+ // apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+ apiKey: "AIzaSyBvRciJasrFPscQrFs52mg0Bmxq3LEm1qk",
   authDomain: "intima-date.firebaseapp.com",
   projectId: "intima-date",
   storageBucket: "intima-date.firebasestorage.app",
