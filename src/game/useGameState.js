@@ -84,6 +84,11 @@ export default function useGameplayState(gameId) {
       gameplayActions.purchaseActivity(gameId, state, activity, myToken);
     },
 
+    endTurnInShop: () => {
+      if (!state) return;
+      gameplayActions.endTurnInShop(gameId, state, myToken);
+    },
+
     flipCoin: () => {
       if (!state) return;
       gameplayActions.flipCoin(gameId, state, myToken);

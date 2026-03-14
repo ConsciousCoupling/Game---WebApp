@@ -287,6 +287,21 @@ export const gameplayActions = {
   },
 
   // -------------------------------------------------------
+  endTurnInShop: (gameId, state, myToken) => {
+    if (!onlyCurrentPlayer(state, myToken)) return;
+
+    write(gameId, {
+      activityShop: null,
+      pendingActivity: null,
+      coin: { isFlipping: false, result: null },
+      phase: "TURN_START",
+      lastDieFace: null,
+      lastCategory: null,
+      currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
+    });
+  },
+
+  // -------------------------------------------------------
   flipCoin: (gameId, state, myToken) => {
     if (!onlyCurrentPlayer(state, myToken)) return;
 
