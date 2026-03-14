@@ -30,6 +30,7 @@ export default function EditActivities() {
     baseline: [],
     approvals: {},
     editor: null,
+    editTurn: null,
     players: [],
     roles: {},
   });
@@ -51,6 +52,7 @@ export default function EditActivities() {
         baseline: data.baseline || [],
         approvals: data.approvals || {},
         editor: data.editor || null,
+        editTurn: data.editTurn ?? null,
         players: data.players || [],
         roles: data.roles || {},
       };
@@ -65,7 +67,7 @@ export default function EditActivities() {
     return () => unsub();
   }, [gameId, myToken]);
 
-  const { editor, roles } = state;
+  const { editor, roles, editTurn } = state;
 
   // -------------------------------------------------------
   // DETERMINE IF THIS DEVICE IS EDITOR
@@ -74,17 +76,27 @@ export default function EditActivities() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
   const waitingRoute = waitingRouteForRole(role, gameId);
-  const shouldRedirectToWaiting = !!(role && editor && editor !== myToken);
+  const canEdit = !!(
+    role && (editor === myToken || (editTurn === role && !editor))
+  );
+  const shouldRedirectToReview = !!(role && editTurn === null && !editor);
+  const shouldRedirectToWaiting = !!(role && !canEdit && !shouldRedirectToReview);
 
 
   // -------------------------------------------------------
   // If no one is editing, take control once
   // -------------------------------------------------------
   useEffect(() => {
-    if (role && !editor && !isHandingOffEditor) {
+    if (role && editTurn === role && !editor && !isHandingOffEditor) {
       setEditor(gameId, myToken);
     }
-  }, [role, editor, gameId, myToken, isHandingOffEditor]);
+  }, [role, editTurn, editor, gameId, myToken, isHandingOffEditor]);
+
+  useEffect(() => {
+    if (shouldRedirectToReview) {
+      navigate(`/create/activities-review/${gameId}`, { replace: true });
+    }
+  }, [shouldRedirectToReview, gameId, navigate]);
 
   useEffect(() => {
     if (shouldRedirectToWaiting && waitingRoute) {
@@ -113,6 +125,17 @@ export default function EditActivities() {
         <div className="edit-card">
           <h2>Redirecting…</h2>
           <p>Opening your waiting room.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldRedirectToReview) {
+    return (
+      <div className="edit-screen">
+        <div className="edit-card">
+          <h2>Redirecting…</h2>
+          <p>Opening the review screen.</p>
         </div>
       </div>
     );
@@ -223,9 +246,13 @@ export default function EditActivities() {
     setSubmitError("");
 
     try {
-      await submitDraftActivities(gameId, localDraft);
+      await submitDraftActivities(gameId, localDraft, myToken);
 
-      navigate(`/create/activities-review/${gameId}`, { replace: true });
+      if (role === "playerOne" && waitingRoute) {
+        navigate(waitingRoute, { replace: true });
+      } else {
+        navigate(`/create/activities-review/${gameId}`, { replace: true });
+      }
     } catch (error) {
       console.error("Failed to submit activity changes:", error);
       setIsHandingOffEditor(false);

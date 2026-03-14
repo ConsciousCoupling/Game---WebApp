@@ -27,6 +27,7 @@ export default function ReviewActivities() {
     baseline: [],
     approvals: {},
     editor: null,
+    editTurn: null,
     players: [],
     roles: {},
   });
@@ -43,6 +44,7 @@ export default function ReviewActivities() {
         baseline: data.baseline || [], // (this is finalActivities)
         approvals: data.approvals || {},
         editor: data.editor || null,
+        editTurn: data.editTurn ?? null,
         players: data.players || [],
         roles: data.roles || {},
       });
@@ -51,7 +53,7 @@ export default function ReviewActivities() {
     return () => unsub();
   }, [gameId]);
 
-  const { draft, baseline, editor, roles } = state;
+  const { draft, baseline, editor, roles, editTurn } = state;
 
   // -------------------------------------------------------
   // DETERMINE ROLE
@@ -61,7 +63,7 @@ export default function ReviewActivities() {
   if (roles.playerTwo === myToken) role = "playerTwo";
   const waitingRoute = waitingRouteForRole(role, gameId);
   const shouldRedirectToWaiting = !!(
-    role && ((editor && editor !== myToken) || draft.length === 0)
+    role && (editTurn !== null || (editor && editor !== myToken) || draft.length === 0)
   );
 
   useEffect(() => {

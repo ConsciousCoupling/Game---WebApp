@@ -12,6 +12,34 @@ import {
 
 import { ACTIVITIES } from "../game/data/activityList";
 
+function getRoleFromIdentity(roles = {}, identityToken) {
+  if (identityToken === roles.playerOne) return "playerOne";
+  if (identityToken === roles.playerTwo) return "playerTwo";
+  return null;
+}
+
+function inferEditTurn(data = {}) {
+  if (data.editTurn !== undefined) {
+    return data.editTurn;
+  }
+
+  const editorRole = getRoleFromIdentity(data.roles || {}, data.editor);
+  if (editorRole) {
+    return editorRole;
+  }
+
+  const approvals = data.approvals || {};
+  if (approvals.playerOne || approvals.playerTwo) {
+    return null;
+  }
+
+  if (!data.roles?.playerTwo) {
+    return "playerOne";
+  }
+
+  return "playerTwo";
+}
+
 // -------------------------------------------------------------
 // NORMALIZER — ensures every activity has required fields
 // -------------------------------------------------------------
@@ -63,6 +91,7 @@ export async function initializeActivities(gameId) {
       playerTwo: false,
     },
     editor: null,
+    editTurn: "playerOne",
   });
 
   console.log("Activities initialized for game:", gameId);
@@ -92,6 +121,7 @@ export function subscribeToDraftActivities(gameId, callback) {
       finalActivities: data.finalActivities || [],
       approvals: data.approvals || { playerOne: false, playerTwo: false },
       editor: data.editor ?? null,
+      editTurn: inferEditTurn(data),
       players: data.players || [],
       roles: data.roles || {},
     });
@@ -119,8 +149,16 @@ async function safeUpdate(gameId, fields) {
 // SET EDITOR (locks editing to one player)
 // -------------------------------------------------------------
 export async function setEditor(gameId, editorToken) {
+  const ref = doc(db, "games", gameId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const role = getRoleFromIdentity(snap.data().roles || {}, editorToken);
+  if (!role) return;
+
   await safeUpdate(gameId, {
     editor: editorToken,
+    editTurn: role,
     approvals: {
       playerOne: false,
       playerTwo: false,
@@ -146,11 +184,7 @@ export async function approveActivities(gameId, identityToken) {
   if (!snap.exists()) return;
 
   const data = snap.data();
-  const roles = data.roles || {};
-
-  let role = null;
-  if (identityToken === roles.playerOne) role = "playerOne";
-  if (identityToken === roles.playerTwo) role = "playerTwo";
+  const role = getRoleFromIdentity(data.roles || {}, identityToken);
 
   if (!role) return console.error("Identity mismatch during approval.");
 
@@ -172,6 +206,7 @@ export async function approveActivities(gameId, identityToken) {
   if (bothApproved) {
     nextFields.finalActivities = buildFinalActivities(data.activityDraft || []);
     nextFields.editor = null;
+    nextFields.editTurn = null;
   }
 
   await safeUpdate(gameId, {
@@ -199,7 +234,16 @@ export async function saveDraftActivities(gameId, draft, editorToken) {
 // SUBMIT UPDATED ACTIVITY DRAFT
 // Saves the draft and releases the editor lock in one write.
 // -------------------------------------------------------------
-export async function submitDraftActivities(gameId, draft) {
+export async function submitDraftActivities(gameId, draft, identityToken) {
+  const ref = doc(db, "games", gameId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const role = getRoleFromIdentity(snap.data().roles || {}, identityToken);
+  if (!role) {
+    throw new Error("Identity mismatch during activity submission.");
+  }
+
   const normalized = draft.map((a) => normalizeActivity(a));
 
   await safeUpdate(gameId, {
@@ -209,6 +253,7 @@ export async function submitDraftActivities(gameId, draft) {
       playerTwo: false,
     },
     editor: null,
+    editTurn: role === "playerOne" ? "playerTwo" : null,
   });
 }
 
@@ -234,5 +279,6 @@ export async function finalizeActivities(gameId) {
   await safeUpdate(gameId, {
     finalActivities: buildFinalActivities(data.activityDraft || []),
     editor: null,
+    editTurn: null,
   });
 }

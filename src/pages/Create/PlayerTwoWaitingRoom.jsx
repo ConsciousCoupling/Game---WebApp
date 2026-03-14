@@ -24,6 +24,7 @@ export default function PlayerTwoWaitingRoom() {
     draft: [],
     approvals: {},
     editor: null,
+    editTurn: null,
   });
 
   // -------------------------------------------------------
@@ -39,13 +40,14 @@ export default function PlayerTwoWaitingRoom() {
         draft: data.draft || [],
         approvals: data.approvals || {},
         editor: data.editor ?? null,
+        editTurn: data.editTurn ?? null,
       });
     });
 
     return () => unsub();
   }, [gameId]);
 
-  const { players, roles, draft, approvals, editor } = state;
+  const { players, roles, approvals, editor, editTurn } = state;
 
   // -------------------------------------------------------
   // Determine which player we are
@@ -55,9 +57,11 @@ export default function PlayerTwoWaitingRoom() {
   if (roles.playerOne === myToken) role = "playerOne";
   const bothApproved = approvals.playerOne && approvals.playerTwo;
   const shouldRedirectToSummary = !!(role && bothApproved);
-  const shouldRedirectToActivities = !!(role && !bothApproved && editor === myToken);
+  const shouldRedirectToActivities = !!(
+    role && !bothApproved && editTurn === role && (!editor || editor === myToken)
+  );
   const shouldRedirectToReview = !!(
-    role && !bothApproved && draft.length > 0 && !editor
+    role && !bothApproved && editTurn === null && !editor
   );
 
   useEffect(() => {
@@ -118,20 +122,8 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // CASE 1 — No draft yet → P1 is editing first list
-  if (draft.length === 0) {
-    return (
-      <div className="waiting-screen">
-        <div className="waiting-card">
-          <h2>Waiting for {partnerName}…</h2>
-          <p>Your partner is preparing the first activity list.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // CASE 2 — Someone is editing, and it isn’t you
-  if (editor && editor !== myToken) {
+  // CASE 1 — P1 is editing first list
+  if (editTurn === "playerOne" || (editor && editor !== myToken)) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">

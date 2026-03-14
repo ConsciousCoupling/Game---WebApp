@@ -105,41 +105,27 @@ export default function PlayerTwo() {
     });
 
     // Proceed depending on whether P1 already began editing
-    const draft = cloud.activityDraft || [];
+    const editTurn =
+      typeof cloud.editTurn === "undefined" ? "unknown" : cloud.editTurn;
     const editor = cloud.editor || null;
     const approvals = cloud.approvals || {};
+    const bothApproved = approvals.playerOne && approvals.playerTwo;
 
-    // No draft yet or partner currently editing → wait
-    if (draft.length === 0 || (editor && editor !== token)) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // If this device already owns the editor lock, return to editing
-    if (editor === token) {
-      navigate(`/create/activities/${gameId}`);
-      return;
-    }
-
-    // P1 submitted draft but not approved
-    if (draft.length > 0 && approvals.playerOne === false) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // P1 approved → P2 reviews
-    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
-      navigate(`/create/activities-review/${gameId}`);
-      return;
-    }
-
-    // Both approved? → Summary
-    if (approvals.playerOne && approvals.playerTwo) {
+    if (bothApproved) {
       navigate(`/create/summary/${gameId}`);
       return;
     }
 
-    // Fallback
+    if (editTurn === "playerTwo" && (!editor || editor === token)) {
+      navigate(`/create/activities/${gameId}`);
+      return;
+    }
+
+    if (editTurn === null && !editor) {
+      navigate(`/create/activities-review/${gameId}`);
+      return;
+    }
+
     navigate(`/create/waiting/player-two/${gameId}`);
   }
 

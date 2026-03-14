@@ -24,6 +24,7 @@ export default function PlayerOneWaitingRoom() {
     draft: [],
     approvals: {},
     editor: null,
+    editTurn: null,
   });
 
   // -------------------------------------------------------
@@ -39,13 +40,14 @@ export default function PlayerOneWaitingRoom() {
         draft: data.draft || [],
         approvals: data.approvals || {},
         editor: data.editor ?? null,
+        editTurn: data.editTurn ?? null,
       });
     });
 
     return () => unsub();
   }, [gameId]);
 
-  const { players, roles, draft, approvals, editor } = state;
+  const { players, roles, approvals, editor, editTurn } = state;
 
   // -------------------------------------------------------
   // Determine if THIS device is PlayerOne
@@ -56,7 +58,10 @@ export default function PlayerOneWaitingRoom() {
   const bothApproved = approvals.playerOne && approvals.playerTwo;
   const shouldRedirectToSummary = !!(role && bothApproved);
   const shouldRedirectToActivities = !!(
-    role && !bothApproved && (draft.length === 0 || editor === myToken)
+    role && !bothApproved && editTurn === role && (!editor || editor === myToken)
+  );
+  const shouldRedirectToReview = !!(
+    role && !bothApproved && editTurn === null && !editor
   );
 
   useEffect(() => {
@@ -67,8 +72,19 @@ export default function PlayerOneWaitingRoom() {
 
     if (shouldRedirectToActivities) {
       navigate(`/create/activities/${gameId}`, { replace: true });
+      return;
     }
-  }, [shouldRedirectToSummary, shouldRedirectToActivities, gameId, navigate]);
+
+    if (shouldRedirectToReview) {
+      navigate(`/create/activities-review/${gameId}`, { replace: true });
+    }
+  }, [
+    shouldRedirectToSummary,
+    shouldRedirectToActivities,
+    shouldRedirectToReview,
+    gameId,
+    navigate,
+  ]);
 
   // If we don’t know who we are yet → show loading
   if (!role) {
@@ -89,7 +105,7 @@ export default function PlayerOneWaitingRoom() {
   // ROUTING LOGIC FOR P1
   // -------------------------------------------------------
 
-  if (shouldRedirectToSummary || shouldRedirectToActivities) {
+  if (shouldRedirectToSummary || shouldRedirectToActivities || shouldRedirectToReview) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
@@ -112,15 +128,14 @@ export default function PlayerOneWaitingRoom() {
     );
   }
 
-  // CASE 2 — No editor & draft exists:
-  // Means P2 has finished editing but hasn't approved yet.
-  if (draft.length > 0 && !editor) {
+  // CASE 2 — P2 owns the current edit turn
+  if (editTurn === "playerTwo" || (editor && editor !== myToken)) {
     // P1 should NOT edit; P1 already submitted.
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
-          <p>Your partner is reviewing the activity list.</p>
+          <p>Your partner is updating the activity list.</p>
         </div>
       </div>
     );
