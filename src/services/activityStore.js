@@ -196,6 +196,23 @@ export async function saveDraftActivities(gameId, draft, editorToken) {
 }
 
 // -------------------------------------------------------------
+// SUBMIT UPDATED ACTIVITY DRAFT
+// Saves the draft and releases the editor lock in one write.
+// -------------------------------------------------------------
+export async function submitDraftActivities(gameId, draft) {
+  const normalized = draft.map((a) => normalizeActivity(a));
+
+  await safeUpdate(gameId, {
+    activityDraft: normalized,
+    approvals: {
+      playerOne: false,
+      playerTwo: false,
+    },
+    editor: null,
+  });
+}
+
+// -------------------------------------------------------------
 // FINALIZE ACTIVITIES — After both players approve
 // -------------------------------------------------------------
 export async function finalizeActivities(gameId) {
