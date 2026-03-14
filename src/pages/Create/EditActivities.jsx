@@ -225,12 +225,7 @@ export default function EditActivities() {
     try {
       await submitDraftActivities(gameId, localDraft);
 
-      // After submitting draft, P1 → P2 waits; P2 → P1 waits
-      if (waitingRoute) {
-        navigate(waitingRoute, { replace: true });
-      } else {
-        setIsHandingOffEditor(false);
-      }
+      navigate(`/create/activities-review/${gameId}`, { replace: true });
     } catch (error) {
       console.error("Failed to submit activity changes:", error);
       setIsHandingOffEditor(false);
