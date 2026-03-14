@@ -48,6 +48,12 @@ export function subscribeToGameplay(gameId, callback) {
   });
 }
 
+export function subscribeToGameplayPresence(gameId, callback) {
+  return onSnapshot(gameplayRef(gameId), (snap) => {
+    callback(snap.exists());
+  });
+}
+
 // ---------------------------------------------------------------------------
 // INITIALIZER — Called when Summary → Start Game
 // ---------------------------------------------------------------------------

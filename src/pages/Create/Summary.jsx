@@ -7,7 +7,10 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
-import { ensureGameplayInitialized } from "../../game/gameplayStore";
+import {
+  ensureGameplayInitialized,
+  subscribeToGameplayPresence,
+} from "../../game/gameplayStore";
 import { waitingRouteForRole } from "./waitingRoute";
 
 import "./Summary.css";
@@ -26,6 +29,7 @@ export default function Summary() {
     roles: {},
   });
   const [isStarting, setIsStarting] = useState(false);
+  const [gameplayReady, setGameplayReady] = useState(false);
 
   // -------------------------------------------------------
   // Subscribe to negotiation doc only
@@ -45,6 +49,14 @@ export default function Summary() {
     return () => unsub();
   }, [gameId]);
 
+  useEffect(() => {
+    const unsub = subscribeToGameplayPresence(gameId, (exists) => {
+      setGameplayReady(exists);
+    });
+
+    return () => unsub();
+  }, [gameId]);
+
   const { finalActivities, approvals, players, roles } = state;
 
   // -------------------------------------------------------
@@ -57,6 +69,7 @@ export default function Summary() {
   const shouldRedirectToWaiting = !!(
     role && (!approvals.playerOne || !approvals.playerTwo)
   );
+  const shouldRedirectToGame = !!(role && gameplayReady);
 
   useEffect(() => {
     if (shouldRedirectToWaiting && waitingRoute) {
@@ -64,12 +77,29 @@ export default function Summary() {
     }
   }, [shouldRedirectToWaiting, waitingRoute, navigate]);
 
+  useEffect(() => {
+    if (shouldRedirectToGame) {
+      navigate(`/game/${gameId}`, { replace: true });
+    }
+  }, [shouldRedirectToGame, gameId, navigate]);
+
   if (!role) {
     return (
       <div className="summary-screen">
         <div className="summary-card">
           <h2>Loading…</h2>
           <p>Verifying your identity.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldRedirectToGame) {
+    return (
+      <div className="summary-screen">
+        <div className="summary-card">
+          <h2>Opening Game…</h2>
+          <p>Gameplay has started.</p>
         </div>
       </div>
     );
@@ -136,13 +166,17 @@ export default function Summary() {
           ))}
         </div>
 
-        <button
-          className="start-game-btn"
-          onClick={startGame}
-          disabled={isStarting}
-        >
-          {isStarting ? "Starting…" : "Start Game →"}
-        </button>
+        {role === "playerOne" ? (
+          <button
+            className="start-game-btn"
+            onClick={startGame}
+            disabled={isStarting}
+          >
+            {isStarting ? "Starting…" : "Start Game →"}
+          </button>
+        ) : (
+          <p>Waiting for Player One to start the game.</p>
+        )}
       </div>
     </div>
   );
