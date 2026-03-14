@@ -16,13 +16,12 @@ const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY || "").trim();
 
 // Safely read config from Vite environment
 const firebaseConfig = {
-  apiKey,
-  authDomain: "intima-date.firebaseapp.com",
-  projectId: "intima-date",
-  storageBucket: "intima-date.firebasestorage.app",
-  messagingSenderId: "1059417189725",
-  appId: "1:1059417189725:web:2dfbd47e2c7d6bef678cb4",
-  measurementId: "G-F8PQ70C0QV",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Validate config early — prevents silent crashes in Firestore
