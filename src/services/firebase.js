@@ -28,20 +28,14 @@ const firebaseConfig = {
 // Validate config early — prevents silent crashes in Firestore
 function validateConfig(config) {
   if (!config.apiKey) {
-    console.error(
-      "%cFirebase Error:%c Missing environment variables (VITE_FIREBASE_API_KEY).",
-      "color:red;font-weight:bold;", ""
+    throw new Error(
+      "Firebase configuration error: VITE_FIREBASE_API_KEY is missing. Check your .env file and rebuild the app."
     );
-    return;
   }
 
-  if (
-    config.apiKey.includes("OUR_KEY_HERE")
-    || !config.apiKey.startsWith("AIza")
-  ) {
-    console.error(
-      "%cFirebase Error:%c Invalid API key format. Check VITE_FIREBASE_API_KEY.",
-      "color:red;font-weight:bold;", ""
+  if (!config.apiKey.startsWith("AIza")) {
+    throw new Error(
+      "Firebase configuration error: API key format is invalid."
     );
   }
 }
