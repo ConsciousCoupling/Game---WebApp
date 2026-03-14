@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { saveSetup, ensureIdentityForGame, loadSetup } from "../../services/setupStorage";
 import { db } from "../../services/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { getNegotiationRoute } from "../../services/negotiationRoute";
 
 import "./Create.css";
 
@@ -104,29 +105,8 @@ export default function PlayerTwo() {
       ],
     });
 
-    // Proceed depending on whether P1 already began editing
-    const editTurn =
-      typeof cloud.editTurn === "undefined" ? "unknown" : cloud.editTurn;
-    const editor = cloud.editor || null;
-    const approvals = cloud.approvals || {};
-    const bothApproved = approvals.playerOne && approvals.playerTwo;
-
-    if (bothApproved) {
-      navigate(`/create/summary/${gameId}`);
-      return;
-    }
-
-    if (editTurn === "playerTwo" && (!editor || editor === token)) {
-      navigate(`/create/activities/${gameId}`);
-      return;
-    }
-
-    if (editTurn === null && !editor) {
-      navigate(`/create/activities-review/${gameId}`);
-      return;
-    }
-
-    navigate(`/create/waiting/player-two/${gameId}`);
+    const nextRoute = getNegotiationRoute(gameId, cloud, token);
+    navigate(nextRoute || `/create/waiting/player-two/${gameId}`);
   }
 
   // -----------------------------------------------------------

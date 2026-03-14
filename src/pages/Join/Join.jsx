@@ -2,13 +2,19 @@
 // JOIN EXISTING GAME — TWO-DOCUMENT, IDENTITY-SAFE EDITION
 // -----------------------------------------------------------
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { ensureIdentityForGame, saveSetup } from "../../services/setupStorage";
-import { db } from "../../services/firebase";
+import {
+  ensureIdentityForGame,
+  loadIdentity,
+  loadSetup,
+  saveSetup,
+} from "../../services/setupStorage";
+import { db, ensureAnonymousAuth } from "../../services/firebase";
 
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { getNegotiationRoute } from "../../services/negotiationRoute";
 
 import "./Join.css";
 
@@ -21,15 +27,67 @@ export default function Join() {
 
   const [code, setCode] = useState(prefill);
   const [step, setStep] = useState(prefill ? 2 : 1);
+  const [isResuming, setIsResuming] = useState(!prefill);
 
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
 
+  const setup = loadSetup();
+  const resumeGameId = setup?.gameId || null;
+  const resumeIdentity = resumeGameId ? loadIdentity(resumeGameId) : null;
+
   const colors = [
     "#ff3e84", "#3e8bff", "#ffd34f", "#37d67a",
     "#ff00cc", "#9b59ff", "#ff7a2f",
   ];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function tryResumeGame() {
+      if (!resumeGameId || !resumeIdentity?.token) {
+        if (!cancelled) setIsResuming(false);
+        return;
+      }
+
+      try {
+        const user = await ensureAnonymousAuth();
+        if (cancelled || user.uid !== resumeIdentity.token) {
+          return;
+        }
+
+        const snap = await getDoc(doc(db, "games", resumeGameId));
+        if (!snap.exists()) {
+          if (!cancelled) setIsResuming(false);
+          return;
+        }
+
+        const nextRoute = getNegotiationRoute(
+          resumeGameId,
+          snap.data(),
+          resumeIdentity.token
+        );
+
+        if (nextRoute) {
+          navigate(nextRoute, { replace: true });
+          return;
+        }
+      } catch (resumeError) {
+        console.error("Failed to resume joined game:", resumeError);
+      }
+
+      if (!cancelled) {
+        setIsResuming(false);
+      }
+    }
+
+    tryResumeGame();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, resumeGameId, resumeIdentity?.token]);
 
   // -----------------------------------------------------------
   // STEP 1 — VALIDATE GAME CODE (Negotiation doc only)
@@ -140,28 +198,19 @@ export default function Join() {
     // ----------------------------
     // DETERMINE NEXT SCREEN
     // ----------------------------
-    const editTurn =
-      typeof data.editTurn === "undefined" ? "unknown" : data.editTurn;
-    const approvals = data.approvals || {};
-    const editor = data.editor || null;
-    const bothApproved = approvals.playerOne && approvals.playerTwo;
+    const nextRoute = getNegotiationRoute(gameId, data, token);
+    navigate(nextRoute || `/create/waiting/player-two/${gameId}`);
+  }
 
-    if (bothApproved) {
-      navigate(`/create/summary/${gameId}`);
-      return;
-    }
-
-    if (editTurn === "playerTwo" && (!editor || editor === token)) {
-      navigate(`/create/activities/${gameId}`);
-      return;
-    }
-
-    if (editTurn === null && !editor) {
-      navigate(`/create/activities-review/${gameId}`);
-      return;
-    }
-
-    navigate(`/create/waiting/player-two/${gameId}`);
+  if (isResuming) {
+    return (
+      <div className="join-page">
+        <div className="join-card">
+          <h2 className="join-title">Reconnecting…</h2>
+          <p className="join-subtitle">Restoring your current game.</p>
+        </div>
+      </div>
+    );
   }
 
   // -----------------------------------------------------------
