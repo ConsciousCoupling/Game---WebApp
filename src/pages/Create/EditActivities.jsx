@@ -37,6 +37,7 @@ export default function EditActivities() {
   const [localDraft, setLocalDraft] = useState([]);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHandingOffEditor, setIsHandingOffEditor] = useState(false);
 
   // -------------------------------------------------------
   // SUBSCRIBE to NEGOTIATION DOC ONLY
@@ -80,10 +81,10 @@ export default function EditActivities() {
   // If no one is editing, take control once
   // -------------------------------------------------------
   useEffect(() => {
-    if (role && !editor) {
+    if (role && !editor && !isHandingOffEditor) {
       setEditor(gameId, myToken);
     }
-  }, [role, editor, gameId, myToken]);
+  }, [role, editor, gameId, myToken, isHandingOffEditor]);
 
   useEffect(() => {
     if (shouldRedirectToWaiting && waitingRoute) {
@@ -218,6 +219,7 @@ export default function EditActivities() {
     }
 
     setIsSubmitting(true);
+    setIsHandingOffEditor(true);
     setSubmitError("");
 
     try {
@@ -226,9 +228,12 @@ export default function EditActivities() {
       // After submitting draft, P1 → P2 waits; P2 → P1 waits
       if (waitingRoute) {
         navigate(waitingRoute, { replace: true });
+      } else {
+        setIsHandingOffEditor(false);
       }
     } catch (error) {
       console.error("Failed to submit activity changes:", error);
+      setIsHandingOffEditor(false);
       setSubmitError("Could not submit your activity changes. Please try again.");
     } finally {
       setIsSubmitting(false);
