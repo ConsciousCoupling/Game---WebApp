@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
 import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./PlayerOneWaitingRoom.css";
 
@@ -125,6 +126,7 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is reviewing or editing the activity list.</p>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
       </div>
     );
@@ -138,6 +140,7 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is updating the activity list.</p>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
       </div>
     );
@@ -149,6 +152,7 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your latest proposal is ready for review.</p>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
       </div>
     );
@@ -162,6 +166,7 @@ export default function PlayerOneWaitingRoom() {
       <div className="waiting-card">
         <h2>Waiting…</h2>
         <p>The game is syncing. You will continue automatically.</p>
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
       </div>
     </div>
   );

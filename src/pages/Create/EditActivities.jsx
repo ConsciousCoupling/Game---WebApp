@@ -14,6 +14,7 @@ import {
 import { loadIdentity } from "../../services/setupStorage";
 import { ACTIVITIES } from "../../game/data/activityList";
 import { waitingRouteForRole } from "./waitingRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./EditActivities.css";
 
@@ -274,6 +275,8 @@ export default function EditActivities() {
         <h2>Edit Activity List</h2>
         <p>Modify, remove, or add activities below.</p>
         {submitError && <div className="submit-error">{submitError}</div>}
+
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
         <div className="proposal-note-card">
           <label className="proposal-note-label" htmlFor="proposal-note">

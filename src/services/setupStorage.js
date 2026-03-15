@@ -6,6 +6,7 @@ import { auth, ensureAnonymousAuth } from "./firebase";
 
 // LocalStorage key for per-game identity tokens
 const IDENTITY_KEY = "intimadate.identity";
+const RECONNECT_KEY = "intimadate.reconnect";
 
 // -------------------------------------------------------------------
 // Load identity map safely
@@ -60,6 +61,49 @@ export function saveIdentity(gameId, token) {
   const map = loadIdentityMap();
   map[gameId] = { token };
   saveIdentityMap(map);
+}
+
+function loadReconnectMap() {
+  try {
+    const raw = localStorage.getItem(RECONNECT_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveReconnectMap(map) {
+  localStorage.setItem(RECONNECT_KEY, JSON.stringify(map));
+}
+
+export function generateReconnectCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint32Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+
+  const chars = Array.from(bytes, (value) => alphabet[value % alphabet.length]);
+
+  return `${chars.slice(0, 4).join("")}-${chars.slice(4).join("")}`;
+}
+
+export function loadReconnectCode(gameId, role) {
+  if (!gameId || !role) return null;
+  const map = loadReconnectMap();
+  return map?.[gameId]?.[role] || null;
+}
+
+export function saveReconnectCode(gameId, role, code) {
+  if (!gameId || !role || !code) return;
+
+  const map = loadReconnectMap();
+  const existing = map[gameId] || {};
+
+  map[gameId] = {
+    ...existing,
+    [role]: code,
+  };
+
+  saveReconnectMap(map);
 }
 
 // -------------------------------------------------------------------

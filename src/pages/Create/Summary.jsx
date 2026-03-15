@@ -12,6 +12,7 @@ import {
   subscribeToGameplayPresence,
 } from "../../game/gameplayStore";
 import { waitingRouteForRole } from "./waitingRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./Summary.css";
 
@@ -156,6 +157,8 @@ export default function Summary() {
       <div className="summary-card">
         <h2>Final Activity List</h2>
         <p>This is the list you will use in the game.</p>
+
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
         <div className="summary-list">
           {finalActivities.map((activity) => (

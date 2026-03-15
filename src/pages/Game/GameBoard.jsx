@@ -19,6 +19,7 @@ import MovementCardPanel from "../../components/gameboard/movement/MovementCardP
 
 import PromptCard from "../../components/gameboard/prompt/PromptCard";
 import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import { loadIdentity } from "../../services/setupStorage";
 
@@ -174,6 +175,11 @@ export default function GameBoard({ gameId }) {
 
         {/* MAIN INTERACTION ZONE */}
         <div className="center-card-placeholder">
+          <ReconnectCodeCard
+            gameId={gameId}
+            role={isPlayerOne ? "playerOne" : isPlayerTwo ? "playerTwo" : null}
+            token={myToken}
+          />
 
           {state.phase === "TURN_START" &&
             (myTurn ? (

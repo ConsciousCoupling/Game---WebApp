@@ -14,6 +14,7 @@ import {
 import { loadIdentity } from "../../services/setupStorage";
 import { waitingRouteForRole } from "./waitingRoute";
 import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./ReviewActivities.css";
 
@@ -233,6 +234,8 @@ export default function ReviewActivities() {
         <p>Approve this proposal or make further changes. Changes are highlighted.</p>
 
         {actionError && <div className="review-error">{actionError}</div>}
+
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
         {proposalNote && (
           <div className="proposal-note-review">

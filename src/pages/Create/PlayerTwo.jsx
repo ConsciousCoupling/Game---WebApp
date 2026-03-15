@@ -5,7 +5,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup, ensureIdentityForGame, loadSetup } from "../../services/setupStorage";
+import {
+  saveSetup,
+  ensureIdentityForGame,
+  loadSetup,
+  generateReconnectCode,
+  saveReconnectCode,
+} from "../../services/setupStorage";
 import { db } from "../../services/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { getNegotiationRoute } from "../../services/negotiationRoute";
@@ -74,6 +80,9 @@ export default function PlayerTwo() {
     }
 
     const cloud = snap.data();
+    const reconnectCode = cloud.players?.[1]?.reconnectCode || generateReconnectCode();
+
+    saveReconnectCode(gameId, "playerTwo", reconnectCode);
 
     // Prevent overwriting P2 if testing restart
     if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
@@ -101,6 +110,7 @@ export default function PlayerTwo() {
           tokens: 0,
           inventory: [],
           token,
+          reconnectCode,
         },
       ],
     });

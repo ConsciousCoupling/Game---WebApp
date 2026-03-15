@@ -1,10 +1,13 @@
 // src/pages/Create/RemoteInvite.jsx
 import { useNavigate, useParams } from "react-router-dom";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
+import { loadIdentity } from "../../services/setupStorage";
 import "./RemoteInvite.css";
 
 export default function RemoteInvite() {
   const navigate = useNavigate();
   const { gameId } = useParams();
+  const identity = loadIdentity(gameId);
 
   function copyCode() {
     navigator.clipboard.writeText(gameId);
@@ -29,6 +32,12 @@ export default function RemoteInvite() {
           Ask them to open <strong>IntimaDate</strong> →
           <em> Join Game </em> → enter the code.
         </p>
+
+        <ReconnectCodeCard
+          gameId={gameId}
+          role="playerOne"
+          token={identity?.token || null}
+        />
 
         <p className="waiting-status">Waiting for Player Two…</p>
 
