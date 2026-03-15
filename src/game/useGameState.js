@@ -56,7 +56,22 @@ export default function useGameplayState(gameId) {
   }, [gameId]);
 
   // -----------------------------------------------------------------------
-  // 3️⃣ ACTION WRAPPERS — token-gated, bound to current state
+  // 3️⃣ Recover abandoned rolls after reconnect / refresh
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    if (!state || !engineRef.current || state.phase !== "ROLLING") return;
+
+    const activeToken = state.players?.[state.currentPlayerId]?.token;
+    const isCurrentPlayer = !!(myToken && activeToken === myToken);
+
+    if (isCurrentPlayer && !engineRef.current.isRolling) {
+      log("Recovering abandoned roll for current player.");
+      engineRef.current.roll();
+    }
+  }, [state, myToken]);
+
+  // -----------------------------------------------------------------------
+  // 4️⃣ ACTION WRAPPERS — token-gated, bound to current state
   // -----------------------------------------------------------------------
   const actions = {
     rollDice: () => {
@@ -122,7 +137,7 @@ export default function useGameplayState(gameId) {
   };
 
   // -----------------------------------------------------------------------
-  // 4️⃣ EXPORT API — matches original: { state, actions, engine }
+  // 5️⃣ EXPORT API — matches original: { state, actions, engine }
   // -----------------------------------------------------------------------
   return {
     state,
