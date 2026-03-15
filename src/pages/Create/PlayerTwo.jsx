@@ -7,14 +7,13 @@ import { useNavigate } from "react-router-dom";
 
 import {
   saveSetup,
-  ensureIdentityForGame,
   loadSetup,
   generateReconnectCode,
   saveReconnectCode,
+  setHotseatActiveRole,
 } from "../../services/setupStorage";
-import { db } from "../../services/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { getNegotiationRoute } from "../../services/negotiationRoute";
+import { ensureSeatIdentity } from "../../services/gameClients";
 
 import "./Create.css";
 
@@ -61,7 +60,7 @@ export default function PlayerTwo() {
     }
 
     // Make PlayerTwo identity token
-    const identity = await ensureIdentityForGame(gameId);
+    const identity = await ensureSeatIdentity(gameId, "playerTwo");
     const token = identity.token;
 
     // Save local display settings
@@ -71,7 +70,7 @@ export default function PlayerTwo() {
       localPlay: true,
     });
 
-    const ref = doc(db, "games", gameId);
+    const ref = doc(identity.db, "games", gameId);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
@@ -115,8 +114,8 @@ export default function PlayerTwo() {
       ],
     });
 
-    const nextRoute = getNegotiationRoute(gameId, cloud, token);
-    navigate(nextRoute || `/create/waiting/player-two/${gameId}`);
+    setHotseatActiveRole(gameId, "playerOne");
+    navigate(`/create/activities/${gameId}`, { replace: true });
   }
 
   // -----------------------------------------------------------

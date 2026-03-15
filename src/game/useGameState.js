@@ -5,22 +5,22 @@
 import { useEffect, useState, useRef } from "react";
 
 import { subscribeToGameplay, gameplayActions } from "./gameplayStore";
-import { loadIdentity } from "../services/setupStorage";
 import { DiceEngine } from "./dice/DiceEngine";
 
 function log(...args) {
   console.log("%c[USE-GAMEPLAY]", "color:#ff22aa;font-weight:bold;", ...args);
 }
 
-export default function useGameplayState(gameId) {
+export default function useGameplayState(gameId, myToken) {
   const [state, setState] = useState(null);
-
-  // Identity token for THIS device/player
-  const identity = loadIdentity(gameId);
-  const myToken = identity?.token || null;
 
   // Dice engine (persistent)
   const engineRef = useRef(null);
+  const myTokenRef = useRef(myToken);
+
+  useEffect(() => {
+    myTokenRef.current = myToken;
+  }, [myToken]);
 
   // -----------------------------------------------------------------------
   // 1️⃣ Initialize DiceEngine ONCE with callback → gameplayStore handler
@@ -34,12 +34,12 @@ export default function useGameplayState(gameId) {
 
         setState((prev) => {
           if (!prev) return prev;
-          gameplayActions.handleDiceResult(gameId, prev, result, myToken);
+          gameplayActions.handleDiceResult(gameId, prev, result, myTokenRef.current);
           return prev;
         });
       });
     }
-  }, [gameId, myToken]);
+  }, [gameId]);
 
   // -----------------------------------------------------------------------
   // 2️⃣ Subscribe to Firestore gameplay document

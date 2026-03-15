@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame, loadIdentity, setHotseatActiveRole } from "../../services/setupStorage";
 import {
   ensureGameplayInitialized,
   subscribeToGameplayPresence,
@@ -22,6 +22,7 @@ export default function Summary() {
 
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const [state, setState] = useState({
     finalActivities: [],
@@ -73,10 +74,25 @@ export default function Summary() {
   const shouldRedirectToGame = !!(role && gameplayReady);
 
   useEffect(() => {
+    if (hotseatMode && approvals.playerOne && approvals.playerTwo && role === "playerTwo") {
+      setHotseatActiveRole(gameId, "playerOne");
+      navigate(`/create/summary/${gameId}`, { replace: true });
+      return;
+    }
+
     if (shouldRedirectToWaiting && waitingRoute) {
       navigate(waitingRoute, { replace: true });
     }
-  }, [shouldRedirectToWaiting, waitingRoute, navigate]);
+  }, [
+    hotseatMode,
+    approvals.playerOne,
+    approvals.playerTwo,
+    role,
+    gameId,
+    shouldRedirectToWaiting,
+    waitingRoute,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (shouldRedirectToGame) {

@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import {
   saveSetup,
   ensureIdentityForGame,
+  enableHotseatForGame,
   generateReconnectCode,
   saveReconnectCode,
 } from "../../services/setupStorage";
@@ -113,12 +114,13 @@ export default function PlayerOne() {
       gameId,
       playerOneName: name,
       playerOneColor: color,
-      localPlay: false,
+      localPlay: true,
     });
+    enableHotseatForGame(gameId, token);
 
     await createNegotiationDocument(gameId, token);
 
-    navigate(`/create/remote-invite/${gameId}?mode=same-device`);
+    navigate("/create/player-two");
   }
 
   // ---------------------------------------------------------
@@ -188,7 +190,7 @@ export default function PlayerOne() {
           </button>
 
           <p className="presence-btn-note">
-            Uses a second browser or incognito window on this device.
+            One-device hotseat mode.
           </p>
 
           <button

@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../services/firebase";
+import { getDbForIdentityToken } from "../services/gameClients";
 import { uploadPromptAudio } from "../services/promptResponseMedia";
 import { initialGameplayState, buildPromptDecks } from "./initialGameState";
 import { getRandomMovementCard } from "./data/movementCards";
@@ -163,9 +164,13 @@ export async function ensureGameplayInitialized(gameId, players, finalActivities
 // SAFE UPDATE WRAPPER
 // ---------------------------------------------------------------------------
 
-async function write(gameId, update) {
+async function write(gameId, update, identityToken = null) {
   log("Updating gameplay:", update);
-  await updateDoc(gameplayRef(gameId), {
+  const targetDb = identityToken
+    ? getDbForIdentityToken(gameId, identityToken)
+    : db;
+
+  await updateDoc(doc(targetDb, "gameplay", gameId), {
     ...update,
     updatedAt: serverTimestamp(),
   });
@@ -213,7 +218,7 @@ export const gameplayActions = {
   rollDice: (gameId, state, engine, myToken) => {
     if (!onlyCurrentPlayer(state, myToken)) return;
 
-    write(gameId, { phase: "ROLLING" });
+    write(gameId, { phase: "ROLLING" }, myToken);
     engine.roll(); // DiceEngine triggers handleDiceResult
   },
 
@@ -299,7 +304,7 @@ export const gameplayActions = {
       };
     }
 
-    await write(gameId, next);
+    await write(gameId, next, myToken);
   },
 
   // -------------------------------------------------------
@@ -307,7 +312,7 @@ export const gameplayActions = {
     if (state.phase !== "PROMPT") return;
     if (!onlyPromptReviewer(state, myToken)) return;
     if (!promptHasResponse(state.activePrompt)) return;
-    write(gameId, { phase: "AWARD" });
+    write(gameId, { phase: "AWARD" }, myToken);
   },
 
   submitPromptResponse: async (gameId, state, response, myToken) => {
@@ -357,7 +362,7 @@ export const gameplayActions = {
           submittedAt: Date.now(),
         },
       },
-    });
+    }, myToken);
 
     return true;
   },
@@ -388,7 +393,7 @@ export const gameplayActions = {
       lastDieFace: null,
       lastCategory: null,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -402,7 +407,7 @@ export const gameplayActions = {
       lastCategory: null,
       doubleReward: false,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -419,7 +424,7 @@ export const gameplayActions = {
           ...state.activityShop,
           message: "Not enough tokens.",
         },
-      });
+      }, myToken);
     }
 
     players[curIdx] = {
@@ -432,7 +437,7 @@ export const gameplayActions = {
       pendingActivity: activity,
       phase: "COIN_TOSS",
       coin: { isFlipping: false, result: null },
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -448,7 +453,7 @@ export const gameplayActions = {
       lastCategory: null,
       doubleReward: false,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -457,7 +462,7 @@ export const gameplayActions = {
 
     write(gameId, {
       coin: { ...state.coin, isFlipping: true },
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -484,7 +489,7 @@ export const gameplayActions = {
       },
       pendingActivity: null,
       phase: "COIN_OUTCOME",
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -497,7 +502,7 @@ export const gameplayActions = {
       doubleReward: false,
       phase: "TURN_START",
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
-    });
+    }, myToken);
   },
 
   // -------------------------------------------------------
@@ -591,13 +596,13 @@ export const gameplayActions = {
         break;
     }
 
-    write(gameId, next);
+    write(gameId, next, myToken);
   },
 
   resumeResetPause: (gameId, state, myToken) => {
     if (state.phase !== RESET_PAUSE_PHASE) return;
     if (!isGameplayParticipant(state, myToken)) return;
 
-    write(gameId, buildResetResumeUpdate(state));
+    write(gameId, buildResetResumeUpdate(state), myToken);
   },
 };

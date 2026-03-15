@@ -3,6 +3,7 @@
 // -------------------------------------------------------------
 
 import { db } from "../services/firebase";
+import { getDbForIdentityToken } from "../services/gameClients";
 import {
   doc,
   getDoc,
@@ -140,13 +141,20 @@ export function subscribeToDraftActivities(gameId, callback) {
 // INTERNAL SAFE UPDATE (does not overwrite roles/players)
 // -------------------------------------------------------------
 async function safeUpdate(gameId, fields) {
+  return safeUpdateAsIdentity(gameId, fields, null);
+}
+
+async function safeUpdateAsIdentity(gameId, fields, identityToken) {
+  const targetDb = identityToken
+    ? getDbForIdentityToken(gameId, identityToken)
+    : db;
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return;
   const existing = snap.data();
 
-  await updateDoc(ref, {
+  await updateDoc(doc(targetDb, "games", gameId), {
     roles: existing.roles || {},
     players: existing.players || [],
     ...fields,
@@ -164,14 +172,14 @@ export async function setEditor(gameId, editorToken) {
   const role = getRoleFromIdentity(snap.data().roles || {}, editorToken);
   if (!role) return;
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     editor: editorToken,
     editTurn: role,
     approvals: {
       playerOne: false,
       playerTwo: false,
     },
-  });
+  }, editorToken);
 }
 
 // -------------------------------------------------------------
@@ -218,9 +226,9 @@ export async function approveActivities(gameId, identityToken) {
     nextFields.editTurn = null;
   }
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     ...nextFields,
-  });
+  }, identityToken);
 }
 
 // -------------------------------------------------------------
@@ -229,14 +237,14 @@ export async function approveActivities(gameId, identityToken) {
 export async function saveDraftActivities(gameId, draft, editorToken) {
   const normalized = draft.map((a) => normalizeActivity(a));
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     activityDraft: normalized,
     approvals: {
       playerOne: false,
       playerTwo: false,
     },
     editor: editorToken,
-  });
+  }, editorToken);
 }
 
 // -------------------------------------------------------------
@@ -265,13 +273,13 @@ export async function submitDraftActivities(
   );
   const normalizedProposalNote = String(proposalNote || "").trim();
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     baselineDraft: previousDraft,
     activityDraft: normalized,
     approvals: buildApprovalsForSubmittedDraft(role, normalizedProposalNote),
     editor: null,
     editTurn: null,
-  });
+  }, identityToken);
 }
 
 // -------------------------------------------------------------

@@ -21,7 +21,9 @@ import PromptCard from "../../components/gameboard/prompt/PromptCard";
 import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
 import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame } from "../../services/setupStorage";
+import { syncHotseatGameplayRole } from "../../services/hotseat";
+import useGameIdentity from "../../services/useGameIdentity";
 
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
@@ -34,15 +36,12 @@ import "../../components/gameboard/activity/CoinOutcome.css";
 
 export default function GameBoard({ gameId }) {
   const navigate = useNavigate();
-  const { state, actions, engine } = useGameState(gameId);
+  const identity = useGameIdentity(gameId);
+  const myToken = identity?.token || null;
+  const { state, actions, engine } = useGameState(gameId, myToken);
 
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // -------------------------------------------------------
-  // IDENTITY VALIDATION — TOKEN ONLY
-  // -------------------------------------------------------
-  const identity = loadIdentity(gameId);
-  const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const myIndex = useMemo(() => {
     if (!state?.players || state.players.length !== 2 || !myToken) return null;
@@ -64,6 +63,11 @@ export default function GameBoard({ gameId }) {
       navigate("/menu");
     }
   }, [identity, myIndex, navigate]);
+
+  useEffect(() => {
+    if (!hotseatMode || !state) return;
+    syncHotseatGameplayRole(gameId, state);
+  }, [gameId, hotseatMode, state]);
 
   if (myIndex === null || !state) {
     return (
@@ -106,9 +110,6 @@ export default function GameBoard({ gameId }) {
     .filter(Boolean)
     .join(" ");
 
-  // -------------------------------------------------------
-  // RENDER
-  // -------------------------------------------------------
   return (
     <div className="gameboard-container">
 

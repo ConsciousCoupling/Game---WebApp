@@ -6,8 +6,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame, loadIdentity } from "../../services/setupStorage";
 import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
+import { getHotseatNegotiationRoute } from "../../services/hotseat";
 import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./PlayerOneWaitingRoom.css";
@@ -19,6 +20,7 @@ export default function PlayerOneWaitingRoom() {
   // Local identity token for THIS device
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const [state, setState] = useState({
     players: [],
@@ -68,6 +70,20 @@ export default function PlayerOneWaitingRoom() {
   );
 
   useEffect(() => {
+    if (hotseatMode) {
+      const nextRoute = getHotseatNegotiationRoute(gameId, {
+        approvals,
+        editor,
+        editTurn,
+        roles,
+      });
+
+      if (nextRoute) {
+        navigate(nextRoute, { replace: true });
+        return;
+      }
+    }
+
     if (shouldRedirectToSummary) {
       navigate(`/create/summary/${gameId}`, { replace: true });
       return;
@@ -85,6 +101,11 @@ export default function PlayerOneWaitingRoom() {
     shouldRedirectToSummary,
     shouldRedirectToActivities,
     shouldRedirectToReview,
+    hotseatMode,
+    approvals,
+    editor,
+    editTurn,
+    roles,
     gameId,
     navigate,
   ]);
