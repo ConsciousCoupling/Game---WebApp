@@ -25,13 +25,13 @@ export default function ActivityShop({
         {activities.map((activity) => {
           const affordable = currentTokens >= activity.cost;
           const duration = activity.duration ? `${activity.duration} min` : "—";
+          const tokenGap = affordable ? 0 : activity.cost - currentTokens;
 
           return (
             <button
               key={activity.id}
               className={`activity-card ${!affordable ? "disabled" : ""}`}
-              disabled={!affordable}
-              onClick={() => affordable && onPurchase(activity)}
+              onClick={() => onPurchase(activity)}
             >
               <div className="activity-card-title">{activity.name}</div>
 
@@ -42,6 +42,12 @@ export default function ActivityShop({
               <p className="activity-card-description">
                 Duration: {duration}
               </p>
+
+              {!affordable && (
+                <p className="activity-card-warning">
+                  Need {tokenGap} more token{tokenGap === 1 ? "" : "s"}
+                </p>
+              )}
             </button>
           );
         })}

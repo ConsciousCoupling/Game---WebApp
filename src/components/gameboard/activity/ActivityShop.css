@@ -83,6 +83,15 @@
   border-color: rgba(255,255,255,0.25);
 }
 
+.activity-card.disabled {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 120, 120, 0.22);
+}
+
+.activity-card.disabled:hover {
+  border-color: rgba(255, 120, 120, 0.32);
+}
+
 /* Card Title */
 .activity-card-title {
   font-size: 1.4rem;
@@ -94,6 +103,13 @@
 .activity-card-cost {
   font-size: 1.25rem;
   opacity: 0.7;
+}
+
+.activity-card-warning {
+  margin-top: 10px;
+  color: #7d1024;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 /* -------------------------------------------------------
