@@ -42,6 +42,7 @@ export default function PromptCard({
   const category = prompt?.category;
   const reversed = !!prompt?.reversed;
   const deepen = !!prompt?.deepen;
+  const bonusTokens = Number(prompt?.bonusTokens || 0);
   const response = prompt?.response || null;
   const responderName = reversed ? otherPlayerName : currentPlayerName;
   const reviewerName = reversed ? currentPlayerName : otherPlayerName;
@@ -190,7 +191,7 @@ export default function PromptCard({
 
       <p className="prompt-text">{promptText}</p>
 
-      {(reversed || deepen) && (
+      {(reversed || deepen || bonusTokens > 0) && (
         <div className="prompt-modifiers">
           {reversed && (
             <div className="modifier reversed">
@@ -203,6 +204,13 @@ export default function PromptCard({
             <div className="modifier deepen">
               Go On
               <span>Give a deeper answer. Rewards are doubled.</span>
+            </div>
+          )}
+
+          {bonusTokens > 0 && (
+            <div className="modifier deepen">
+              Ask Me Anything
+              <span>Answer openly to earn +{bonusTokens} bonus tokens.</span>
             </div>
           )}
         </div>

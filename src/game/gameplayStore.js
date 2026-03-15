@@ -17,6 +17,18 @@ import { uploadPromptAudio } from "../services/promptResponseMedia";
 import { initialGameplayState, buildPromptDecks } from "./initialGameState";
 import { getRandomMovementCard } from "./data/movementCards";
 import { PROMPT_CARDS } from "./data/promptCards";
+import {
+  buildResetPauseUpdate,
+  buildResetResumeUpdate,
+  getMovementCardAvailability,
+  getPlayerIndexByToken,
+  getPromptResponderIndex,
+  getPromptReviewerIndex,
+  isGameplayParticipant,
+  promptHasResponse,
+  removeMovementCardFromInventory,
+  RESET_PAUSE_PHASE,
+} from "./movementCardRules";
 
 // Debug helper
 function log(...args) {
@@ -168,23 +180,6 @@ function onlyCurrentPlayer(state, myToken) {
   return activeToken === myToken;
 }
 
-function getOtherPlayerIndex(index) {
-  return index === 0 ? 1 : 0;
-}
-
-function getPromptResponderIndex(state) {
-  if (!state?.players || state.players.length < 2) return null;
-  return state.reversePrompt
-    ? getOtherPlayerIndex(state.currentPlayerId)
-    : state.currentPlayerId;
-}
-
-function getPromptReviewerIndex(state) {
-  const responderIndex = getPromptResponderIndex(state);
-  if (responderIndex === null) return null;
-  return getOtherPlayerIndex(responderIndex);
-}
-
 function onlyPromptResponder(state, myToken) {
   const responderIndex = getPromptResponderIndex(state);
   if (responderIndex === null) return false;
@@ -258,6 +253,7 @@ export const gameplayActions = {
           : null,
         promptDecks: updatedDecks,
         reversePrompt: false,
+        doubleReward: false,
         phase: "PROMPT",
       };
     }
@@ -276,6 +272,8 @@ export const gameplayActions = {
         ...next,
         players,
         awardedMovementCard: movement,
+        reversePrompt: false,
+        doubleReward: false,
         phase: "MOVEMENT_AWARD",
       };
     }
@@ -290,6 +288,8 @@ export const gameplayActions = {
       next = {
         ...next,
         negotiatedActivities,
+        reversePrompt: false,
+        doubleReward: false,
         phase: "ACTIVITY_SHOP",
         activityShop: {
           message: negotiatedActivities.length > 0
@@ -306,7 +306,7 @@ export const gameplayActions = {
   beginAwardPhase: (gameId, state, myToken) => {
     if (state.phase !== "PROMPT") return;
     if (!onlyPromptReviewer(state, myToken)) return;
-    if (!state.activePrompt?.response) return;
+    if (!promptHasResponse(state.activePrompt)) return;
     write(gameId, { phase: "AWARD" });
   },
 
@@ -367,10 +367,16 @@ export const gameplayActions = {
     if (state.phase !== "AWARD") return;
     if (!onlyPromptReviewer(state, myToken)) return;
 
+    const responderIndex = getPromptResponderIndex(state);
+    if (responderIndex === null) return;
+
+    const bonusTokens = Number(state.activePrompt?.bonusTokens || 0);
+    const multiplier = state.doubleReward ? 2 : 1;
+    const awardedTokens = value * multiplier + bonusTokens;
     const players = [...state.players];
-    players[state.currentPlayerId] = {
-      ...players[state.currentPlayerId],
-      tokens: players[state.currentPlayerId].tokens + value,
+    players[responderIndex] = {
+      ...players[responderIndex],
+      tokens: players[responderIndex].tokens + awardedTokens,
     };
 
     write(gameId, {
@@ -378,6 +384,7 @@ export const gameplayActions = {
       phase: "TURN_START",
       activePrompt: null,
       reversePrompt: false,
+      doubleReward: false,
       lastDieFace: null,
       lastCategory: null,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
@@ -393,6 +400,7 @@ export const gameplayActions = {
       phase: "TURN_START",
       lastDieFace: null,
       lastCategory: null,
+      doubleReward: false,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
     });
   },
@@ -438,6 +446,7 @@ export const gameplayActions = {
       phase: "TURN_START",
       lastDieFace: null,
       lastCategory: null,
+      doubleReward: false,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
     });
   },
@@ -485,6 +494,7 @@ export const gameplayActions = {
     write(gameId, {
       activityResult: null,
       activityShop: null,
+      doubleReward: false,
       phase: "TURN_START",
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
     });
@@ -492,14 +502,18 @@ export const gameplayActions = {
 
   // -------------------------------------------------------
   useMovementCard: (gameId, state, card, myToken, engine) => {
-    if (!onlyCurrentPlayer(state, myToken)) return;
+    const availability = getMovementCardAvailability(state, myToken, card);
+    if (!availability.canUse) return;
+
+    const actorIndex = getPlayerIndexByToken(state, myToken);
+    if (actorIndex === -1) return;
 
     const curIdx = state.currentPlayerId;
     const players = [...state.players];
 
-    players[curIdx] = {
-      ...players[curIdx],
-      inventory: players[curIdx].inventory.filter((c) => c !== card),
+    players[actorIndex] = {
+      ...players[actorIndex],
+      inventory: removeMovementCardFromInventory(players[actorIndex].inventory, card),
     };
 
     let next = { players };
@@ -510,39 +524,80 @@ export const gameplayActions = {
           ...next,
           activePrompt: null,
           reversePrompt: false,
+          doubleReward: false,
+          activityShop: null,
+          lastDieFace: null,
+          lastCategory: null,
           phase: "TURN_START",
           currentPlayerId: curIdx === 0 ? 1 : 0,
         };
         break;
 
       case "reroll":
-        next = { ...next, phase: "ROLLING" };
+        next = {
+          ...next,
+          activePrompt: null,
+          reversePrompt: false,
+          doubleReward: false,
+          lastDieFace: null,
+          lastCategory: null,
+          phase: "ROLLING",
+        };
         engine.roll();
         break;
 
       case "double_reward":
-        next = { ...next, doubleReward: true, phase: "AWARD" };
+        next = {
+          ...next,
+          doubleReward: true,
+          phase: "PROMPT",
+          activePrompt: {
+            ...state.activePrompt,
+            deepen: true,
+            response: null,
+          },
+        };
         break;
 
       case "reverse_prompt":
-        next = { ...next, reversePrompt: true, phase: "PROMPT" };
+        next = {
+          ...next,
+          reversePrompt: true,
+          phase: "PROMPT",
+          activePrompt: withEmptyPromptResponse(state.activePrompt),
+        };
         break;
 
       case "ama_bonus":
-        players[curIdx].tokens += 10;
         next = {
           ...next,
           players,
-          activePrompt: withEmptyPromptResponse({
+          activePrompt: {
             category: "AMA",
-            text: "Ask your partner any question.",
-          }),
+            text: "Your partner may ask any question they want. Answer openly to earn +10 bonus tokens.",
+            bonusTokens: 10,
+            response: null,
+          },
           reversePrompt: false,
           phase: "PROMPT",
+        };
+        break;
+
+      case "reset":
+        next = {
+          ...next,
+          ...buildResetPauseUpdate(state, state.players[actorIndex]?.name || "A player"),
         };
         break;
     }
 
     write(gameId, next);
+  },
+
+  resumeResetPause: (gameId, state, myToken) => {
+    if (state.phase !== RESET_PAUSE_PHASE) return;
+    if (!isGameplayParticipant(state, myToken)) return;
+
+    write(gameId, buildResetResumeUpdate(state));
   },
 };

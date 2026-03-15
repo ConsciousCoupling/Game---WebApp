@@ -182,6 +182,29 @@
   text-align: center;
 }
 
+.reset-pause-card {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  padding: 28px 24px;
+  border-radius: 22px;
+  background: rgba(255, 243, 247, 0.09);
+  border: 1px solid rgba(255, 210, 225, 0.16);
+  color: #ffe7ef;
+  text-align: center;
+}
+
+.reset-pause-card h2 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.reset-pause-card p {
+  margin: 0;
+  max-width: 540px;
+  line-height: 1.6;
+}
+
 
 /* ============================================================
    DICE AREA

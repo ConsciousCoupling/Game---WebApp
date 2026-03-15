@@ -134,6 +134,11 @@ export default function useGameplayState(gameId) {
         engineRef.current
       );
     },
+
+    resumeResetPause: () => {
+      if (!state) return;
+      gameplayActions.resumeResetPause(gameId, state, myToken);
+    },
   };
 
   // -----------------------------------------------------------------------

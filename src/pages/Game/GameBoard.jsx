@@ -160,8 +160,10 @@ export default function GameBoard({ gameId }) {
           ) : (
             <MovementCardPanel
               player={p1}
+              state={state}
+              viewerToken={myToken}
               isCurrent={state.currentPlayerId === 0}
-              onUseCard={myTurn && isPlayerOne ? actions.useMovementCard : () => {}}
+              onUseCard={isPlayerOne ? actions.useMovementCard : null}
             />
           )}
         </div>
@@ -204,6 +206,17 @@ export default function GameBoard({ gameId }) {
 
           {state.phase === "ROLLING" && (
             <p className="placeholder-text">Rolling… 🎲</p>
+          )}
+
+          {state.phase === "RESET_PAUSE" && (
+            <div className="reset-pause-card">
+              <h2>Reset Break</h2>
+              <p>{state.activityShop?.message || "Take a short pause and resume when ready."}</p>
+
+              <button className="big-action-btn" onClick={actions.resumeResetPause}>
+                Resume Game
+              </button>
+            </div>
           )}
 
           {state.phase === "PROMPT" && state.activePrompt && (
@@ -299,8 +312,10 @@ export default function GameBoard({ gameId }) {
           ) : (
             <MovementCardPanel
               player={p2}
+              state={state}
+              viewerToken={myToken}
               isCurrent={state.currentPlayerId === 1}
-              onUseCard={myTurn && isPlayerTwo ? actions.useMovementCard : () => {}}
+              onUseCard={isPlayerTwo ? actions.useMovementCard : null}
             />
           )}
         </div>

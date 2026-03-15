@@ -4,9 +4,16 @@ import "./MovementCardPanel.css";
 import { useState } from "react";
 import MovementCardModal from "./MovementCardModal";
 import "./MovementCard.css"; // <-- holographic styles live here
+import {
+  getMovementCardAvailability,
+  getMovementCardKey,
+} from "../../../game/movementCardRules";
 
-export default function MovementCardPanel({ player, onUseCard }) {
+export default function MovementCardPanel({ player, onUseCard, state, viewerToken }) {
   const [selected, setSelected] = useState(null);
+  const selectedAvailability = selected
+    ? getMovementCardAvailability(state, viewerToken, selected)
+    : null;
 
   return (
     <>
@@ -17,26 +24,36 @@ export default function MovementCardPanel({ player, onUseCard }) {
           <p className="movement-empty">No cards</p>
         )}
 
-        {player.inventory.map((card, index) => (
-          <div
-            key={index}
-            className="movement-card holo-card"
-            onClick={() => setSelected(card)}
-          >
-            <div className="holo-glow"></div>
-            <div className="holo-sheen"></div>
+        {player.inventory.map((card, index) => {
+          const availability = getMovementCardAvailability(state, viewerToken, card);
 
-            <div className="movement-card-label">{card.name}</div>
-          </div>
-        ))}
+          return (
+            <div
+              key={getMovementCardKey(card, String(index))}
+              className={`movement-card holo-card ${availability.canUse ? "playable" : "locked"}`}
+              onClick={() => setSelected(card)}
+            >
+              <div className="holo-glow"></div>
+              <div className="holo-sheen"></div>
+
+              <div className="movement-card-label">{card.name}</div>
+              <div className="movement-card-status">
+                {availability.canUse ? "Ready" : "Locked"}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {selected && (
         <MovementCardModal
           card={selected}
+          availability={selectedAvailability}
           onClose={() => setSelected(null)}
           onUse={() => {
-            onUseCard(selected);
+            if (selectedAvailability?.canUse && onUseCard) {
+              onUseCard(selected);
+            }
             setSelected(null);
           }}
         />
