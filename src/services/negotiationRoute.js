@@ -10,6 +10,11 @@ export function getWaitingRoute(role, gameId) {
   return null;
 }
 
+export function hasApprovedCurrentDraft(data = {}, role) {
+  if (!role) return false;
+  return data?.approvals?.[role] === true;
+}
+
 export function getNegotiationRoute(gameId, data, token) {
   const role = getNegotiationRole(data?.roles || {}, token);
   if (!role) return null;
@@ -28,7 +33,7 @@ export function getNegotiationRoute(gameId, data, token) {
     return `/create/activities/${gameId}`;
   }
 
-  if (editTurn === null && !editor) {
+  if (editTurn === null && !editor && !hasApprovedCurrentDraft(data, role)) {
     return `/create/activities-review/${gameId}`;
   }
 

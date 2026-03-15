@@ -7,6 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
 import { loadIdentity } from "../../services/setupStorage";
+import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
 
 import "./PlayerOneWaitingRoom.css";
 
@@ -56,12 +57,13 @@ export default function PlayerOneWaitingRoom() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
   const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const alreadyApproved = hasApprovedCurrentDraft({ approvals }, role);
   const shouldRedirectToSummary = !!(role && bothApproved);
   const shouldRedirectToActivities = !!(
     role && !bothApproved && editTurn === role && (!editor || editor === myToken)
   );
   const shouldRedirectToReview = !!(
-    role && !bothApproved && editTurn === null && !editor
+    role && !bothApproved && editTurn === null && !editor && !alreadyApproved
   );
 
   useEffect(() => {
@@ -136,6 +138,17 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is updating the activity list.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (alreadyApproved && !bothApproved) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Waiting for {partnerName}…</h2>
+          <p>Your latest proposal is ready for review.</p>
         </div>
       </div>
     );

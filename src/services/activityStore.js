@@ -18,6 +18,14 @@ function getRoleFromIdentity(roles = {}, identityToken) {
   return null;
 }
 
+function buildApprovalsForSubmittedDraft(role, proposalNote) {
+  return {
+    playerOne: role === "playerOne",
+    playerTwo: role === "playerTwo",
+    proposalNote,
+  };
+}
+
 function inferEditTurn(data = {}) {
   if (data.editTurn !== undefined) {
     return data.editTurn;
@@ -193,6 +201,7 @@ export async function approveActivities(gameId, identityToken) {
     playerTwo: false,
   };
   const nextApprovals = {
+    ...currentApprovals,
     playerOne: role === "playerOne" ? true : !!currentApprovals.playerOne,
     playerTwo: role === "playerTwo" ? true : !!currentApprovals.playerTwo,
   };
@@ -234,26 +243,34 @@ export async function saveDraftActivities(gameId, draft, editorToken) {
 // SUBMIT UPDATED ACTIVITY DRAFT
 // Saves the draft and releases the editor lock in one write.
 // -------------------------------------------------------------
-export async function submitDraftActivities(gameId, draft, identityToken) {
+export async function submitDraftActivities(
+  gameId,
+  draft,
+  identityToken,
+  proposalNote = ""
+) {
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
-  const role = getRoleFromIdentity(snap.data().roles || {}, identityToken);
+  const existing = snap.data();
+  const role = getRoleFromIdentity(existing.roles || {}, identityToken);
   if (!role) {
     throw new Error("Identity mismatch during activity submission.");
   }
 
   const normalized = draft.map((a) => normalizeActivity(a));
+  const previousDraft = (existing.activityDraft || []).map((activity) =>
+    normalizeActivity(activity)
+  );
+  const normalizedProposalNote = String(proposalNote || "").trim();
 
   await safeUpdate(gameId, {
+    baselineDraft: previousDraft,
     activityDraft: normalized,
-    approvals: {
-      playerOne: false,
-      playerTwo: false,
-    },
+    approvals: buildApprovalsForSubmittedDraft(role, normalizedProposalNote),
     editor: null,
-    editTurn: role === "playerOne" ? "playerTwo" : null,
+    editTurn: null,
   });
 }
 

@@ -36,6 +36,7 @@ export default function EditActivities() {
   });
 
   const [localDraft, setLocalDraft] = useState([]);
+  const [localProposalNote, setLocalProposalNote] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHandingOffEditor, setIsHandingOffEditor] = useState(false);
@@ -61,13 +62,14 @@ export default function EditActivities() {
 
       if (nextState.editor === myToken) {
         setLocalDraft(JSON.parse(JSON.stringify(nextState.draft)));
+        setLocalProposalNote(nextState.approvals?.proposalNote || "");
       }
     });
 
     return () => unsub();
   }, [gameId, myToken]);
 
-  const { editor, roles, editTurn } = state;
+  const { approvals, editor, roles, editTurn } = state;
 
   // -------------------------------------------------------
   // DETERMINE IF THIS DEVICE IS EDITOR
@@ -76,10 +78,13 @@ export default function EditActivities() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
   const waitingRoute = waitingRouteForRole(role, gameId);
+  const hasApprovedCurrentDraft = !!(role && approvals?.[role]);
   const canEdit = !!(
     role && (editor === myToken || (editTurn === role && !editor))
   );
-  const shouldRedirectToReview = !!(role && editTurn === null && !editor);
+  const shouldRedirectToReview = !!(
+    role && editTurn === null && !editor && !hasApprovedCurrentDraft
+  );
   const shouldRedirectToWaiting = !!(role && !canEdit && !shouldRedirectToReview);
 
 
@@ -246,12 +251,10 @@ export default function EditActivities() {
     setSubmitError("");
 
     try {
-      await submitDraftActivities(gameId, localDraft, myToken);
+      await submitDraftActivities(gameId, localDraft, myToken, localProposalNote);
 
-      if (role === "playerOne" && waitingRoute) {
+      if (waitingRoute) {
         navigate(waitingRoute, { replace: true });
-      } else {
-        navigate(`/create/activities-review/${gameId}`, { replace: true });
       }
     } catch (error) {
       console.error("Failed to submit activity changes:", error);
@@ -271,6 +274,19 @@ export default function EditActivities() {
         <h2>Edit Activity List</h2>
         <p>Modify, remove, or add activities below.</p>
         {submitError && <div className="submit-error">{submitError}</div>}
+
+        <div className="proposal-note-card">
+          <label className="proposal-note-label" htmlFor="proposal-note">
+            Optional note for your partner
+          </label>
+          <textarea
+            id="proposal-note"
+            className="proposal-note-input"
+            value={localProposalNote}
+            onChange={(e) => setLocalProposalNote(e.target.value)}
+            placeholder="Explain why you want these changes."
+          />
+        </div>
 
         <div className="activity-list">
           {localDraft.map((a, i) => (
