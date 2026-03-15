@@ -136,12 +136,31 @@
   justify-content: space-between;
   padding: 28px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .center-card-placeholder {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+  min-height: 0;
+}
+
+.center-card-placeholder.shop-phase {
+  display: flex;
+  flex-direction: column;
+}
+
+.center-card-placeholder.shop-phase .reconnect-card {
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.center-card-placeholder.shop-phase .activity-shop-container {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 
 .placeholder-text {
@@ -213,6 +232,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.action-bar:empty {
+  display: none;
 }
 
 .big-action-btn {

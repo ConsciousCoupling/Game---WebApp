@@ -98,6 +98,13 @@ export default function GameBoard({ gameId }) {
       : promptResponderIndex === 0 ? 1 : 0;
   const isPromptResponder = promptResponderIndex === myIndex;
   const isPromptReviewer = promptReviewerIndex === myIndex;
+  const isShopPhase = state.phase === "ACTIVITY_SHOP";
+  const centerCardClassName = [
+    "center-card-placeholder",
+    isShopPhase ? "shop-phase" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // -------------------------------------------------------
   // RENDER
@@ -174,7 +181,7 @@ export default function GameBoard({ gameId }) {
         </div>
 
         {/* MAIN INTERACTION ZONE */}
-        <div className="center-card-placeholder">
+        <div className={centerCardClassName}>
           <ReconnectCodeCard
             gameId={gameId}
             role={isPlayerOne ? "playerOne" : isPlayerTwo ? "playerTwo" : null}
@@ -275,7 +282,6 @@ export default function GameBoard({ gameId }) {
               Roll the Die 🎲
             </button>
           )}
-
         </div>
       </div>
 

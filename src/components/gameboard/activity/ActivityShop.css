@@ -12,7 +12,7 @@
 
   /* FIXES SCROLLING */
   overflow-y: auto;
-  max-height: calc(100vh - 360px); /* dynamic, not cutoff */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding-bottom: 40px;
