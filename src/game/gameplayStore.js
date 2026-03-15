@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../services/firebase";
+import { uploadPromptAudio } from "../services/promptResponseMedia";
 import { initialGameplayState, buildPromptDecks } from "./initialGameState";
 import { getRandomMovementCard } from "./data/movementCards";
 import { PROMPT_CARDS } from "./data/promptCards";
@@ -141,6 +142,44 @@ function onlyCurrentPlayer(state, myToken) {
   return activeToken === myToken;
 }
 
+function getOtherPlayerIndex(index) {
+  return index === 0 ? 1 : 0;
+}
+
+function getPromptResponderIndex(state) {
+  if (!state?.players || state.players.length < 2) return null;
+  return state.reversePrompt
+    ? getOtherPlayerIndex(state.currentPlayerId)
+    : state.currentPlayerId;
+}
+
+function getPromptReviewerIndex(state) {
+  const responderIndex = getPromptResponderIndex(state);
+  if (responderIndex === null) return null;
+  return getOtherPlayerIndex(responderIndex);
+}
+
+function onlyPromptResponder(state, myToken) {
+  const responderIndex = getPromptResponderIndex(state);
+  if (responderIndex === null) return false;
+  return state.players[responderIndex]?.token === myToken;
+}
+
+function onlyPromptReviewer(state, myToken) {
+  const reviewerIndex = getPromptReviewerIndex(state);
+  if (reviewerIndex === null) return false;
+  return state.players[reviewerIndex]?.token === myToken;
+}
+
+function withEmptyPromptResponse(prompt) {
+  if (!prompt) return null;
+
+  return {
+    ...prompt,
+    response: null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // PUBLIC ACTIONS
 // ---------------------------------------------------------------------------
@@ -186,9 +225,13 @@ export const gameplayActions = {
       next = {
         ...next,
         activePrompt: card
-          ? { category: card.category, text: card.text }
+          ? withEmptyPromptResponse({
+              category: card.category,
+              text: card.text,
+            })
           : null,
         promptDecks: updatedDecks,
+        reversePrompt: false,
         phase: "PROMPT",
       };
     }
@@ -225,13 +268,68 @@ export const gameplayActions = {
 
   // -------------------------------------------------------
   beginAwardPhase: (gameId, state, myToken) => {
-    if (!onlyCurrentPlayer(state, myToken)) return;
+    if (state.phase !== "PROMPT") return;
+    if (!onlyPromptReviewer(state, myToken)) return;
+    if (!state.activePrompt?.response) return;
     write(gameId, { phase: "AWARD" });
+  },
+
+  submitPromptResponse: async (gameId, state, response, myToken) => {
+    if (!onlyPromptResponder(state, myToken)) return false;
+    if (state.phase !== "PROMPT" || !state.activePrompt) return false;
+
+    const text = String(response?.text || "").trim();
+    const responseType = response?.type || "text";
+    const responderIndex = getPromptResponderIndex(state);
+    const responderName = state.players[responderIndex]?.name || "Player";
+
+    let mediaFields = {
+      audioUrl: "",
+      audioPath: "",
+      audioMimeType: "",
+    };
+
+    if (response?.audioBlob) {
+      mediaFields = await uploadPromptAudio(gameId, response.audioBlob, myToken);
+    }
+
+    const hasText = text.length > 0;
+    const hasAudio = !!mediaFields.audioUrl;
+    const hasLiveMarker = responseType === "live";
+
+    if (!hasText && !hasAudio && !hasLiveMarker) {
+      throw new Error("A prompt response needs text, audio, or a live answer marker.");
+    }
+
+    const storedType = hasLiveMarker
+      ? "live"
+      : hasText && hasAudio
+        ? "mixed"
+        : hasAudio
+          ? "audio"
+          : "text";
+
+    await write(gameId, {
+      activePrompt: {
+        ...state.activePrompt,
+        response: {
+          type: storedType,
+          text,
+          ...mediaFields,
+          responderToken: myToken,
+          responderName,
+          submittedAt: Date.now(),
+        },
+      },
+    });
+
+    return true;
   },
 
   // -------------------------------------------------------
   awardTokens: (gameId, state, value, myToken) => {
-    if (!onlyCurrentPlayer(state, myToken)) return;
+    if (state.phase !== "AWARD") return;
+    if (!onlyPromptReviewer(state, myToken)) return;
 
     const players = [...state.players];
     players[state.currentPlayerId] = {
@@ -243,6 +341,7 @@ export const gameplayActions = {
       players,
       phase: "TURN_START",
       activePrompt: null,
+      reversePrompt: false,
       lastDieFace: null,
       lastCategory: null,
       currentPlayerId: state.currentPlayerId === 0 ? 1 : 0,
@@ -374,6 +473,7 @@ export const gameplayActions = {
         next = {
           ...next,
           activePrompt: null,
+          reversePrompt: false,
           phase: "TURN_START",
           currentPlayerId: curIdx === 0 ? 1 : 0,
         };
@@ -397,10 +497,11 @@ export const gameplayActions = {
         next = {
           ...next,
           players,
-          activePrompt: {
+          activePrompt: withEmptyPromptResponse({
             category: "AMA",
             text: "Ask your partner any question.",
-          },
+          }),
+          reversePrompt: false,
           phase: "PROMPT",
         };
         break;

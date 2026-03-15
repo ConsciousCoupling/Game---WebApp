@@ -11,6 +11,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 import { getValidatedFirebaseConfig } from "./firebaseConfig";
 
 const firebaseConfig = getValidatedFirebaseConfig(import.meta.env, {
@@ -27,6 +28,7 @@ const app = !getApps().length
 // Export Firestore instance
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
 let authPromise = null;
 

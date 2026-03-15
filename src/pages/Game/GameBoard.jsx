@@ -81,13 +81,22 @@ export default function GameBoard({ gameId }) {
   const isPlayerOne = myIndex === 0;
   const isPlayerTwo = myIndex === 1;
 
-  const partner = isPlayerOne ? p2 : p1;
-
   // -------------------------------------------------------
   // TURN LOGIC
   // -------------------------------------------------------
   const currentPlayer = state.players[state.currentPlayerId];
   const myTurn = state.currentPlayerId === myIndex;
+  const otherPlayerIndex = state.currentPlayerId === 0 ? 1 : 0;
+  const promptResponderIndex =
+    state.phase === "PROMPT"
+      ? (state.reversePrompt ? otherPlayerIndex : state.currentPlayerId)
+      : null;
+  const promptReviewerIndex =
+    promptResponderIndex === null
+      ? null
+      : promptResponderIndex === 0 ? 1 : 0;
+  const isPromptResponder = promptResponderIndex === myIndex;
+  const isPromptReviewer = promptReviewerIndex === myIndex;
 
   // -------------------------------------------------------
   // RENDER
@@ -183,10 +192,16 @@ export default function GameBoard({ gameId }) {
 
           {state.phase === "PROMPT" && state.activePrompt && (
             <PromptCard
-              prompt={state.activePrompt}
+              prompt={{
+                ...state.activePrompt,
+                reversed: state.reversePrompt,
+              }}
               currentPlayerName={currentPlayer.name}
-              otherPlayerName={partner.name}
-              onReady={!myTurn ? actions.beginAwardPhase : () => {}}
+              otherPlayerName={state.players[otherPlayerIndex]?.name || ""}
+              isResponder={isPromptResponder}
+              isReviewer={isPromptReviewer}
+              onSubmitResponse={actions.submitPromptResponse}
+              onReadyToRate={actions.beginAwardPhase}
             />
           )}
 
@@ -250,25 +265,6 @@ export default function GameBoard({ gameId }) {
             </button>
           )}
 
-          {state.phase === "PROMPT" && myTurn && (
-            <button className="big-action-btn" onClick={actions.beginAwardPhase}>
-              Ready to Rate
-            </button>
-          )}
-
-          {state.phase === "AWARD" && myTurn && (
-            <div className="rating-row">
-              {[0, 1, 2, 3].map((v) => (
-                <button
-                  key={v}
-                  className="rating-btn"
-                  onClick={() => actions.awardTokens(v)}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 

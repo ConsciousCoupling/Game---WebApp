@@ -69,6 +69,11 @@ export default function useGameplayState(gameId) {
       gameplayActions.beginAwardPhase(gameId, state, myToken);
     },
 
+    submitPromptResponse: async (response) => {
+      if (!state) return false;
+      return gameplayActions.submitPromptResponse(gameId, state, response, myToken);
+    },
+
     awardTokens: (val) => {
       if (!state) return;
       gameplayActions.awardTokens(gameId, state, val, myToken);
