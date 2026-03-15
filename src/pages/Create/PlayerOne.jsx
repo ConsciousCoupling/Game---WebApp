@@ -113,12 +113,12 @@ export default function PlayerOne() {
       gameId,
       playerOneName: name,
       playerOneColor: color,
-      localPlay: true,
+      localPlay: false,
     });
 
     await createNegotiationDocument(gameId, token);
 
-    navigate("/create/player-two");
+    navigate(`/create/remote-invite/${gameId}?mode=same-device`);
   }
 
   // ---------------------------------------------------------
@@ -186,6 +186,10 @@ export default function PlayerOne() {
           >
             Player Two is here with me
           </button>
+
+          <p className="presence-btn-note">
+            Uses a second browser or incognito window on this device.
+          </p>
 
           <button
             className={`presence-btn alt ${!name.trim() ? "disabled" : ""}`}
