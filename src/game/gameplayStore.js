@@ -31,6 +31,18 @@ function gameplayRef(gameId) {
   return doc(db, "gameplay", gameId);
 }
 
+function negotiationRef(gameId) {
+  return doc(db, "games", gameId);
+}
+
+async function loadFinalActivitiesFromNegotiation(gameId) {
+  const snap = await getDoc(negotiationRef(gameId));
+  if (!snap.exists()) return [];
+
+  const data = snap.data();
+  return Array.isArray(data.finalActivities) ? data.finalActivities : [];
+}
+
 // ---------------------------------------------------------------------------
 // REALTIME SUBSCRIBER
 // ---------------------------------------------------------------------------
@@ -113,6 +125,20 @@ export async function ensureGameplayInitialized(gameId, players, finalActivities
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
+    const existing = snap.data();
+    const hasActivities = Array.isArray(existing.negotiatedActivities)
+      && existing.negotiatedActivities.length > 0;
+    const nextActivities = Array.isArray(finalActivities) ? finalActivities : [];
+
+    if (!hasActivities && nextActivities.length > 0) {
+      await updateDoc(ref, {
+        negotiatedActivities: nextActivities,
+        updatedAt: serverTimestamp(),
+      });
+      log("Backfilled missing gameplay activities for:", gameId);
+      return true;
+    }
+
     log("Gameplay already exists. Skipping init for:", gameId);
     return false;
   }
@@ -256,10 +282,20 @@ export const gameplayActions = {
 
     // CATEGORY: ACTIVITY SHOP (6)
     else if (category === 6) {
+      const negotiatedActivities =
+        Array.isArray(state.negotiatedActivities) && state.negotiatedActivities.length > 0
+          ? state.negotiatedActivities
+          : await loadFinalActivitiesFromNegotiation(gameId);
+
       next = {
         ...next,
+        negotiatedActivities,
         phase: "ACTIVITY_SHOP",
-        activityShop: { message: "Choose an activity or end your turn." },
+        activityShop: {
+          message: negotiatedActivities.length > 0
+            ? "Choose an activity or end your turn."
+            : "No activities were loaded for this game yet.",
+        },
       };
     }
 
