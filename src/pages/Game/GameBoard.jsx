@@ -123,7 +123,16 @@ export default function GameBoard({ gameId }) {
           <div className="game-id-hint">Use this ID to resume later.</div>
         </div>
 
-        <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
+        <div className="gameboard-topbar-actions">
+          <ReconnectCodeCard
+            gameId={gameId}
+            role={isPlayerOne ? "playerOne" : isPlayerTwo ? "playerTwo" : null}
+            token={myToken}
+            variant="compact"
+          />
+
+          <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
+        </div>
       </div>
 
       {/* MENU */}
@@ -182,12 +191,6 @@ export default function GameBoard({ gameId }) {
 
         {/* MAIN INTERACTION ZONE */}
         <div className={centerCardClassName}>
-          <ReconnectCodeCard
-            gameId={gameId}
-            role={isPlayerOne ? "playerOne" : isPlayerTwo ? "playerTwo" : null}
-            token={myToken}
-          />
-
           {state.phase === "TURN_START" &&
             (myTurn ? (
               <p className="placeholder-text">

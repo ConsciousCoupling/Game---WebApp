@@ -5,7 +5,12 @@ import { ensureReconnectCodeForRole } from "../services/sessionRecovery";
 
 import "./ReconnectCodeCard.css";
 
-export default function ReconnectCodeCard({ gameId, role, token }) {
+export default function ReconnectCodeCard({
+  gameId,
+  role,
+  token,
+  variant = "default"
+}) {
   const [code, setCode] = useState(() => loadReconnectCode(gameId, role) || "");
   const [copyLabel, setCopyLabel] = useState("Copy");
 
@@ -39,6 +44,8 @@ export default function ReconnectCodeCard({ gameId, role, token }) {
 
   if (!code) return null;
 
+  const isCompact = variant === "compact";
+
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(code);
@@ -50,13 +57,17 @@ export default function ReconnectCodeCard({ gameId, role, token }) {
   }
 
   return (
-    <div className="reconnect-card">
+    <div className={`reconnect-card${isCompact ? " compact" : ""}`}>
       <div className="reconnect-card-header">
-        <div>
+        <div className="reconnect-card-copy-block">
           <div className="reconnect-card-title">Reconnect Code</div>
-          <div className="reconnect-card-subtitle">
-            Save this so you can reclaim your seat if the browser closes.
-          </div>
+          {isCompact ? (
+            <div className="reconnect-card-inline-code">{code}</div>
+          ) : (
+            <div className="reconnect-card-subtitle">
+              Save this so you can reclaim your seat if the browser closes.
+            </div>
+          )}
         </div>
 
         <button className="reconnect-card-copy" onClick={copyCode}>
@@ -64,7 +75,7 @@ export default function ReconnectCodeCard({ gameId, role, token }) {
         </button>
       </div>
 
-      <div className="reconnect-card-code">{code}</div>
+      {!isCompact && <div className="reconnect-card-code">{code}</div>}
     </div>
   );
 }

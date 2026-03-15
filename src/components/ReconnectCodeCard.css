@@ -7,11 +7,22 @@
   color: #fff;
 }
 
+.reconnect-card.compact {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  min-width: 0;
+}
+
 .reconnect-card-header {
   display: flex;
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
+}
+
+.reconnect-card-copy-block {
+  min-width: 0;
 }
 
 .reconnect-card-title {
@@ -28,6 +39,14 @@
   line-height: 1.4;
 }
 
+.reconnect-card-inline-code {
+  margin-top: 4px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
 .reconnect-card-copy {
   border: none;
   border-radius: 999px;
@@ -35,6 +54,11 @@
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
   cursor: pointer;
+}
+
+.reconnect-card.compact .reconnect-card-copy {
+  padding: 8px 12px;
+  flex-shrink: 0;
 }
 
 .reconnect-card-code {
@@ -54,5 +78,10 @@
 
   .reconnect-card-copy {
     width: 100%;
+  }
+
+  .reconnect-card.compact .reconnect-card-inline-code {
+    white-space: normal;
+    word-break: break-word;
   }
 }
