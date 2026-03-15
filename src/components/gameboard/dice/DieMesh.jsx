@@ -1,12 +1,10 @@
 // src/components/gameboard/dice/DieMesh.jsx
-
-import React, { forwardRef, useRef, useMemo, useImperativeHandle } from "react";
+import React, { forwardRef, useRef, useImperativeHandle } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import EngravingTextures from "./engravingTextures.js";
 import EngravingMaterial from "./EngravingMaterial.jsx";
-import InnerGlowMaterial from "./InnerGlowMaterial.js";   // ★ ADD THIS IMPORT
 
 function createImperfectionCube(size) {
   const geom = new THREE.BoxGeometry(size, size, size);
@@ -30,13 +28,65 @@ function createImperfectionCube(size) {
 const DIE_SIZE = 1.3;
 const FACE_OFFSET = DIE_SIZE / 2 + 0.01;
 const baseGeometry = createImperfectionCube(DIE_SIZE);
+const INNER_GLOW_INSET = 0.08;
+const INNER_GLOW_SIZE = 1.08;
+const INNER_GLOW_BLOOM_SIZE = 1.18;
+
+const FACE_CONFIGS = [
+  {
+    key: "top",
+    texture: EngravingTextures[1],
+    glow: "#f30c0c",
+    position: [0, FACE_OFFSET, 0],
+    rotation: [-Math.PI / 2, 0, 0],
+  },
+  {
+    key: "bottom",
+    texture: EngravingTextures[6],
+    glow: "#ff9900",
+    position: [0, -FACE_OFFSET, 0],
+    rotation: [Math.PI / 2, 0, 0],
+  },
+  {
+    key: "right",
+    texture: EngravingTextures[5],
+    glow: "#052de2",
+    position: [FACE_OFFSET, 0, 0],
+    rotation: [0, -Math.PI / 2, 0],
+  },
+  {
+    key: "left",
+    texture: EngravingTextures[2],
+    glow: "#6633cc",
+    position: [-FACE_OFFSET, 0, 0],
+    rotation: [0, Math.PI / 2, 0],
+  },
+  {
+    key: "front",
+    texture: EngravingTextures[3],
+    glow: "#15c429",
+    position: [0, 0, FACE_OFFSET],
+    rotation: [0, 0, 0],
+  },
+  {
+    key: "back",
+    texture: EngravingTextures[4],
+    glow: "#dd0aa9",
+    position: [0, 0, -FACE_OFFSET],
+    rotation: [0, Math.PI, 0],
+  },
+];
+
+function insetFacePosition(position) {
+  return position.map((value) => {
+    if (value === 0) return 0;
+    return value > 0 ? value - INNER_GLOW_INSET : value + INNER_GLOW_INSET;
+  });
+}
 
 const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
   const mesh = useRef();
   const aura = useRef();
-
-  // CREATE GLOW MATERIAL ONE TIME
-  const glowMaterial = useMemo(() => new InnerGlowMaterial(), []);
 
   useImperativeHandle(ref, () => mesh.current, []);
 
@@ -79,49 +129,51 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
 
         {/* ENGRAVED FACES */}
         <group>
-          {/* 1 top */}
-          <mesh position={[0, FACE_OFFSET, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[1]} glow="#f30c0c" />
-          </mesh>
+          {FACE_CONFIGS.map((face) => (
+            <React.Fragment key={face.key}>
+              <mesh
+                position={insetFacePosition(face.position)}
+                rotation={face.rotation}
+                renderOrder={1}
+              >
+                <planeGeometry args={[INNER_GLOW_BLOOM_SIZE, INNER_GLOW_BLOOM_SIZE]} />
+                <meshBasicMaterial
+                  map={face.texture}
+                  color={face.glow}
+                  transparent
+                  opacity={0.16}
+                  blending={THREE.AdditiveBlending}
+                  side={THREE.DoubleSide}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
 
-          {/* 6 bottom */}
-          <mesh position={[0, -FACE_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[6]} glow="#ff9900" />
-          </mesh>
+              <mesh
+                position={insetFacePosition(face.position)}
+                rotation={face.rotation}
+                renderOrder={2}
+              >
+                <planeGeometry args={[INNER_GLOW_SIZE, INNER_GLOW_SIZE]} />
+                <meshBasicMaterial
+                  map={face.texture}
+                  color={face.glow}
+                  transparent
+                  opacity={0.45}
+                  blending={THREE.AdditiveBlending}
+                  side={THREE.DoubleSide}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
 
-          {/* 2 right */}
-          <mesh position={[FACE_OFFSET, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[5]} glow="#052de2" />
-          </mesh>
-
-          {/* 5 left */}
-          <mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[2]} glow="#6633cc" />
-          </mesh>
-
-          {/* 3 front */}
-          <mesh position={[0, 0, FACE_OFFSET]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
-          </mesh>
-
-          {/* 4 back */}
-          <mesh position={[0, 0, -FACE_OFFSET]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
-            <EngravingMaterial texture={EngravingTextures[4]} glow="#dd0aa9" />
-          </mesh>
+              <mesh position={face.position} rotation={face.rotation} renderOrder={3}>
+                <planeGeometry args={[1.25, 1.25]} />
+                <EngravingMaterial texture={face.texture} glow={face.glow} />
+              </mesh>
+            </React.Fragment>
+          ))}
         </group>
-
-        {/* ★★★★★ INNER GLOW (NOW WORKING) ★★★★★ */}
-        {/* Inner Glow Volume */}
- <mesh scale={[1.05, 1.05, 1.05]}>
-        <boxGeometry args={[1.3, 1.3, 1.3]} />
-        <primitive object={glowMaterial} attach="material" />
-      </mesh>
 
         {/* Acrylic physical material */}
         <meshPhysicalMaterial
