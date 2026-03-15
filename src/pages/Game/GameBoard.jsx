@@ -229,15 +229,20 @@ export default function GameBoard({ gameId }) {
             />
           )}
 
-          {state.phase === "ACTIVITY_SHOP" && (
-            <ActivityShop
-              activities={state.negotiatedActivities || []}
-              message={state.activityShop?.message || ""}
-              currentTokens={currentPlayer.tokens}
-              onPurchase={myTurn ? actions.purchaseActivity : () => {}}
-              onEndTurn={myTurn ? actions.endTurnInShop : () => {}}
-            />
-          )}
+          {state.phase === "ACTIVITY_SHOP" &&
+            (myTurn ? (
+              <ActivityShop
+                activities={state.negotiatedActivities || []}
+                message={state.activityShop?.message || ""}
+                currentTokens={currentPlayer.tokens}
+                onPurchase={actions.purchaseActivity}
+                onEndTurn={actions.endTurnInShop}
+              />
+            ) : (
+              <p className="placeholder-text">
+                Waiting for <strong>{currentPlayer.name}</strong> to choose an activity…
+              </p>
+            ))}
 
           {state.phase === "COIN_TOSS" && (
             <CoinFlip
