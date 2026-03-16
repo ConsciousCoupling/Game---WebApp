@@ -110,6 +110,14 @@ export default function GameBoard({ gameId }) {
     .filter(Boolean)
     .join(" ");
 
+  if (!p1 || !p2 || !currentPlayer) {
+    return (
+      <div className="game-missing">
+        <p>Loading game…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="gameboard-container">
 
