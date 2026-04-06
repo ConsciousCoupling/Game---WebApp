@@ -1,0 +1,10 @@
+{
+  "dry_run": true,
+  "request": {
+    "endpoint": "/v1/videos",
+    "model": "sora-2-pro",
+    "prompt": "Use case: social ad\nPrimary request: reveal the gameplay loop and end on one clear CTA\nScene/background: same obsidian studio, floating gameboard with luminous dice area and holographic cards\nSubject: 3D die, prompt card, token counters, movement card flash, activity shop card, coin flip outcome card\nAction: beat 1 (0-2s) 3D die rolls and lands dramatically; beat 2 (2-5s) prompt card rises, tokens pulse, movement card flashes holographically; beat 3 (5-8s) activity card is selected, a coin flips, and the final CTA card locks on screen\nCamera: medium-wide hero shot, gentle orbit into a centered finish\nLighting/mood: energetic, premium, cinematic\nColor palette: obsidian black, neon rose, electric blue, warm gold\nStyle/format: high-end product trailer, glossy reflections, controlled UI motion\nAudio: ambient synth pulse swells slightly, final voiceover line lands with the CTA\nText (verbatim): \"Structured connection.\", \"Start a game. Share the code.\"\nDialogue:\n<dialogue>\n- Narrator: \"Then the board comes alive with prompts, tokens, movement cards, and a favor-or-challenge finish. Start a game. Share the code.\"\n</dialogue>\nConstraints: keep it PG-safe; no explicit activities shown; final CTA only once at the end\nAvoid: chaotic motion, illegible text, extra claims, human faces",
+    "seconds": "8",
+    "size": "1280x720"
+  }
+}

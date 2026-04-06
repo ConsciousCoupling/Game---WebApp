@@ -2,7 +2,7 @@
 // GAME BOARD — FINAL IDENTITY-SAFE VERSION
 // -----------------------------------------------------------
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import useGameState from "../../game/useGameState";
@@ -21,6 +21,16 @@ import PromptCard from "../../components/gameboard/prompt/PromptCard";
 import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
 
 import { loadIdentity } from "../../services/setupStorage";
+import {
+  playCoinFlipSound,
+  playDiceRollSound,
+  playTurnAlertSound,
+  primeGameAudio,
+} from "../../utils/soundEffects";
+import {
+  requestTurnNotificationPermission,
+  showTurnNotification,
+} from "../../utils/turnNotifications";
 
 import "./GameBoard.css";
 import "../../components/gameboard/styles/actionButtons.css";
@@ -36,6 +46,10 @@ export default function GameBoard({ gameId }) {
   const { state, actions, engine } = useGameState(gameId);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const previousSnapshotRef = useRef(null);
+  const hasLoadedInitialStateRef = useRef(false);
+  const titleResetTimeoutRef = useRef(null);
+  const originalTitleRef = useRef("Intima-Date");
 
   // -------------------------------------------------------
   // IDENTITY VALIDATION — TOKEN ONLY
@@ -64,7 +78,91 @@ export default function GameBoard({ gameId }) {
     }
   }, [identity, myIndex, navigate]);
 
-  if (myIndex === null || !state) {
+  useEffect(() => {
+    const primeExperience = () => {
+      primeGameAudio();
+      requestTurnNotificationPermission();
+    };
+
+    window.addEventListener("pointerdown", primeExperience, { passive: true });
+    window.addEventListener("touchstart", primeExperience, { passive: true });
+    window.addEventListener("keydown", primeExperience);
+
+    return () => {
+      window.removeEventListener("pointerdown", primeExperience);
+      window.removeEventListener("touchstart", primeExperience);
+      window.removeEventListener("keydown", primeExperience);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      originalTitleRef.current = document.title;
+    }
+
+    return () => {
+      if (titleResetTimeoutRef.current) {
+        window.clearTimeout(titleResetTimeoutRef.current);
+      }
+
+      if (typeof document !== "undefined") {
+        document.title = originalTitleRef.current;
+      }
+    };
+  }, []);
+
+  const currentPlayer = state?.players?.[state.currentPlayerId] || null;
+  const myTurn = state ? state.currentPlayerId === myIndex : false;
+
+  useEffect(() => {
+    if (!state || myIndex === null || myIndex === -1 || !currentPlayer) return;
+
+    const previous = previousSnapshotRef.current;
+
+    if (hasLoadedInitialStateRef.current && previous) {
+      if (state.phase === "ROLLING" && previous.phase !== "ROLLING") {
+        playDiceRollSound();
+      }
+
+      if (state.coin?.isFlipping && !previous.coinIsFlipping) {
+        playCoinFlipSound();
+      }
+
+      const becameMyTurn =
+        state.phase === "TURN_START" &&
+        state.currentPlayerId === myIndex &&
+        (previous.currentPlayerId !== myIndex || previous.phase !== "TURN_START");
+
+      if (becameMyTurn) {
+        playTurnAlertSound();
+
+        if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+          showTurnNotification(currentPlayer.name);
+        }
+
+        if (typeof document !== "undefined") {
+          document.title = `Your turn • ${gameId}`;
+
+          if (titleResetTimeoutRef.current) {
+            window.clearTimeout(titleResetTimeoutRef.current);
+          }
+
+          titleResetTimeoutRef.current = window.setTimeout(() => {
+            document.title = originalTitleRef.current;
+          }, 4500);
+        }
+      }
+    }
+
+    previousSnapshotRef.current = {
+      phase: state.phase,
+      currentPlayerId: state.currentPlayerId,
+      coinIsFlipping: !!state.coin?.isFlipping,
+    };
+    hasLoadedInitialStateRef.current = true;
+  }, [state, myIndex, currentPlayer, gameId]);
+
+  if (myIndex === null || !state || !currentPlayer) {
     return (
       <div className="game-missing">
         <p>Loading game…</p>
@@ -82,12 +180,6 @@ export default function GameBoard({ gameId }) {
   const isPlayerTwo = myIndex === 1;
 
   const partner = isPlayerOne ? p2 : p1;
-
-  // -------------------------------------------------------
-  // TURN LOGIC
-  // -------------------------------------------------------
-  const currentPlayer = state.players[state.currentPlayerId];
-  const myTurn = state.currentPlayerId === myIndex;
 
   // -------------------------------------------------------
   // RENDER
@@ -169,16 +261,16 @@ export default function GameBoard({ gameId }) {
           {state.phase === "TURN_START" &&
             (myTurn ? (
               <p className="placeholder-text">
-                Your turn, <strong>{currentPlayer.name}</strong>!
+                Your turn, <strong>{currentPlayer.name}</strong>. Roll the die to reveal your next category.
               </p>
             ) : (
               <p className="placeholder-text">
-                Waiting for <strong>{currentPlayer.name}</strong>…
+                Waiting for <strong>{currentPlayer.name}</strong> to roll. Stay ready to rate prompts or watch the coin toss.
               </p>
             ))}
 
           {state.phase === "ROLLING" && (
-            <p className="placeholder-text">Rolling… 🎲</p>
+            <p className="placeholder-text">Rolling the die… the next prompt, card, or activity is on the way.</p>
           )}
 
           {state.phase === "PROMPT" && state.activePrompt && (
@@ -186,7 +278,7 @@ export default function GameBoard({ gameId }) {
               prompt={state.activePrompt}
               currentPlayerName={currentPlayer.name}
               otherPlayerName={partner.name}
-              onReady={!myTurn ? actions.beginAwardPhase : () => {}}
+              myTurn={myTurn}
             />
           )}
 
@@ -219,6 +311,8 @@ export default function GameBoard({ gameId }) {
               activities={state.negotiatedActivities || []}
               message={state.activityShop?.message || ""}
               currentTokens={currentPlayer.tokens}
+              currentPlayerName={currentPlayer.name}
+              isCurrentPlayer={myTurn}
               onPurchase={myTurn ? actions.purchaseActivity : () => {}}
               onEndTurn={myTurn ? actions.endTurnInShop : () => {}}
             />
@@ -227,6 +321,9 @@ export default function GameBoard({ gameId }) {
           {state.phase === "COIN_TOSS" && (
             <CoinFlip
               coin={state.coin}
+              activityName={state.pendingActivity?.name}
+              canFlip={myTurn}
+              currentPlayerName={currentPlayer.name}
               onFlip={myTurn ? actions.flipCoin : () => {}}
               onComplete={myTurn ? actions.completeCoinFlip : () => {}}
             />
@@ -237,6 +334,8 @@ export default function GameBoard({ gameId }) {
               result={state.activityResult.outcome}
               activity={state.activityResult.activityName}
               performer={state.activityResult.performer}
+              canContinue={myTurn}
+              currentPlayerName={currentPlayer.name}
               onContinue={myTurn ? actions.finishActivityResult : () => {}}
             />
           )}
@@ -292,7 +391,10 @@ export default function GameBoard({ gameId }) {
         <InstructionOverlay
           phase={state.phase}
           currentPlayer={currentPlayer}
-          prompt={state.activePrompt}
+          myTurn={myTurn}
+          partner={partner}
+          pendingActivity={state.pendingActivity}
+          activityResult={state.activityResult}
         />
       </div>
     </div>

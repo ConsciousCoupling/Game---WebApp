@@ -49,6 +49,16 @@
   line-height: 1.45;
 }
 
+.shop-instruction-callout {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 240, 245, 0.92);
+  line-height: 1.5;
+}
+
 /* -------------------------------------------------------
    ACTIVITY GRID
 -------------------------------------------------------- */
@@ -81,6 +91,20 @@
   transform: translateY(-4px);
   box-shadow: 0 8px 22px rgba(0,0,0,0.35);
   border-color: rgba(255,255,255,0.25);
+}
+
+.activity-card:disabled,
+.activity-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.activity-card:disabled:hover,
+.activity-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Card Title */

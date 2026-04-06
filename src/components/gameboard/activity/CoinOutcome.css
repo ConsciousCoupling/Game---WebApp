@@ -37,6 +37,13 @@
   opacity: 0.95;
 }
 
+.coin-outcome-note {
+  margin: 12px 0 0;
+  font-size: 0.96rem;
+  line-height: 1.45;
+  opacity: 0.82;
+}
+
 .coin-outcome-btn {
   margin-top: 16px;
   padding: 12px 20px;
@@ -50,6 +57,12 @@
 
 .coin-outcome-btn:hover {
   background: #ff7fc2;
+}
+
+.coin-outcome-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #915475;
 }
 
 .coin-outcome-overlay {

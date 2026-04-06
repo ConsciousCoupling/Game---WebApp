@@ -127,6 +127,11 @@ export default function Summary() {
         <h2>Final Activity List</h2>
         <p>This is the list you will use in the game.</p>
 
+        <div className="summary-flow-note">
+          <strong>Next step</strong>
+          <p>Starting the game creates the live turn tracker. Both players can return later with the same Game ID.</p>
+        </div>
+
         <div className="summary-list">
           {finalActivities.map((activity) => (
             <div className="summary-item" key={activity.id}>

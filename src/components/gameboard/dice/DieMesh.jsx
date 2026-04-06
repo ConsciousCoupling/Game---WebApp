@@ -3,17 +3,18 @@
 import React, { forwardRef, useRef, useMemo, useImperativeHandle } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 import EngravingTextures from "./engravingTextures.js";
 import EngravingMaterial from "./EngravingMaterial.jsx";
 import InnerGlowMaterial from "./InnerGlowMaterial.js";   // ★ ADD THIS IMPORT
 
 function createImperfectionCube(size) {
-  const geom = new THREE.BoxGeometry(size, size, size);
+  const geom = new RoundedBoxGeometry(size, size, size, 4, 0.12);
   const pos = geom.attributes.position;
 
   for (let i = 0; i < pos.count; i++) {
-    const v = 0.003 + Math.random() * 0.004;
+    const v = 0.0015 + Math.random() * 0.0025;
     pos.setXYZ(
       i,
       pos.getX(i) + (Math.random() - 0.5) * v,
@@ -29,7 +30,9 @@ function createImperfectionCube(size) {
 
 const DIE_SIZE = 1.3;
 const FACE_OFFSET = DIE_SIZE / 2 + 0.01;
+const FACE_SIZE = 1.08;
 const baseGeometry = createImperfectionCube(DIE_SIZE);
+const glowGeometry = new RoundedBoxGeometry(DIE_SIZE * 1.04, DIE_SIZE * 1.04, DIE_SIZE * 1.04, 4, 0.14);
 
 const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
   const mesh = useRef();
@@ -81,47 +84,46 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
         <group>
           {/* 1 top */}
           <mesh position={[0, FACE_OFFSET, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[1]} glow="#f30c0c" />
           </mesh>
 
           {/* 6 bottom */}
           <mesh position={[0, -FACE_OFFSET, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[6]} glow="#ff9900" />
           </mesh>
 
           {/* 2 right */}
           <mesh position={[FACE_OFFSET, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[5]} glow="#052de2" />
           </mesh>
 
           {/* 5 left */}
           <mesh position={[-FACE_OFFSET, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[2]} glow="#6633cc" />
           </mesh>
 
           {/* 3 front */}
           <mesh position={[0, 0, FACE_OFFSET]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[3]} glow="#15c429" />
           </mesh>
 
           {/* 4 back */}
           <mesh position={[0, 0, -FACE_OFFSET]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[1.25, 1.25]} />
+            <planeGeometry args={[FACE_SIZE, FACE_SIZE]} />
             <EngravingMaterial texture={EngravingTextures[4]} glow="#dd0aa9" />
           </mesh>
         </group>
 
         {/* ★★★★★ INNER GLOW (NOW WORKING) ★★★★★ */}
         {/* Inner Glow Volume */}
- <mesh scale={[1.05, 1.05, 1.05]}>
-        <boxGeometry args={[1.3, 1.3, 1.3]} />
-        <primitive object={glowMaterial} attach="material" />
-      </mesh>
+        <mesh geometry={glowGeometry}>
+          <primitive object={glowMaterial} attach="material" />
+        </mesh>
 
         {/* Acrylic physical material */}
         <meshPhysicalMaterial

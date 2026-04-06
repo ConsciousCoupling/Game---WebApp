@@ -1,7 +1,14 @@
 // src/components/gameboard/activity/CoinOutcome.jsx
 import "./CoinOutcome.css";
 
-export default function CoinOutcome({ result, activity, performer, onContinue }) {
+export default function CoinOutcome({
+  result,
+  activity,
+  performer,
+  canContinue,
+  currentPlayerName,
+  onContinue,
+}) {
   const imageSrc =
     result === "Favor ❤️"
       ? "/assets/coin-favor.png"
@@ -23,7 +30,17 @@ export default function CoinOutcome({ result, activity, performer, onContinue })
           <strong>Performer:</strong> <strong>{performer}</strong>
         </p>
 
-        <button className="coin-outcome-btn" onClick={onContinue}>
+        <p className="coin-outcome-note">
+          {canContinue
+            ? "Take a beat to confirm the result together, then continue to pass the turn."
+            : `Waiting for ${currentPlayerName} to continue.`}
+        </p>
+
+        <button
+          className="coin-outcome-btn"
+          onClick={onContinue}
+          disabled={!canContinue}
+        >
           Continue
         </button>
 

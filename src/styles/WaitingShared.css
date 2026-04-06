@@ -51,6 +51,16 @@
   margin-bottom: 24px;
 }
 
+.waiting-next-step {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f2dbe6;
+  line-height: 1.45;
+}
+
 .waiting-btn {
   background: linear-gradient(90deg, #ff3e84, #ff6ba8);
   color: white;

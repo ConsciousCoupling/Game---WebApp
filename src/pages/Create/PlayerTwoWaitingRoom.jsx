@@ -125,6 +125,9 @@ export default function PlayerTwoWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is preparing the first activity list.</p>
+          <div className="waiting-next-step">
+            You&apos;ll be moved to review or edit as soon as that first draft is ready.
+          </div>
         </div>
       </div>
     );
@@ -137,6 +140,9 @@ export default function PlayerTwoWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is updating the activity list.</p>
+          <div className="waiting-next-step">
+            This page advances automatically when they finish.
+          </div>
         </div>
       </div>
     );
@@ -150,6 +156,9 @@ export default function PlayerTwoWaitingRoom() {
       <div className="waiting-card">
         <h2>Waiting…</h2>
         <p>Your game is syncing. You will continue automatically.</p>
+        <div className="waiting-next-step">
+          Stay on this screen while the shared state catches up.
+        </div>
       </div>
     </div>
   );

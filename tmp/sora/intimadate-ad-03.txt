@@ -1,0 +1,17 @@
+Use case: social ad
+Primary request: reveal the gameplay loop and end on one clear CTA
+Scene/background: same obsidian studio, floating gameboard with luminous dice area and holographic cards
+Subject: 3D die, prompt card, token counters, movement card flash, activity shop card, coin flip outcome card
+Action: beat 1 (0-2s) 3D die rolls and lands dramatically; beat 2 (2-5s) prompt card rises, tokens pulse, movement card flashes holographically; beat 3 (5-8s) activity card is selected, a coin flips, and the final CTA card locks on screen
+Camera: medium-wide hero shot, gentle orbit into a centered finish
+Lighting/mood: energetic, premium, cinematic
+Color palette: obsidian black, neon rose, electric blue, warm gold
+Style/format: high-end product trailer, glossy reflections, controlled UI motion
+Audio: ambient synth pulse swells slightly, final voiceover line lands with the CTA
+Text (verbatim): "Structured connection.", "Start a game. Share the code."
+Dialogue:
+<dialogue>
+- Narrator: "Then the board comes alive with prompts, tokens, movement cards, and a favor-or-challenge finish. Start a game. Share the code."
+</dialogue>
+Constraints: keep it PG-safe; no explicit activities shown; final CTA only once at the end
+Avoid: chaotic motion, illegible text, extra claims, human faces

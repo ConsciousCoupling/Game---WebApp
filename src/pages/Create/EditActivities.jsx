@@ -179,6 +179,11 @@ export default function EditActivities() {
         <h2>Edit Activity List</h2>
         <p>Modify, remove, or add activities below.</p>
 
+        <div className="flow-note">
+          <strong>How this step works</strong>
+          <p>Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review.</p>
+        </div>
+
         <div className="activity-list">
           {localDraft.map((a, i) => (
             <div key={a.id} className={`activity-row ${a.deleted ? "deleted" : ""}`}>

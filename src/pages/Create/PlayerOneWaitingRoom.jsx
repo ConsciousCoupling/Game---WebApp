@@ -107,6 +107,9 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is reviewing or editing the activity list.</p>
+          <div className="waiting-next-step">
+            You&apos;ll move forward automatically when they submit or approve the draft.
+          </div>
         </div>
       </div>
     );
@@ -121,6 +124,9 @@ export default function PlayerOneWaitingRoom() {
         <div className="waiting-card">
           <h2>Waiting for {partnerName}…</h2>
           <p>Your partner is reviewing the activity list.</p>
+          <div className="waiting-next-step">
+            Once both of you approve, this screen will advance to the summary automatically.
+          </div>
         </div>
       </div>
     );
@@ -134,6 +140,9 @@ export default function PlayerOneWaitingRoom() {
       <div className="waiting-card">
         <h2>Waiting…</h2>
         <p>The game is syncing. You will continue automatically.</p>
+        <div className="waiting-next-step">
+          Stay on this page. No refresh is needed.
+        </div>
       </div>
     </div>
   );

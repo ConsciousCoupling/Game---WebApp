@@ -2,7 +2,12 @@
 
 import "./PromptCard.css";
 
-export default function PromptCard({ prompt, currentPlayerName, otherPlayerName }) {
+export default function PromptCard({
+  prompt,
+  currentPlayerName,
+  otherPlayerName,
+  myTurn,
+}) {
   if (!prompt) return null;
 
   const promptText = prompt.text || prompt.prompt || "";
@@ -50,9 +55,18 @@ export default function PromptCard({ prompt, currentPlayerName, otherPlayerName 
             )
           : (
               <>
-                <strong>{currentPlayerName}</strong>, answer the prompt. 
-                When you're done,
-                <strong> {otherPlayerName}</strong> will rate your effort.
+                {myTurn ? (
+                  <>
+                    <strong>{currentPlayerName}</strong>, answer this prompt out loud.
+                    When you&apos;re done, tap “Ready to Rate” so{" "}
+                    <strong>{otherPlayerName}</strong> can award 0 to 3 tokens.
+                  </>
+                ) : (
+                  <>
+                    Listen to <strong>{currentPlayerName}</strong>&apos;s answer.
+                    Once they tap “Ready to Rate,” you&apos;ll choose the 0 to 3 token reward.
+                  </>
+                )}
               </>
             )
         }

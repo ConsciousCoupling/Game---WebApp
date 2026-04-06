@@ -1,0 +1,10 @@
+{
+  "dry_run": true,
+  "request": {
+    "endpoint": "/v1/videos",
+    "model": "sora-2-pro",
+    "prompt": "Use case: social ad\nPrimary request: show the share-code join flow and the pre-game activity negotiation as the product differentiator\nScene/background: same obsidian void, two floating phones side by side with subtle depth separation\nSubject: one phone generating a game code, the second phone joining, then both transitioning into activity edit and review screens\nAction: beat 1 (0-2s) first phone reveals a share code with a copy button; beat 2 (2-4s) second phone enters the code and joins; beat 3 (4-8s) activity rows animate with edits, deletions, additions, and approval highlights\nCamera: locked-off frontal composition with a slight lateral slide\nLighting/mood: confident, high-trust, product-led\nColor palette: obsidian black, neon rose, electric blue, warm gold\nStyle/format: premium UI showcase, minimal but dramatic\nAudio: continuing ambient pulse, clear voiceover\nText (verbatim): \"Share code.\", \"Edit. Review. Approve.\"\nDialogue:\n<dialogue>\n- Narrator: \"One code brings your partner in. Before anyone plays, you build the experience together.\"\n</dialogue>\nConstraints: show only supported product flow; highlight edit, review, approve states; no unsupported metrics or claims\nAvoid: busy backgrounds, unreadable UI, exaggerated motion",
+    "seconds": "8",
+    "size": "1280x720"
+  }
+}

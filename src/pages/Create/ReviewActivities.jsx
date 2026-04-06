@@ -166,6 +166,11 @@ export default function ReviewActivities() {
         <h2>Review Your Activity List</h2>
         <p>Please confirm the list below. Changes are highlighted.</p>
 
+        <div className="review-flow-note">
+          <strong>Before you approve</strong>
+          <p>Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Approving confirms this draft and advances both players.</p>
+        </div>
+
         <div className="review-table">
           {draft.map((a, i) => renderRow(a, i))}
         </div>

@@ -1,0 +1,17 @@
+Use case: social ad
+Primary request: introduce Intima-Date as more than a prompt app, with a consent-first premium feel
+Scene/background: dark obsidian void with soft particle haze, floating portal card and consent UI
+Subject: glass phone screen showing warning screen transitioning into consent screen
+Action: beat 1 (0-2s) portal warning card glows into view; beat 2 (2-5s) consent screen replaces it with a smooth UI morph; beat 3 (5-8s) headline locks center as the camera gently pushes in
+Camera: straight-on medium close-up, 50mm, slow push-in
+Lighting/mood: premium, intimate, controlled, PG-safe
+Color palette: obsidian black, neon rose, electric blue, warm gold
+Style/format: polished startup ad, crisp UI, shallow depth of field
+Audio: soft ambient synth pulse, clean confident voiceover
+Text (verbatim): "Not just prompts.", "Consent first."
+Dialogue:
+<dialogue>
+- Narrator: "Most connection apps stop at prompts. Intima-Date turns the whole night into a two-player game."
+</dialogue>
+Constraints: app UI only; no real people; no physical contact; keep text centered and readable
+Avoid: flicker, jitter, UI distortion, fast camera moves

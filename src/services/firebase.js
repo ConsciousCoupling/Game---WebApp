@@ -12,8 +12,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
-const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY || "").trim();
-
 // Safely read config from Vite environment
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,

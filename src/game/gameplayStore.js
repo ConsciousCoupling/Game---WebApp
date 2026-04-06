@@ -135,6 +135,12 @@ function onlyCurrentPlayer(state, myToken) {
   return activeToken === myToken;
 }
 
+function onlyPartnerOfCurrentPlayer(state, myToken) {
+  return state.players.some(
+    (player, index) => index !== state.currentPlayerId && player?.token === myToken
+  );
+}
+
 // ---------------------------------------------------------------------------
 // PUBLIC ACTIONS
 // ---------------------------------------------------------------------------
@@ -225,7 +231,7 @@ export const gameplayActions = {
 
   // -------------------------------------------------------
   awardTokens: (gameId, state, value, myToken) => {
-    if (!onlyCurrentPlayer(state, myToken)) return;
+    if (!onlyPartnerOfCurrentPlayer(state, myToken)) return;
 
     const players = [...state.players];
     players[state.currentPlayerId] = {

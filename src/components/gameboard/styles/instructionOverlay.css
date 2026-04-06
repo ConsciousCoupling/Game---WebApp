@@ -6,7 +6,7 @@
   width: 260px;
   padding: 16px 20px;
 
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.52);
   border-radius: 12px;
   color: #fff;
   font-size: 0.9rem;
@@ -15,9 +15,38 @@
   backdrop-filter: blur(6px);
   z-index: 10;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 
   animation: fadeIn 0.4s ease;
   max-width: 80%;
+}
+
+.instruction-overlay.active-player {
+  border-color: rgba(150, 220, 255, 0.28);
+  box-shadow: 0 8px 22px rgba(80, 140, 255, 0.18);
+}
+
+.instruction-overlay.waiting-player {
+  border-color: rgba(255, 194, 214, 0.22);
+}
+
+.instruction-eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.instruction-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.instruction-body {
+  margin: 0;
+  opacity: 0.9;
 }
 
 @keyframes fadeIn {
