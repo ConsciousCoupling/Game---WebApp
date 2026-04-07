@@ -19,8 +19,11 @@ import MovementCardPanel from "../../components/gameboard/movement/MovementCardP
 
 import PromptCard from "../../components/gameboard/prompt/PromptCard";
 import InstructionOverlay from "../../components/gameboard/InstructionOverlay/InstructionOverlay";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame } from "../../services/setupStorage";
+import { syncHotseatGameplayRole } from "../../services/hotseat";
+import useGameIdentity from "../../services/useGameIdentity";
 import {
   playCoinFlipSound,
   playDiceRollSound,
@@ -43,19 +46,16 @@ import "../../components/gameboard/activity/CoinOutcome.css";
 
 export default function GameBoard({ gameId }) {
   const navigate = useNavigate();
-  const { state, actions, engine } = useGameState(gameId);
+  const identity = useGameIdentity(gameId);
+  const myToken = identity?.token || null;
+  const { state, actions, engine } = useGameState(gameId, myToken);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const previousSnapshotRef = useRef(null);
   const hasLoadedInitialStateRef = useRef(false);
   const titleResetTimeoutRef = useRef(null);
   const originalTitleRef = useRef("Intima-Date");
-
-  // -------------------------------------------------------
-  // IDENTITY VALIDATION — TOKEN ONLY
-  // -------------------------------------------------------
-  const identity = loadIdentity(gameId);
-  const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const myIndex = useMemo(() => {
     if (!state?.players || state.players.length !== 2 || !myToken) return null;
@@ -111,6 +111,11 @@ export default function GameBoard({ gameId }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!hotseatMode || !state) return;
+    syncHotseatGameplayRole(gameId, state);
+  }, [gameId, hotseatMode, state]);
+
   const currentPlayer = state?.players?.[state.currentPlayerId] || null;
   const myTurn = state ? state.currentPlayerId === myIndex : false;
 
@@ -162,7 +167,7 @@ export default function GameBoard({ gameId }) {
     hasLoadedInitialStateRef.current = true;
   }, [state, myIndex, currentPlayer, gameId]);
 
-  if (myIndex === null || !state || !currentPlayer) {
+  if (myIndex === null || !state) {
     return (
       <div className="game-missing">
         <p>Loading game…</p>
@@ -170,27 +175,47 @@ export default function GameBoard({ gameId }) {
     );
   }
 
-  // -------------------------------------------------------
-  // PLAYER ROLE RESOLUTION
-  // -------------------------------------------------------
   const p1 = state.players[0];
   const p2 = state.players[1];
 
+  if (!p1 || !p2 || !currentPlayer) {
+    return (
+      <div className="game-missing">
+        <p>Loading game…</p>
+      </div>
+    );
+  }
+
   const isPlayerOne = myIndex === 0;
   const isPlayerTwo = myIndex === 1;
-
   const partner = isPlayerOne ? p2 : p1;
+  const otherPlayerIndex = state.currentPlayerId === 0 ? 1 : 0;
+  const usesPromptRoles = state.phase === "PROMPT" || state.phase === "AWARD";
+  const promptResponderIndex = usesPromptRoles
+    ? (state.reversePrompt ? otherPlayerIndex : state.currentPlayerId)
+    : null;
+  const promptReviewerIndex =
+    promptResponderIndex === null
+      ? null
+      : promptResponderIndex === 0 ? 1 : 0;
+  const isPromptResponder = promptResponderIndex === myIndex;
+  const isPromptReviewer = promptReviewerIndex === myIndex;
+  const promptReviewerName =
+    promptReviewerIndex === null
+      ? "your partner"
+      : state.players[promptReviewerIndex]?.name || "your partner";
+  const isShopPhase = state.phase === "ACTIVITY_SHOP";
+  const centerCardClassName = [
+    "center-card-placeholder",
+    isShopPhase ? "shop-phase" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  // -------------------------------------------------------
-  // RENDER
-  // -------------------------------------------------------
   return (
     <div className="gameboard-container">
-
-      {/* PHASE BANNER */}
       <PhaseBanner phase={state.phase} />
 
-      {/* TOP BAR */}
       <div className="gameboard-topbar">
         <div className="game-id-block">
           <div className="game-id-label">Game ID</div>
@@ -198,10 +223,18 @@ export default function GameBoard({ gameId }) {
           <div className="game-id-hint">Use this ID to resume later.</div>
         </div>
 
-        <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
+        <div className="gameboard-topbar-actions">
+          <ReconnectCodeCard
+            gameId={gameId}
+            role={isPlayerOne ? "playerOne" : isPlayerTwo ? "playerTwo" : null}
+            token={myToken}
+            variant="compact"
+          />
+
+          <button className="menu-btn" onClick={() => setMenuOpen(true)}>☰</button>
+        </div>
       </div>
 
-      {/* MENU */}
       {menuOpen && (
         <div className="menu-modal">
           <div className="menu-box">
@@ -215,7 +248,6 @@ export default function GameBoard({ gameId }) {
         </div>
       )}
 
-      {/* LEFT PLAYER PANEL */}
       <div className="player-panel left-panel" style={{ "--player-aura": p1.color }}>
         <div className="player-name">{p1.name}</div>
         <div className="player-tokens">Tokens: <span>{p1.tokens}</span></div>
@@ -226,14 +258,15 @@ export default function GameBoard({ gameId }) {
           ) : (
             <MovementCardPanel
               player={p1}
+              state={state}
+              viewerToken={myToken}
               isCurrent={state.currentPlayerId === 0}
-              onUseCard={myTurn && isPlayerOne ? actions.useMovementCard : () => {}}
+              onUseCard={isPlayerOne ? actions.useMovementCard : null}
             />
           )}
         </div>
       </div>
 
-      {/* CENTER */}
       <div className="gameboard-center">
         <div className="die-wrapper">
           <div
@@ -255,9 +288,7 @@ export default function GameBoard({ gameId }) {
           )}
         </div>
 
-        {/* MAIN INTERACTION ZONE */}
-        <div className="center-card-placeholder">
-
+        <div className={centerCardClassName}>
           {state.phase === "TURN_START" &&
             (myTurn ? (
               <p className="placeholder-text">
@@ -270,20 +301,39 @@ export default function GameBoard({ gameId }) {
             ))}
 
           {state.phase === "ROLLING" && (
-            <p className="placeholder-text">Rolling the die… the next prompt, card, or activity is on the way.</p>
+            <p className="placeholder-text">
+              Rolling the die… the next prompt, card, or activity is on the way.
+            </p>
+          )}
+
+          {state.phase === "RESET_PAUSE" && (
+            <div className="reset-pause-card">
+              <h2>Reset Break</h2>
+              <p>{state.activityShop?.message || "Take a short pause and resume when ready."}</p>
+
+              <button className="big-action-btn" onClick={actions.resumeResetPause}>
+                Resume Game
+              </button>
+            </div>
           )}
 
           {state.phase === "PROMPT" && state.activePrompt && (
             <PromptCard
-              prompt={state.activePrompt}
+              prompt={{
+                ...state.activePrompt,
+                reversed: state.reversePrompt,
+              }}
               currentPlayerName={currentPlayer.name}
-              otherPlayerName={partner.name}
-              myTurn={myTurn}
+              otherPlayerName={state.players[otherPlayerIndex]?.name || ""}
+              isResponder={isPromptResponder}
+              isReviewer={isPromptReviewer}
+              onSubmitResponse={actions.submitPromptResponse}
+              onReadyToRate={actions.beginAwardPhase}
             />
           )}
 
           {state.phase === "AWARD" &&
-            (!myTurn ? (
+            (isPromptReviewer ? (
               <div className="rating-row">
                 {[0, 1, 2, 3].map((val) => (
                   <button
@@ -296,7 +346,9 @@ export default function GameBoard({ gameId }) {
                 ))}
               </div>
             ) : (
-              <p className="placeholder-text">Waiting for rating…</p>
+              <p className="placeholder-text">
+                Waiting for <strong>{promptReviewerName}</strong> to choose a rating.
+              </p>
             ))}
 
           {state.phase === "MOVEMENT_AWARD" && state.awardedMovementCard && (
@@ -313,8 +365,8 @@ export default function GameBoard({ gameId }) {
               currentTokens={currentPlayer.tokens}
               currentPlayerName={currentPlayer.name}
               isCurrentPlayer={myTurn}
-              onPurchase={myTurn ? actions.purchaseActivity : () => {}}
-              onEndTurn={myTurn ? actions.endTurnInShop : () => {}}
+              onPurchase={actions.purchaseActivity}
+              onEndTurn={actions.endTurnInShop}
             />
           )}
 
@@ -341,37 +393,15 @@ export default function GameBoard({ gameId }) {
           )}
         </div>
 
-        {/* ACTION BAR */}
         <div className="action-bar">
           {state.phase === "TURN_START" && myTurn && (
             <button className="big-action-btn" onClick={actions.rollDice}>
               Roll the Die 🎲
             </button>
           )}
-
-          {state.phase === "PROMPT" && myTurn && (
-            <button className="big-action-btn" onClick={actions.beginAwardPhase}>
-              Ready to Rate
-            </button>
-          )}
-
-          {state.phase === "AWARD" && myTurn && (
-            <div className="rating-row">
-              {[0, 1, 2, 3].map((v) => (
-                <button
-                  key={v}
-                  className="rating-btn"
-                  onClick={() => actions.awardTokens(v)}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* RIGHT PLAYER PANEL */}
       <div className="player-panel right-panel" style={{ "--player-aura": p2.color }}>
         <div className="player-name">{p2.name}</div>
         <div className="player-tokens">Tokens: <span>{p2.tokens}</span></div>
@@ -382,8 +412,10 @@ export default function GameBoard({ gameId }) {
           ) : (
             <MovementCardPanel
               player={p2}
+              state={state}
+              viewerToken={myToken}
               isCurrent={state.currentPlayerId === 1}
-              onUseCard={myTurn && isPlayerTwo ? actions.useMovementCard : () => {}}
+              onUseCard={isPlayerTwo ? actions.useMovementCard : null}
             />
           )}
         </div>

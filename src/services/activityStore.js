@@ -3,6 +3,7 @@
 // -------------------------------------------------------------
 
 import { db } from "../services/firebase";
+import { getDbForIdentityToken } from "../services/gameClients";
 import {
   doc,
   getDoc,
@@ -11,6 +12,42 @@ import {
 } from "firebase/firestore";
 
 import { ACTIVITIES } from "../game/data/activityList";
+
+function getRoleFromIdentity(roles = {}, identityToken) {
+  if (identityToken === roles.playerOne) return "playerOne";
+  if (identityToken === roles.playerTwo) return "playerTwo";
+  return null;
+}
+
+function buildApprovalsForSubmittedDraft(role, proposalNote) {
+  return {
+    playerOne: role === "playerOne",
+    playerTwo: role === "playerTwo",
+    proposalNote,
+  };
+}
+
+function inferEditTurn(data = {}) {
+  if (data.editTurn !== undefined) {
+    return data.editTurn;
+  }
+
+  const editorRole = getRoleFromIdentity(data.roles || {}, data.editor);
+  if (editorRole) {
+    return editorRole;
+  }
+
+  const approvals = data.approvals || {};
+  if (approvals.playerOne || approvals.playerTwo) {
+    return null;
+  }
+
+  if (!data.roles?.playerTwo) {
+    return "playerOne";
+  }
+
+  return "playerTwo";
+}
 
 // -------------------------------------------------------------
 // NORMALIZER — ensures every activity has required fields
@@ -63,6 +100,7 @@ export async function initializeActivities(gameId) {
       playerTwo: false,
     },
     editor: null,
+    editTurn: "playerOne",
   });
 
   console.log("Activities initialized for game:", gameId);
@@ -92,6 +130,7 @@ export function subscribeToDraftActivities(gameId, callback) {
       finalActivities: data.finalActivities || [],
       approvals: data.approvals || { playerOne: false, playerTwo: false },
       editor: data.editor ?? null,
+      editTurn: inferEditTurn(data),
       players: data.players || [],
       roles: data.roles || {},
     });
@@ -102,13 +141,20 @@ export function subscribeToDraftActivities(gameId, callback) {
 // INTERNAL SAFE UPDATE (does not overwrite roles/players)
 // -------------------------------------------------------------
 async function safeUpdate(gameId, fields) {
+  return safeUpdateAsIdentity(gameId, fields, null);
+}
+
+async function safeUpdateAsIdentity(gameId, fields, identityToken) {
+  const targetDb = identityToken
+    ? getDbForIdentityToken(gameId, identityToken)
+    : db;
   const ref = doc(db, "games", gameId);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return;
   const existing = snap.data();
 
-  await updateDoc(ref, {
+  await updateDoc(doc(targetDb, "games", gameId), {
     roles: existing.roles || {},
     players: existing.players || [],
     ...fields,
@@ -119,13 +165,21 @@ async function safeUpdate(gameId, fields) {
 // SET EDITOR (locks editing to one player)
 // -------------------------------------------------------------
 export async function setEditor(gameId, editorToken) {
-  await safeUpdate(gameId, {
+  const ref = doc(db, "games", gameId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const role = getRoleFromIdentity(snap.data().roles || {}, editorToken);
+  if (!role) return;
+
+  await safeUpdateAsIdentity(gameId, {
     editor: editorToken,
+    editTurn: role,
     approvals: {
       playerOne: false,
       playerTwo: false,
     },
-  });
+  }, editorToken);
 }
 
 // -------------------------------------------------------------
@@ -146,11 +200,7 @@ export async function approveActivities(gameId, identityToken) {
   if (!snap.exists()) return;
 
   const data = snap.data();
-  const roles = data.roles || {};
-
-  let role = null;
-  if (identityToken === roles.playerOne) role = "playerOne";
-  if (identityToken === roles.playerTwo) role = "playerTwo";
+  const role = getRoleFromIdentity(data.roles || {}, identityToken);
 
   if (!role) return console.error("Identity mismatch during approval.");
 
@@ -159,6 +209,7 @@ export async function approveActivities(gameId, identityToken) {
     playerTwo: false,
   };
   const nextApprovals = {
+    ...currentApprovals,
     playerOne: role === "playerOne" ? true : !!currentApprovals.playerOne,
     playerTwo: role === "playerTwo" ? true : !!currentApprovals.playerTwo,
   };
@@ -172,11 +223,12 @@ export async function approveActivities(gameId, identityToken) {
   if (bothApproved) {
     nextFields.finalActivities = buildFinalActivities(data.activityDraft || []);
     nextFields.editor = null;
+    nextFields.editTurn = null;
   }
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     ...nextFields,
-  });
+  }, identityToken);
 }
 
 // -------------------------------------------------------------
@@ -185,14 +237,49 @@ export async function approveActivities(gameId, identityToken) {
 export async function saveDraftActivities(gameId, draft, editorToken) {
   const normalized = draft.map((a) => normalizeActivity(a));
 
-  await safeUpdate(gameId, {
+  await safeUpdateAsIdentity(gameId, {
     activityDraft: normalized,
     approvals: {
       playerOne: false,
       playerTwo: false,
     },
     editor: editorToken,
-  });
+  }, editorToken);
+}
+
+// -------------------------------------------------------------
+// SUBMIT UPDATED ACTIVITY DRAFT
+// Saves the draft and releases the editor lock in one write.
+// -------------------------------------------------------------
+export async function submitDraftActivities(
+  gameId,
+  draft,
+  identityToken,
+  proposalNote = ""
+) {
+  const ref = doc(db, "games", gameId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+
+  const existing = snap.data();
+  const role = getRoleFromIdentity(existing.roles || {}, identityToken);
+  if (!role) {
+    throw new Error("Identity mismatch during activity submission.");
+  }
+
+  const normalized = draft.map((a) => normalizeActivity(a));
+  const previousDraft = (existing.activityDraft || []).map((activity) =>
+    normalizeActivity(activity)
+  );
+  const normalizedProposalNote = String(proposalNote || "").trim();
+
+  await safeUpdateAsIdentity(gameId, {
+    baselineDraft: previousDraft,
+    activityDraft: normalized,
+    approvals: buildApprovalsForSubmittedDraft(role, normalizedProposalNote),
+    editor: null,
+    editTurn: null,
+  }, identityToken);
 }
 
 // -------------------------------------------------------------
@@ -217,5 +304,6 @@ export async function finalizeActivities(gameId) {
   await safeUpdate(gameId, {
     finalActivities: buildFinalActivities(data.activityDraft || []),
     editor: null,
+    editTurn: null,
   });
 }

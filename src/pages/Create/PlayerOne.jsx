@@ -5,7 +5,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup, ensureIdentityForGame } from "../../services/setupStorage";
+import {
+  saveSetup,
+  ensureIdentityForGame,
+  enableHotseatForGame,
+  generateReconnectCode,
+  saveReconnectCode,
+} from "../../services/setupStorage";
 import generateGameId from "../../services/gameId";
 
 import { db } from "../../services/firebase";
@@ -36,6 +42,9 @@ export default function PlayerOne() {
   // ---------------------------------------------------------
   async function createNegotiationDocument(gameId, token) {
     const ref = doc(db, "games", gameId);
+    const reconnectCode = generateReconnectCode();
+
+    saveReconnectCode(gameId, "playerOne", reconnectCode);
 
     await setDoc(
       ref,
@@ -55,6 +64,7 @@ export default function PlayerOne() {
             tokens: 0,
             inventory: [],
             token,
+            reconnectCode,
           },
           {
             name: "",
@@ -62,6 +72,7 @@ export default function PlayerOne() {
             tokens: 0,
             inventory: [],
             token: null,
+            reconnectCode: null,
           },
         ],
 
@@ -105,6 +116,7 @@ export default function PlayerOne() {
       playerOneColor: color,
       localPlay: true,
     });
+    enableHotseatForGame(gameId, token);
 
     await createNegotiationDocument(gameId, token);
 
@@ -176,6 +188,10 @@ export default function PlayerOne() {
           >
             Player Two is here with me
           </button>
+
+          <p className="presence-btn-note">
+            One-device hotseat mode.
+          </p>
 
           <button
             className={`presence-btn alt ${!name.trim() ? "disabled" : ""}`}

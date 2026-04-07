@@ -5,9 +5,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { saveSetup, ensureIdentityForGame, loadSetup } from "../../services/setupStorage";
-import { db } from "../../services/firebase";
+import {
+  saveSetup,
+  loadSetup,
+  generateReconnectCode,
+  saveReconnectCode,
+  setHotseatActiveRole,
+} from "../../services/setupStorage";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { ensureSeatIdentity } from "../../services/gameClients";
 
 import "./Create.css";
 
@@ -54,7 +60,7 @@ export default function PlayerTwo() {
     }
 
     // Make PlayerTwo identity token
-    const identity = await ensureIdentityForGame(gameId);
+    const identity = await ensureSeatIdentity(gameId, "playerTwo");
     const token = identity.token;
 
     // Save local display settings
@@ -64,7 +70,7 @@ export default function PlayerTwo() {
       localPlay: true,
     });
 
-    const ref = doc(db, "games", gameId);
+    const ref = doc(identity.db, "games", gameId);
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
@@ -73,6 +79,9 @@ export default function PlayerTwo() {
     }
 
     const cloud = snap.data();
+    const reconnectCode = cloud.players?.[1]?.reconnectCode || generateReconnectCode();
+
+    saveReconnectCode(gameId, "playerTwo", reconnectCode);
 
     // Prevent overwriting P2 if testing restart
     if (cloud.roles?.playerTwo && cloud.roles.playerTwo !== token) {
@@ -100,47 +109,13 @@ export default function PlayerTwo() {
           tokens: 0,
           inventory: [],
           token,
+          reconnectCode,
         },
       ],
     });
 
-    // Proceed depending on whether P1 already began editing
-    const draft = cloud.activityDraft || [];
-    const editor = cloud.editor || null;
-    const approvals = cloud.approvals || {};
-
-    // No draft yet or partner currently editing → wait
-    if (draft.length === 0 || (editor && editor !== token)) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // If this device already owns the editor lock, return to editing
-    if (editor === token) {
-      navigate(`/create/activities/${gameId}`);
-      return;
-    }
-
-    // P1 submitted draft but not approved
-    if (draft.length > 0 && approvals.playerOne === false) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // P1 approved → P2 reviews
-    if (draft.length > 0 && approvals.playerOne === true && !approvals.playerTwo) {
-      navigate(`/create/activities-review/${gameId}`);
-      return;
-    }
-
-    // Both approved? → Summary
-    if (approvals.playerOne && approvals.playerTwo) {
-      navigate(`/create/summary/${gameId}`);
-      return;
-    }
-
-    // Fallback
-    navigate(`/create/waiting/player-two/${gameId}`);
+    setHotseatActiveRole(gameId, "playerOne");
+    navigate(`/create/activities/${gameId}`, { replace: true });
   }
 
   // -----------------------------------------------------------

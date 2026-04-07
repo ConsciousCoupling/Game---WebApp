@@ -19,22 +19,20 @@
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 0 55px rgba(255, 120, 180, 0.22);
+  text-align: center;
 }
 
 .join-title {
   margin: 0 0 10px;
   color: white;
-  text-align: center;
 }
 
 .join-subtitle {
   margin: 0 0 18px;
   color: rgba(240, 228, 234, 0.86);
-  text-align: center;
   line-height: 1.5;
 }
 
-/* Input styling */
 .join-input {
   width: 100%;
   padding: 14px;
@@ -59,47 +57,65 @@
   transform: scale(1.03);
 }
 
-.join-error {
-  margin: 0 0 14px;
-  color: #ffb3c8;
-  text-align: center;
-}
-
 .join-btn,
+.join-secondary,
 .join-back {
   width: 100%;
-  padding: 14px 18px;
-  border-radius: 12px;
   border: none;
+  border-radius: 12px;
   cursor: pointer;
   transition: 0.25s ease;
-  font-family: var(--font-body);
 }
 
 .join-btn {
   background: linear-gradient(90deg, #ff3e84, #ff6ba8);
   color: white;
+  padding: 14px 18px;
   box-shadow: 0 0 12px rgba(255, 62, 132, 0.42);
+  margin-bottom: 12px;
 }
 
-.join-btn:hover:not(.disabled) {
+.join-btn:hover:not(:disabled) {
   background: linear-gradient(90deg, #ff5694, #ff8ab8);
   transform: translateY(-1px);
+}
+
+.join-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.join-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.join-secondary {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  padding: 12px 18px;
+  margin-bottom: 12px;
+}
+
+.join-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .join-back {
   margin-top: 12px;
   background: rgba(255, 255, 255, 0.12);
   color: #ededed;
+  padding: 10px 14px;
 }
 
 .join-back:hover {
   background: rgba(255, 255, 255, 0.18);
 }
 
-.join-btn.disabled {
-  opacity: 0.5;
-  pointer-events: none;
+.join-error {
+  margin: 0 0 14px;
+  color: #ffb3c8;
+  line-height: 1.4;
 }
 
 .join-helper-section {
@@ -111,7 +127,6 @@
 .join-helper-copy {
   margin: 0 0 12px;
   color: rgba(255, 236, 244, 0.82);
-  text-align: center;
 }
 
 .join-helper-actions {
@@ -146,4 +161,39 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.07);
   color: #4ff6e7;
+}
+
+.color-picker-label {
+  display: block;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.color-picker-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.color-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.12);
+}
+
+.color-swatch.selected {
+  border-color: white;
+  transform: scale(1.18);
 }

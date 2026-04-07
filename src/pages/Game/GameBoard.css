@@ -24,10 +24,11 @@
 
 .gameboard-topbar {
   grid-area: topbar;
-  height: 60px;
+  min-height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 0 22px;
 
   background: rgba(255, 240, 235, 0.07);
@@ -51,6 +52,17 @@
   font-size: 22px;
   font-weight: bold;
   color: #ff77ff;
+}
+
+.gameboard-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.gameboard-topbar-actions .reconnect-card {
+  max-width: min(420px, 48vw);
 }
 
 .menu-btn {
@@ -136,12 +148,31 @@
   justify-content: space-between;
   padding: 28px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .center-card-placeholder {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+  min-height: 0;
+}
+
+.center-card-placeholder.shop-phase {
+  display: flex;
+  flex-direction: column;
+}
+
+.center-card-placeholder.shop-phase .reconnect-card {
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.center-card-placeholder.shop-phase .activity-shop-container {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 
 .placeholder-text {
@@ -150,6 +181,29 @@
   opacity: 0.9;
   text-align: center;
   line-height: 1.45;
+}
+
+.reset-pause-card {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  padding: 28px 24px;
+  border-radius: 22px;
+  background: rgba(255, 243, 247, 0.09);
+  border: 1px solid rgba(255, 210, 225, 0.16);
+  color: #ffe7ef;
+  text-align: center;
+}
+
+.reset-pause-card h2 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.reset-pause-card p {
+  margin: 0;
+  max-width: 540px;
+  line-height: 1.6;
 }
 
 
@@ -214,6 +268,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.action-bar:empty {
+  display: none;
 }
 
 .big-action-btn {
@@ -284,6 +342,21 @@
   .gameboard-center {
     order: 1;
     padding: 16px;
+  }
+
+  .gameboard-topbar {
+    align-items: flex-start;
+    padding: 12px 16px;
+  }
+
+  .gameboard-topbar-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    width: min(60vw, 280px);
+  }
+
+  .gameboard-topbar-actions .reconnect-card {
+    max-width: none;
   }
 
   .left-panel { order: 2; }

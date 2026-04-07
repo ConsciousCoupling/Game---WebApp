@@ -1,36 +1,54 @@
-/* ===========================================
-   EDIT ACTIVITIES – Layout
-=========================================== */
-
-.edit-activities-page {
-  display: flex;
-  justify-content: center;
-  padding: 40px 20px;
-  background: #0f0f0f;
+.edit-screen {
   min-height: 100vh;
-  color: #fff;
+  padding: 40px 20px;
+  background: radial-gradient(circle at top, #232323 0%, #0d0d0d 62%);
+  color: #f2f2f2;
 }
 
 .edit-card {
   width: 100%;
-  max-width: 900px;
-  background: #161616;
+  max-width: 960px;
+  margin: 0 auto;
   padding: 32px;
-  border-radius: 14px;
-  box-shadow: 0 0 22px rgba(0, 0, 0, 0.45);
-  border: 1px solid #1f1f1f;
+  background: rgba(18, 18, 18, 0.95);
+  border: 1px solid #262626;
+  border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.38);
 }
 
 .edit-card h2 {
+  margin: 0 0 8px;
   font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 8px;
 }
 
-.edit-subtext {
-  color: #b5b5b5;
-  margin-bottom: 24px;
+.edit-card p {
+  margin: 0 0 24px;
+  color: #bfbfbf;
+}
+
+.submit-error {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 107, 107, 0.12);
+  color: #ffd2d2;
+}
+
+.proposal-note-card {
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid #2b2b2b;
+  border-radius: 14px;
+  background: #171717;
+}
+
+.proposal-note-label {
+  display: block;
+  margin-bottom: 10px;
+  color: #e4e4e4;
   font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .flow-note {
@@ -52,170 +70,183 @@
   margin: 0;
 }
 
-
-/* ===========================================
-   NOTE BOX
-=========================================== */
-
-.note-box {
+.proposal-note-input {
   width: 100%;
-  min-height: 80px;
-  background: #1d1d1d;
-  border: 1px solid #333;
+  min-height: 96px;
+  padding: 12px 14px;
+  border: 1px solid #353535;
   border-radius: 10px;
-  padding: 12px;
-  color: #eee;
-  margin-bottom: 28px;
-  resize: vertical;
+  background: #222;
+  color: #f4f4f4;
   font-size: 0.95rem;
+  resize: vertical;
 }
 
-.note-box:focus {
+.proposal-note-input:focus {
   outline: none;
-  border-color: #555;
+  border-color: #6c89ff;
+  box-shadow: 0 0 0 3px rgba(108, 137, 255, 0.16);
 }
-
-
-/* ===========================================
-   ACTIVITY LIST
-=========================================== */
 
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
-.activity-item {
-  background: #1a1a1a;
-  border: 1px solid #262626;
-  border-radius: 12px;
-  padding: 16px;
-  position: relative;
+.activity-row {
   display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr 100px 50px;
-  grid-template-areas:
-    "name cost delete"
-    "desc desc desc"
-    "duration duration duration";
+  grid-template-columns: minmax(0, 1fr) 140px 120px 44px;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #2b2b2b;
+  border-radius: 14px;
+  background: #171717;
 }
 
-.activity-input,
-.activity-textarea {
+.activity-row.deleted {
+  opacity: 0.6;
+  background: rgba(90, 24, 24, 0.45);
+}
+
+.activity-input {
   width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #353535;
+  border-radius: 10px;
   background: #222;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 8px;
-  color: #eee;
+  color: #f4f4f4;
   font-size: 0.95rem;
 }
 
-.activity-input:focus,
-.activity-textarea:focus {
-  outline: none;
-  border-color: #555;
-}
-
-.activity-input.number {
-  width: 80px;
+.activity-input.small {
   text-align: center;
 }
 
-.activity-item input[placeholder="Name"] {
-  grid-area: name;
+.activity-input:focus {
+  outline: none;
+  border-color: #6c89ff;
+  box-shadow: 0 0 0 3px rgba(108, 137, 255, 0.16);
 }
 
-.activity-item input.number {
-  grid-area: cost;
+.activity-input.changed {
+  border-color: #d2a532;
+  background: #2a2413;
 }
 
-.activity-item textarea {
-  grid-area: desc;
-  min-height: 60px;
-  resize: vertical;
-}
-
-.activity-item input[placeholder="Duration (optional)"] {
-  grid-area: duration;
-}
-
-/* Delete Button */
 .delete-btn {
-  grid-area: delete;
-  background: transparent;
+  width: 44px;
+  height: 44px;
   border: none;
-  color: #ff4f4f;
-  font-size: 1.3rem;
+  border-radius: 10px;
+  background: rgba(255, 95, 95, 0.12);
+  color: #ff7a7a;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 .delete-btn:hover {
-  color: #ff7777;
+  background: rgba(255, 95, 95, 0.22);
 }
 
+.deleted-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 95, 95, 0.14);
+  color: #ffb1b1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 
-/* ===========================================
-   ADD BUTTON
-=========================================== */
+.add-actions {
+  margin-top: 24px;
+}
+
+.custom-add-btn,
+.add-btn,
+.submit-btn {
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.custom-add-btn {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2450ff, #4a7fff);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.custom-add-btn:hover,
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.edit-card h3 {
+  margin: 26px 0 12px;
+  font-size: 1rem;
+  color: #d6d6d6;
+}
+
+.add-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
 
 .add-btn {
-  margin-top: 24px;
   width: 100%;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
   background: #242424;
-  border: 1px solid #333;
-  color: #ddd;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: 0.2s;
+  border: 1px solid #383838;
+  color: #e4e4e4;
+  text-align: left;
 }
 
 .add-btn:hover {
-  background: #2c2c2c;
+  background: #2d2d2d;
 }
 
-
-/* ===========================================
-   FOOTER BUTTONS
-=========================================== */
-
-.footer-row {
-  margin-top: 32px;
-  display: flex;
-  justify-content: center;
-}
-
-.ready-btn {
-  background: #0057ff;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  border: none;
-  cursor: pointer;
-  color: #fff;
-  font-weight: 600;
-  transition: background 0.3s;
-}
-
-.ready-btn:hover {
-  background: #1a6aff;
-}
-
-.waiting-message {
-  color: #9d9d9d;
+.submit-btn {
+  width: 100%;
+  margin-top: 28px;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00a86b, #11d18a);
+  color: #05150e;
   font-size: 1rem;
-  text-align: center;
-  padding: 12px 0;
+  font-weight: 700;
 }
 
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
 
-/* ===========================================
-   LOADING
-=========================================== */
+@media (max-width: 720px) {
+  .edit-card {
+    padding: 22px;
+  }
+
+  .activity-row {
+    grid-template-columns: 1fr;
+  }
+
+  .delete-btn,
+  .deleted-tag {
+    width: 100%;
+  }
+}
 
 .loading {
   color: white;

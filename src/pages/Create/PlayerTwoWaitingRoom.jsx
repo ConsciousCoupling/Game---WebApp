@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { subscribeToDraftActivities } from "../../services/activityStore";
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame, loadIdentity } from "../../services/setupStorage";
+import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
+import { getHotseatNegotiationRoute } from "../../services/hotseat";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./PlayerTwoWaitingRoom.css";
 
@@ -14,9 +17,9 @@ export default function PlayerTwoWaitingRoom() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  // Local identity token for THIS device
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const [state, setState] = useState({
     players: [],
@@ -24,11 +27,9 @@ export default function PlayerTwoWaitingRoom() {
     draft: [],
     approvals: {},
     editor: null,
+    editTurn: null,
   });
 
-  // -------------------------------------------------------
-  // Subscribe to negotiation doc ONLY
-  // -------------------------------------------------------
   useEffect(() => {
     const unsub = subscribeToDraftActivities(gameId, (data) => {
       if (!data) return;
@@ -39,28 +40,44 @@ export default function PlayerTwoWaitingRoom() {
         draft: data.draft || [],
         approvals: data.approvals || {},
         editor: data.editor ?? null,
+        editTurn: data.editTurn ?? null,
       });
     });
 
     return () => unsub();
   }, [gameId]);
 
-  const { players, roles, draft, approvals, editor } = state;
+  const { players, roles, draft, approvals, editor, editTurn } = state;
 
-  // -------------------------------------------------------
-  // Determine which player we are
-  // -------------------------------------------------------
   let role = null;
   if (roles.playerTwo === myToken) role = "playerTwo";
   if (roles.playerOne === myToken) role = "playerOne";
+
   const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const alreadyApproved = hasApprovedCurrentDraft({ approvals }, role);
   const shouldRedirectToSummary = !!(role && bothApproved);
-  const shouldRedirectToActivities = !!(role && !bothApproved && editor === myToken);
+  const shouldRedirectToActivities = !!(
+    role && !bothApproved && editTurn === role && (!editor || editor === myToken)
+  );
   const shouldRedirectToReview = !!(
-    role && !bothApproved && draft.length > 0 && !editor
+    role && !bothApproved && editTurn === null && !editor && !alreadyApproved
   );
 
   useEffect(() => {
+    if (hotseatMode) {
+      const nextRoute = getHotseatNegotiationRoute(gameId, {
+        approvals,
+        editor,
+        editTurn,
+        roles,
+      });
+
+      if (nextRoute) {
+        navigate(nextRoute, { replace: true });
+        return;
+      }
+    }
+
     if (shouldRedirectToSummary) {
       navigate(`/create/summary/${gameId}`, { replace: true });
       return;
@@ -78,6 +95,11 @@ export default function PlayerTwoWaitingRoom() {
     shouldRedirectToSummary,
     shouldRedirectToActivities,
     shouldRedirectToReview,
+    hotseatMode,
+    approvals,
+    editor,
+    editTurn,
+    roles,
     gameId,
     navigate,
   ]);
@@ -93,21 +115,12 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // Partner's name
   const partnerName =
     role === "playerTwo"
       ? players[0]?.name || "your partner"
       : players[1]?.name || "your partner";
 
-  // -------------------------------------------------------
-  // ROUTING LOGIC — NEGOTIATION-ONLY FIELDS
-  // -------------------------------------------------------
-
-  if (
-    shouldRedirectToSummary ||
-    shouldRedirectToActivities ||
-    shouldRedirectToReview
-  ) {
+  if (shouldRedirectToSummary || shouldRedirectToActivities || shouldRedirectToReview) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
@@ -118,7 +131,6 @@ export default function PlayerTwoWaitingRoom() {
     );
   }
 
-  // CASE 1 — No draft yet → P1 is editing first list
   if (draft.length === 0) {
     return (
       <div className="waiting-screen">
@@ -128,13 +140,13 @@ export default function PlayerTwoWaitingRoom() {
           <div className="waiting-next-step">
             You&apos;ll be moved to review or edit as soon as that first draft is ready.
           </div>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
       </div>
     );
   }
 
-  // CASE 2 — Someone is editing, and it isn’t you
-  if (editor && editor !== myToken) {
+  if (editTurn === "playerOne" || (editor && editor !== myToken)) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
@@ -143,14 +155,27 @@ export default function PlayerTwoWaitingRoom() {
           <div className="waiting-next-step">
             This page advances automatically when they finish.
           </div>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
       </div>
     );
   }
 
-  // -------------------------------------------------------
-  // Default fallback
-  // -------------------------------------------------------
+  if (alreadyApproved && !bothApproved) {
+    return (
+      <div className="waiting-screen">
+        <div className="waiting-card">
+          <h2>Waiting for {partnerName}…</h2>
+          <p>Your latest proposal is ready for review.</p>
+          <div className="waiting-next-step">
+            Stay on this screen while your partner reviews the newest version.
+          </div>
+          <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="waiting-screen">
       <div className="waiting-card">
@@ -159,6 +184,7 @@ export default function PlayerTwoWaitingRoom() {
         <div className="waiting-next-step">
           Stay on this screen while the shared state catches up.
         </div>
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
       </div>
     </div>
   );
