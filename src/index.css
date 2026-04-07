@@ -3,13 +3,37 @@
 @import "./theme/neon.css";
 @import "./theme/layout.css";
 
+@font-face {
+  font-family: "IntimaCaps";
+  src: url("/fonts/aFontcaps.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IntimaOpenBlock";
+  src: url("/fonts/aFontopenblock.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IntimaFun";
+  src: url("/fonts/aFontFun.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  --font-body: "IntimaCaps", system-ui, sans-serif;
+  --font-heading: "IntimaOpenBlock", system-ui, sans-serif;
+  --font-accent: "IntimaFun", system-ui, sans-serif;
+}
+
 /* RESET + GLOBALS ---------------------------------- */
 html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--font-body);
   background: #0d0a0c; /* Deep romantic plum-black */
   color: #fff;
 }
@@ -20,12 +44,46 @@ html, body, #root {
 }
 
 button {
-  font-family: inherit;
+  font-family: var(--font-accent);
+}
+
+[class*="-btn"] {
+  font-family: var(--font-accent);
+}
+
+[class*="-label"],
+[class*="-tag"],
+[class*="-badge"],
+[class*="-eyebrow"] {
+  font-family: var(--font-accent);
+}
+
+[class*="-name"],
+[class*="-value"] {
+  font-family: var(--font-heading);
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+input,
+textarea,
+select,
+option {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+[class*="title"],
+[class*="heading"] {
+  font-family: var(--font-heading);
 }
 
 /* Utility page wrapper */

@@ -22,6 +22,7 @@
 
   border: 1px solid rgba(255, 200, 215, 0.12);
   box-shadow: 0 0 18px rgba(255, 170, 190, 0.15);
+  font-family: var(--font-heading);
 
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }

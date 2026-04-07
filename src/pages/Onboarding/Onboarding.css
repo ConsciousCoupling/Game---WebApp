@@ -10,7 +10,7 @@
   background: #0d0d0f; /* deep black */
   padding: 20px;
   color: #eee;
-  font-family: "Inter", sans-serif;
+  font-family: inherit;
 }
 
 /* Frosted-glass style card */
