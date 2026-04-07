@@ -9,10 +9,10 @@ export default function Consent() {
     <div className="consent-page">
 
       <div className="consent-content">
-        <h1 className="consent-title">Before we begin...</h1>
+        <h1 className="consent-title">Before I begin...</h1>
 
         <p className="consent-text">
-          Please confirm that you both willingly consent and commit to:<br /><br />
+          Please confirm that I willingly consent and commit to:<br /><br />
           - share openly and honestly<br />
           - make an effort to expand awareness<br />
           - create a safe, supportive space<br />
@@ -26,14 +26,14 @@ export default function Consent() {
             className="consent-btn yes"
             onClick={() => navigate("/onboarding")}
           >
-            Yes, we both consent
+            Yes, I consent
           </button>
 
           <button
             className="consent-btn no"
             onClick={() => navigate("/")}
           >
-            We do not consent
+            I do not consent
           </button>
         </div>
       </div>

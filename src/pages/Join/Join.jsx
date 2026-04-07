@@ -188,7 +188,7 @@ export default function Join() {
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
-            <p className="join-subtitle">Enter the code your partner shared.</p>
+            <p className="join-subtitle join-caps-text">Enter the code your partner shared.</p>
 
             <input
               className="join-input"
@@ -199,20 +199,32 @@ export default function Join() {
 
             {error && <p className="join-error">{error}</p>}
 
-            <button className="join-btn" onClick={handleCodeSubmit}>
+            <button className="join-btn join-caps-text" onClick={handleCodeSubmit}>
               Continue →
             </button>
 
-            <button className="join-back" onClick={() => navigate("/onboarding")}>
+            <button className="join-back join-caps-text" onClick={() => navigate("/onboarding")}>
               Back
             </button>
+
+            <div className="join-helper-section">
+              <p className="join-helper-copy">Need a refresher first?</p>
+              <div className="join-helper-actions">
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions")}>
+                  Instructions
+                </button>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components")}>
+                  Components
+                </button>
+              </div>
+            </div>
           </>
         )}
 
         {step === 2 && (
           <>
             <h2 className="join-title">Welcome!</h2>
-            <p className="join-subtitle">Enter your name and choose your color.</p>
+            <p className="join-subtitle join-caps-text">Enter your name and choose your color.</p>
 
             <input
               className="join-input"
@@ -237,15 +249,27 @@ export default function Join() {
             {error && <p className="join-error">{error}</p>}
 
             <button
-              className={`join-btn ${!name.trim() ? "disabled" : ""}`}
+              className={`join-btn join-caps-text ${!name.trim() ? "disabled" : ""}`}
               onClick={handleJoin}
             >
               Join Game →
             </button>
 
-            <button className="join-back" onClick={() => setStep(1)}>
+            <button className="join-back join-caps-text" onClick={() => setStep(1)}>
               ← Back
             </button>
+
+            <div className="join-helper-section">
+              <p className="join-helper-copy">Need a refresher first?</p>
+              <div className="join-helper-actions">
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions")}>
+                  Instructions
+                </button>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components")}>
+                  Components
+                </button>
+              </div>
+            </div>
           </>
         )}
 

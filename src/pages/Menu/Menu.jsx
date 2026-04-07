@@ -9,22 +9,22 @@ export default function Menu() {
       <div className="menu-card">
 
         <h1 className="menu-title">Intima-Date</h1>
-        <p className="menu-subtitle">Your connection journey begins here.</p>
+        <p className="menu-subtitle menu-caps-text">Your connection journey begins here.</p>
 
         <div className="menu-buttons">
-
-          <button
-            className="menu-btn"
-            onClick={() => navigate("/components")}
-          >
-            Components
-          </button>
 
           <button
             className="menu-btn"
             onClick={() => navigate("/instructions")}
           >
             Instructions
+          </button>
+
+          <button
+            className="menu-btn"
+            onClick={() => navigate("/components")}
+          >
+            Components
           </button>
 
           <button
@@ -37,7 +37,7 @@ export default function Menu() {
 
         {/* NEW BACK BUTTON */}
         <button
-          className="menu-back-btn"
+          className="menu-back-btn menu-caps-text"
           onClick={() => navigate("/onboarding")}
         >
           ← Back

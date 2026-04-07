@@ -140,14 +140,14 @@ export default function PlayerOne() {
     <div className="create-container">
       <div className="create-card">
         <button
-          className="secondary-btn"
+          className="secondary-btn create-caps-text"
           onClick={() => navigate("/onboarding/slides")}
         >
           ← Back
         </button>
 
         <h1 className="create-title">Player One</h1>
-        <p className="create-subtitle">Enter your name and choose your color.</p>
+        <p className="create-subtitle create-caps-text">Enter your name</p>
 
         <input
           className="create-input"
@@ -156,7 +156,7 @@ export default function PlayerOne() {
           onChange={(e) => setName(e.target.value)}
         />
 
-        <label className="color-picker-label">Choose your color:</label>
+        <label className="color-picker-label create-caps-text">Choose your color:</label>
 
         <div className="color-picker-row">
           {colors.map((c) => (

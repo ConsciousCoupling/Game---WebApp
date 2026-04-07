@@ -1,12 +1,14 @@
 // src/pages/Onboarding/OnboardingSlides.jsx
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "./OnboardingSlides.css";
 
 export default function OnboardingSlides() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [index, setIndex] = useState(0);
+  const after = params.get("after");
 
   const MotionDiv = motion.div;
 
@@ -27,12 +29,12 @@ export default function OnboardingSlides() {
 
   const next = () => {
     if (index < slides.length - 1) setIndex(index + 1);
-    else navigate("/menu");
+    else navigate(after === "join" ? "/join" : "/menu");
   };
 
   const back = () => {
     if (index > 0) setIndex(index - 1);
-    else navigate("/onboarding");
+    else navigate(after === "join" ? "/onboarding?join=1" : "/onboarding");
   };
 
   return (
@@ -55,7 +57,9 @@ export default function OnboardingSlides() {
             </button>
 
             <button className="onboard-btn next" onClick={next}>
-              {index === slides.length - 1 ? "Continue" : "Next"}
+              {index === slides.length - 1
+                ? (after === "join" ? "Continue to Join" : "Continue")
+                : "Next"}
             </button>
           </div>
         </MotionDiv>

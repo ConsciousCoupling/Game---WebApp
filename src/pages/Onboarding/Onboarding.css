@@ -25,6 +25,16 @@
   text-align: center;
 }
 
+.onboarding-back-btn {
+  display: inline-flex;
+  margin-bottom: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f2f2f2;
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
 /* Titles & Text */
 .onboarding-title {
   font-size: 2.4rem;
