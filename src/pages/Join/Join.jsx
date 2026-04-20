@@ -325,10 +325,10 @@ export default function Join() {
             <div className="join-helper-section">
               <p className="join-helper-copy">Need a refresher first?</p>
               <div className="join-helper-actions">
-                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions")}>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions?from=join")}>
                   Instructions
                 </button>
-                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components")}>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components?from=join")}>
                   Components
                 </button>
               </div>
@@ -390,10 +390,10 @@ export default function Join() {
             <div className="join-helper-section">
               <p className="join-helper-copy">Need a refresher first?</p>
               <div className="join-helper-actions">
-                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions")}>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/instructions?from=join")}>
                   Instructions
                 </button>
-                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components")}>
+                <button className="join-helper-btn join-menu-tone" onClick={() => navigate("/components?from=join")}>
                   Components
                 </button>
               </div>

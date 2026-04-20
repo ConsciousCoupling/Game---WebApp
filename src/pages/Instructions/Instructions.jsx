@@ -1,9 +1,14 @@
 // src/pages/Instructions/Instructions.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "./Instructions.css";
 
 export default function Instructions() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const from = params.get("from");
+  const backPath = from === "join" ? "/join" : "/menu";
+  const backLabel = from === "join" ? "Return to Join" : "Return to Menu";
   return (
     <div className="insta-bg">
       <div className="insta-card">
@@ -87,9 +92,9 @@ export default function Instructions() {
         </div>
 
         <div className="insta-footer">
-          <Link to="/menu" className="insta-btn">
-            Return to Menu
-          </Link>
+          <button className="insta-btn" onClick={() => navigate(backPath)}>
+            {backLabel}
+          </button>
         </div>
 
       </div>

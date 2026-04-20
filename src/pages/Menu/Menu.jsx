@@ -15,14 +15,14 @@ export default function Menu() {
 
           <button
             className="menu-btn"
-            onClick={() => navigate("/instructions")}
+            onClick={() => navigate("/instructions?from=menu")}
           >
             Instructions
           </button>
 
           <button
             className="menu-btn"
-            onClick={() => navigate("/components")}
+            onClick={() => navigate("/components?from=menu")}
           >
             Components
           </button>

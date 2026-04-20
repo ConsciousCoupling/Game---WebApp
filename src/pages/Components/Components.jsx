@@ -1,11 +1,15 @@
 // src/pages/Components/Components.jsx
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "./Components.css";
 
 export default function Components() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const from = params.get("from");
+  const backPath = from === "join" ? "/join" : "/menu";
+  const backLabel = from === "join" ? "Return to Join" : "Return to Menu";
 
   const parts = [
     {
@@ -64,8 +68,8 @@ export default function Components() {
           ))}
         </div>
 
-        <button className="components-back" onClick={() => navigate("/menu")}>
-          ← Return to Menu
+        <button className="components-back" onClick={() => navigate(backPath)}>
+          ← {backLabel}
         </button>
       </div>
     </div>
