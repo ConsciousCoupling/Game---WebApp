@@ -1,5 +1,5 @@
 // src/components/gameboard/dice/DieMesh.jsx
-import React, { forwardRef, useRef, useImperativeHandle } from "react";
+import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -29,9 +29,14 @@ function createImperfectionCube(size) {
 const DIE_SIZE = 1.3;
 const FACE_OFFSET = DIE_SIZE / 2 + 0.01;
 const baseGeometry = createImperfectionCube(DIE_SIZE);
+const FACE_WASH_INSET = 0.18;
+const FACE_WASH_SIZE = 1;
 const INNER_GLOW_INSET = 0.08;
-const INNER_GLOW_SIZE = 1.08;
-const INNER_GLOW_BLOOM_SIZE = 1.18;
+const INNER_GLOW_SIZE = 1.12;
+const INNER_GLOW_BLOOM_SIZE = 1.26;
+const LIGHT_INSET = 0.3;
+const LIGHT_DISTANCE = 1.8;
+const LIGHT_INTENSITY = 0.22;
 
 const FACE_CONFIGS = [
   {
@@ -78,10 +83,10 @@ const FACE_CONFIGS = [
   },
 ];
 
-function insetFacePosition(position) {
+function insetFacePosition(position, inset = INNER_GLOW_INSET) {
   return position.map((value) => {
     if (value === 0) return 0;
-    return value > 0 ? value - INNER_GLOW_INSET : value + INNER_GLOW_INSET;
+    return value > 0 ? value - inset : value + inset;
   });
 }
 
@@ -108,6 +113,23 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
           {FACE_CONFIGS.map((face) => (
             <React.Fragment key={face.key}>
               <mesh
+                position={insetFacePosition(face.position, FACE_WASH_INSET)}
+                rotation={face.rotation}
+                renderOrder={0}
+              >
+                <planeGeometry args={[FACE_WASH_SIZE, FACE_WASH_SIZE]} />
+                <meshBasicMaterial
+                  color={face.glow}
+                  transparent
+                  opacity={0.08}
+                  blending={THREE.AdditiveBlending}
+                  side={THREE.DoubleSide}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+
+              <mesh
                 position={insetFacePosition(face.position)}
                 rotation={face.rotation}
                 renderOrder={1}
@@ -117,7 +139,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                   map={face.texture}
                   color={face.glow}
                   transparent
-                  opacity={0.16}
+                  opacity={0.22}
                   blending={THREE.AdditiveBlending}
                   side={THREE.DoubleSide}
                   depthWrite={false}
@@ -135,13 +157,21 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                   map={face.texture}
                   color={face.glow}
                   transparent
-                  opacity={0.45}
+                  opacity={0.52}
                   blending={THREE.AdditiveBlending}
                   side={THREE.DoubleSide}
                   depthWrite={false}
                   toneMapped={false}
                 />
               </mesh>
+
+              <pointLight
+                position={insetFacePosition(face.position, LIGHT_INSET)}
+                color={face.glow}
+                intensity={LIGHT_INTENSITY}
+                distance={LIGHT_DISTANCE}
+                decay={2.1}
+              />
 
               <mesh position={face.position} rotation={face.rotation} renderOrder={3}>
                 <planeGeometry args={[1.25, 1.25]} />

@@ -20,8 +20,15 @@
   overflow: hidden;
 
   background:
-    radial-gradient(circle at 50% 28%, var(--die-backdrop-core, rgba(255, 240, 235, 0.16)) 0%, var(--die-backdrop-mid, rgba(255, 240, 235, 0.08)) 46%, rgba(11, 12, 17, 0.82) 100%),
-    linear-gradient(180deg, rgba(255, 248, 252, 0.08), rgba(10, 12, 18, 0.44));
+    radial-gradient(
+      circle at 50% 48%,
+      rgba(6, 8, 13, 0.94) 0%,
+      rgba(8, 10, 16, 0.9) 24%,
+      rgba(10, 12, 18, 0.84) 42%,
+      var(--die-backdrop-mid, rgba(255, 240, 235, 0.08)) 74%,
+      var(--die-backdrop-core, rgba(255, 240, 235, 0.16)) 100%
+    ),
+    linear-gradient(180deg, rgba(255, 248, 252, 0.06), rgba(10, 12, 18, 0.46));
   border: 1px solid var(--die-backdrop-outline, rgba(255, 255, 255, 0.12));
   backdrop-filter: blur(12px);
   box-shadow:
