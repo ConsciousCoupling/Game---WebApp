@@ -1,7 +1,7 @@
 // src/components/gameboard/dice/DiceCanvas.jsx
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
+import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
 import DieMesh from "./DieMesh.jsx";
 
 export default function DiceCanvas({ engine, backdropStyle }) {
@@ -19,32 +19,50 @@ export default function DiceCanvas({ engine, backdropStyle }) {
           preserveDrawingBuffer: true,
         }}
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
+        <ambientLight intensity={0.26} color="#f7fbff" />
 
         <directionalLight
           position={[5, 7, 5]}
-          intensity={1.2}
+          intensity={1.35}
+          color="#ffffff"
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
           shadow-bias={-0.0004}
         />
 
-        {/* Safe environment preset (NO external HDR chunk loading) */}
+        <pointLight
+          position={[-2.8, 2.4, 2.6]}
+          intensity={0.6}
+          distance={8}
+          color="#9feaff"
+        />
+
+        <pointLight
+          position={[2.7, 1.1, -2.8]}
+          intensity={0.52}
+          distance={7.5}
+          color="#ffc18f"
+        />
+
+        <pointLight
+          position={[0, -1.8, 2.4]}
+          intensity={0.28}
+          distance={6.5}
+          color="#ffc9f0"
+        />
+
         <Environment preset="city" />
 
-        {/* Soft shadows under die */}
         <ContactShadows
           position={[0, -0.51, 0]}
-          opacity={0.4}
+          opacity={0.34}
           width={12}
           height={12}
-          blur={3}
+          blur={2.7}
           far={6}
         />
 
-        {/* Die wrapper that drives engine updates */}
         <DieWrapper engine={engine} />
 
         <OrbitControls
