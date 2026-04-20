@@ -28,7 +28,7 @@ export default function ActivityShop({
       <div className="activity-grid">
         {activities.map((activity) => {
           const affordable = currentTokens >= activity.cost;
-          const duration = activity.duration ? `${activity.duration} min` : "—";
+          const duration = activity.duration || "—";
           const tokenGap = affordable ? 0 : activity.cost - currentTokens;
           const disabled = !affordable || !isCurrentPlayer;
 
