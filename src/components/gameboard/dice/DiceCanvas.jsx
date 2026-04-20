@@ -4,11 +4,11 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import DieMesh from "./DieMesh.jsx";
 
-export default function DiceCanvas({ engine, game }) {
+export default function DiceCanvas({ engine, backdropStyle }) {
   return (
     <div
       className="dice-canvas-container"
-      style={{ width: "100%", height: "280px" }}
+      style={{ width: "100%", height: "280px", ...backdropStyle }}
     >
       <Canvas
         shadows
@@ -45,7 +45,7 @@ export default function DiceCanvas({ engine, game }) {
         />
 
         {/* Die wrapper that drives engine updates */}
-        <DieWrapper engine={engine} game={game} />
+        <DieWrapper engine={engine} />
 
         <OrbitControls
           enablePan={false}
@@ -59,10 +59,10 @@ export default function DiceCanvas({ engine, game }) {
   );
 }
 
-function DieWrapper({ engine, game }) {
+function DieWrapper({ engine }) {
   useFrame((_, delta) => {
     if (engine) engine.step(delta);
   });
 
-  return <DieMesh engine={engine} game={game} />;
+  return <DieMesh engine={engine} />;
 }

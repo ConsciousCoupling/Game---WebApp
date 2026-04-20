@@ -85,9 +85,8 @@ function insetFacePosition(position) {
   });
 }
 
-const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
+const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
   const mesh = useRef();
-  const aura = useRef();
 
   useImperativeHandle(ref, () => mesh.current, []);
 
@@ -100,30 +99,10 @@ const DieMesh = forwardRef(function DieMesh({ engine, game }, ref) {
       mesh.current.rotation.y = rotation[1];
       mesh.current.rotation.z = rotation[2];
     }
-
-    if (aura.current && game) {
-      const color =
-        game.currentPlayerId === 0
-          ? game.players[0].color
-          : game.players[1].color;
-
-      aura.current.material.color = new THREE.Color(color);
-
-      const pulse = 1 + Math.sin(Date.now() * 0.0025) * 0.18;
-      aura.current.scale.set(pulse, pulse, pulse);
-
-      aura.current.material.opacity =
-        0.28 + Math.sin(Date.now() * 0.003) * 0.12;
-    }
   });
 
   return (
     <group>
-      <mesh ref={aura} position={[0, -0.05, 0]}>
-        <sphereGeometry args={[1.2, 32, 32]} />
-        <meshBasicMaterial transparent opacity={0.25} blending={THREE.AdditiveBlending} />
-      </mesh>
-
       <mesh ref={mesh} geometry={baseGeometry} castShadow receiveShadow>
         <group>
           {FACE_CONFIGS.map((face) => (

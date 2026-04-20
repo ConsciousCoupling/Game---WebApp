@@ -44,6 +44,61 @@ import "../../components/gameboard/styles/promptDisplay.css";
 import "../../components/gameboard/styles/instructionOverlay.css";
 import "../../components/gameboard/activity/CoinOutcome.css";
 
+function hexToRgb(color) {
+  if (!color || typeof color !== "string") return null;
+
+  const raw = color.replace("#", "").trim();
+  const normalized = raw.length === 3
+    ? raw.split("").map((char) => char + char).join("")
+    : raw;
+
+  if (normalized.length !== 6) return null;
+
+  const value = Number.parseInt(normalized, 16);
+  if (Number.isNaN(value)) return null;
+
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function toRgba(color, alpha) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return `rgba(255, 255, 255, ${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function toMutedGray(color) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return "rgb(156, 156, 162)";
+
+  const luminance = Math.round(rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114);
+  return `rgb(${luminance}, ${luminance}, ${luminance})`;
+}
+
+function buildPlayerPanelStyle(color, isCurrent) {
+  const tone = isCurrent ? color : toMutedGray(color);
+
+  return {
+    "--player-aura-core": toRgba(tone, isCurrent ? 0.28 : 0.18),
+    "--player-aura-edge": toRgba(tone, isCurrent ? 0.14 : 0.08),
+    "--player-border": toRgba(tone, isCurrent ? 0.3 : 0.14),
+    "--player-surface-top": isCurrent ? "rgba(255, 255, 255, 0.09)" : "rgba(220, 220, 225, 0.05)",
+    "--player-surface-bottom": isCurrent ? "rgba(255, 255, 255, 0.03)" : "rgba(145, 145, 152, 0.025)",
+  };
+}
+
+function buildDieBackdropStyle(color) {
+  return {
+    "--die-backdrop-core": toRgba(color, 0.24),
+    "--die-backdrop-mid": toRgba(color, 0.12),
+    "--die-backdrop-outline": toRgba(color, 0.28),
+    "--die-backdrop-shadow": toRgba(color, 0.18),
+  };
+}
+
 export default function GameBoard({ gameId }) {
   const navigate = useNavigate();
   const identity = useGameIdentity(gameId);
@@ -211,6 +266,9 @@ export default function GameBoard({ gameId }) {
   ]
     .filter(Boolean)
     .join(" ");
+  const isLeftCurrent = state.currentPlayerId === 0;
+  const isRightCurrent = state.currentPlayerId === 1;
+  const dieBackdropStyle = buildDieBackdropStyle(currentPlayer.color);
 
   return (
     <div className="gameboard-container">
@@ -248,7 +306,10 @@ export default function GameBoard({ gameId }) {
         </div>
       )}
 
-      <div className="player-panel left-panel" style={{ "--player-aura": p1.color }}>
+      <div
+        className={`player-panel left-panel ${isLeftCurrent ? "is-active" : "is-waiting"}`}
+        style={buildPlayerPanelStyle(p1.color, isLeftCurrent)}
+      >
         <div className="player-name">{p1.name}</div>
         <div className="player-tokens">Tokens: <span>{p1.tokens}</span></div>
 
@@ -269,16 +330,7 @@ export default function GameBoard({ gameId }) {
 
       <div className="gameboard-center">
         <div className="die-wrapper">
-          <div
-            className="die-glow"
-            style={{
-              background: `radial-gradient(circle,
-                ${currentPlayer.color}55 0%,
-                ${currentPlayer.color}22 70%,
-                transparent 90%)`,
-            }}
-          />
-          <DiceCanvas engine={engine} game={state} />
+          <DiceCanvas engine={engine} backdropStyle={dieBackdropStyle} />
 
           {state.lastDieFace && (
             <div className="final-face-display">
@@ -402,7 +454,10 @@ export default function GameBoard({ gameId }) {
         </div>
       </div>
 
-      <div className="player-panel right-panel" style={{ "--player-aura": p2.color }}>
+      <div
+        className={`player-panel right-panel ${isRightCurrent ? "is-active" : "is-waiting"}`}
+        style={buildPlayerPanelStyle(p2.color, isRightCurrent)}
+      >
         <div className="player-name">{p2.name}</div>
         <div className="player-tokens">Tokens: <span>{p2.tokens}</span></div>
 

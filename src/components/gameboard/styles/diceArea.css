@@ -19,9 +19,16 @@
   border-radius: 18px;
   overflow: hidden;
 
-  background: rgba(255, 240, 235, 0.08);
+  background:
+    radial-gradient(circle at 50% 28%, var(--die-backdrop-core, rgba(255, 240, 235, 0.16)) 0%, var(--die-backdrop-mid, rgba(255, 240, 235, 0.08)) 46%, rgba(11, 12, 17, 0.82) 100%),
+    linear-gradient(180deg, rgba(255, 248, 252, 0.08), rgba(10, 12, 18, 0.44));
+  border: 1px solid var(--die-backdrop-outline, rgba(255, 255, 255, 0.12));
   backdrop-filter: blur(12px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 0 28px var(--die-backdrop-shadow, rgba(255, 255, 255, 0.08));
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 /* Final rolled face display */
