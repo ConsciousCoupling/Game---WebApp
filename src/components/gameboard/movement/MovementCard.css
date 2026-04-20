@@ -24,6 +24,7 @@
   /* Holographic glow border (rainbow foil) */
   position: relative;
   overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
 }
 
 /* HOLOGRAPHIC BORDER ANIMATION */
@@ -80,8 +81,27 @@
 /* Slight shimmer on hover */
 .movement-card:hover {
   transform: translateY(-3px);
-  transition: 0.25s ease;
   box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.movement-card.playable {
+  cursor: pointer;
+}
+
+.movement-card.locked {
+  filter: grayscale(0.95) saturate(0.18);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.movement-card.locked::before {
+  filter: blur(2px);
+  opacity: 0.45;
+}
+
+.movement-card.locked:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 @keyframes holo-spin {

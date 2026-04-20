@@ -1,19 +1,29 @@
 // src/components/gameboard/movement/MovementCardModal.jsx
 
 import "./MovementCardModal.css";
+import { describeMovementCard } from "../../../game/data/movementCards";
 
-export default function MovementCardModal({ card, onUse, onClose }) {
+export default function MovementCardModal({ card, availability, onUse, onClose }) {
+  const canUse = !!availability?.canUse;
+  const statusText = availability?.reason || "";
+
   return (
     <div className="movement-modal-overlay">
       <div className="movement-modal">
         <h2 className="movement-modal-title">{card.name}</h2>
 
         <p className="movement-modal-desc">
-          {describeCard(card.effect)}
+          {describeMovementCard(card.effect)}
         </p>
 
+        {statusText && (
+          <p className={`movement-modal-status ${canUse ? "ready" : "locked"}`}>
+            {statusText}
+          </p>
+        )}
+
         <div className="movement-modal-actions">
-          <button className="use-btn" onClick={onUse}>
+          <button className="use-btn" onClick={onUse} disabled={!canUse}>
             Use Card
           </button>
 
@@ -24,24 +34,4 @@ export default function MovementCardModal({ card, onUse, onClose }) {
       </div>
     </div>
   );
-}
-
-// Descriptions based on card effect
-function describeCard(effect) {
-  switch (effect) {
-    case "skip_prompt":
-      return "Skip the prompt after seeing it. No rating occurs.";
-    case "reroll":
-      return "Roll the die again and restart the turn.";
-    case "double_reward":
-      return "Ask partner for deeper detail; reward is doubled.";
-    case "reverse_prompt":
-      return "Your partner must answer the prompt instead.";
-    case "ama_bonus":
-      return "Your partner may ask ANY question. Answering awards +10 tokens.";
-    case "pause":
-      return "Pause gameplay for a reset or emotional check-in.";
-    default:
-      return "Special movement ability.";
-  }
 }

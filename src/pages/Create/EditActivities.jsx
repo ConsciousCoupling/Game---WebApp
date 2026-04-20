@@ -7,14 +7,14 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
   subscribeToDraftActivities,
-  saveDraftActivities,
+  submitDraftActivities,
   setEditor,
-  clearEditor,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
 import { ACTIVITIES } from "../../game/data/activityList";
 import { waitingRouteForRole } from "./waitingRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./EditActivities.css";
 
@@ -31,11 +31,16 @@ export default function EditActivities() {
     baseline: [],
     approvals: {},
     editor: null,
+    editTurn: null,
     players: [],
     roles: {},
   });
 
   const [localDraft, setLocalDraft] = useState([]);
+  const [localProposalNote, setLocalProposalNote] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHandingOffEditor, setIsHandingOffEditor] = useState(false);
 
   // -------------------------------------------------------
   // SUBSCRIBE to NEGOTIATION DOC ONLY
@@ -49,6 +54,7 @@ export default function EditActivities() {
         baseline: data.baseline || [],
         approvals: data.approvals || {},
         editor: data.editor || null,
+        editTurn: data.editTurn ?? null,
         players: data.players || [],
         roles: data.roles || {},
       };
@@ -57,13 +63,14 @@ export default function EditActivities() {
 
       if (nextState.editor === myToken) {
         setLocalDraft(JSON.parse(JSON.stringify(nextState.draft)));
+        setLocalProposalNote(nextState.approvals?.proposalNote || "");
       }
     });
 
     return () => unsub();
   }, [gameId, myToken]);
 
-  const { editor, roles } = state;
+  const { approvals, editor, roles, editTurn } = state;
 
   // -------------------------------------------------------
   // DETERMINE IF THIS DEVICE IS EDITOR
@@ -72,17 +79,30 @@ export default function EditActivities() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
   const waitingRoute = waitingRouteForRole(role, gameId);
-  const shouldRedirectToWaiting = !!(role && editor && editor !== myToken);
+  const hasApprovedCurrentDraft = !!(role && approvals?.[role]);
+  const canEdit = !!(
+    role && (editor === myToken || (editTurn === role && !editor))
+  );
+  const shouldRedirectToReview = !!(
+    role && editTurn === null && !editor && !hasApprovedCurrentDraft
+  );
+  const shouldRedirectToWaiting = !!(role && !canEdit && !shouldRedirectToReview);
 
 
   // -------------------------------------------------------
   // If no one is editing, take control once
   // -------------------------------------------------------
   useEffect(() => {
-    if (role && !editor) {
+    if (role && editTurn === role && !editor && !isHandingOffEditor) {
       setEditor(gameId, myToken);
     }
-  }, [role, editor, gameId, myToken]);
+  }, [role, editTurn, editor, gameId, myToken, isHandingOffEditor]);
+
+  useEffect(() => {
+    if (shouldRedirectToReview) {
+      navigate(`/create/activities-review/${gameId}`, { replace: true });
+    }
+  }, [shouldRedirectToReview, gameId, navigate]);
 
   useEffect(() => {
     if (shouldRedirectToWaiting && waitingRoute) {
@@ -116,12 +136,23 @@ export default function EditActivities() {
     );
   }
 
+  if (shouldRedirectToReview) {
+    return (
+      <div className="edit-screen">
+        <div className="edit-card">
+          <h2>Redirecting…</h2>
+          <p>Opening the review screen.</p>
+        </div>
+      </div>
+    );
+  }
+
   // -------------------------------------------------------
   // FIELD CHANGE HANDLERS
   // -------------------------------------------------------
   function updateField(index, field, value) {
     const next = [...localDraft];
-    next[index][field] = value;
+    next[index][field] = field === "cost" ? Number(value || 0) : value;
 
     // Mark changed field
     next[index].changedFields = {
@@ -145,28 +176,93 @@ export default function EditActivities() {
   // ADD ACTIVITY
   // -------------------------------------------------------
   function addActivity(activity) {
-    const next = [...localDraft, {
-      ...activity,
-      changedFields: {
-        name: true,
-        cost: true,
-        duration: true,
+    const next = [
+      ...localDraft,
+      {
+        ...activity,
+        id: createActivityId("template"),
+        changedFields: {
+          name: true,
+          cost: true,
+          duration: true,
+        },
+        added: true,
       },
-      added: true,
-    }];
+    ];
     setLocalDraft(next);
+  }
+
+  function addCustomActivity() {
+    const next = [
+      ...localDraft,
+      {
+        id: createActivityId("custom"),
+        name: "",
+        duration: "",
+        cost: 0,
+        description: "",
+        deleted: false,
+        added: true,
+        changedFields: {
+          name: true,
+          cost: true,
+          duration: true,
+          description: true,
+        },
+      },
+    ];
+
+    setLocalDraft(next);
+  }
+
+  function createActivityId(prefix) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function validateDraft() {
+    const invalidActivity = localDraft.find(
+      (activity) =>
+        !activity.deleted &&
+        (!String(activity.name || "").trim() ||
+          !Number.isFinite(Number(activity.cost)) ||
+          Number(activity.cost) < 0)
+    );
+
+    if (!invalidActivity) return null;
+
+    if (!String(invalidActivity.name || "").trim()) {
+      return "Each activity must have a name before you submit.";
+    }
+
+    return "Each activity must have a valid token cost of 0 or more.";
   }
 
   // -------------------------------------------------------
   // SAVE DRAFT + EXIT EDITOR MODE
   // -------------------------------------------------------
   async function saveAndSubmit() {
-    await saveDraftActivities(gameId, localDraft, myToken);
-    await clearEditor(gameId);
+    const validationError = validateDraft();
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
 
-    // After submitting draft, P1 → P2 waits; P2 → P1 waits
-    if (waitingRoute) {
-      navigate(waitingRoute);
+    setIsSubmitting(true);
+    setIsHandingOffEditor(true);
+    setSubmitError("");
+
+    try {
+      await submitDraftActivities(gameId, localDraft, myToken, localProposalNote);
+
+      if (waitingRoute) {
+        navigate(waitingRoute, { replace: true });
+      }
+    } catch (error) {
+      console.error("Failed to submit activity changes:", error);
+      setIsHandingOffEditor(false);
+      setSubmitError("Could not submit your activity changes. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -178,6 +274,22 @@ export default function EditActivities() {
       <div className="edit-card">
         <h2>Edit Activity List</h2>
         <p>Modify, remove, or add activities below.</p>
+        {submitError && <div className="submit-error">{submitError}</div>}
+
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
+
+        <div className="proposal-note-card">
+          <label className="proposal-note-label" htmlFor="proposal-note">
+            Optional note for your partner
+          </label>
+          <textarea
+            id="proposal-note"
+            className="proposal-note-input"
+            value={localProposalNote}
+            onChange={(e) => setLocalProposalNote(e.target.value)}
+            placeholder="Explain why you want these changes."
+          />
+        </div>
 
         <div className="flow-note">
           <strong>How this step works</strong>
@@ -192,6 +304,7 @@ export default function EditActivities() {
                 className={`activity-input ${a.changedFields?.name ? "changed" : ""}`}
                 value={a.name}
                 onChange={(e) => updateField(i, "name", e.target.value)}
+                placeholder="Activity name"
               />
 
               <input
@@ -222,7 +335,13 @@ export default function EditActivities() {
           ))}
         </div>
 
-        <h3>Add New Activity</h3>
+        <div className="add-actions">
+          <button className="custom-add-btn" onClick={addCustomActivity}>
+            + Add Custom Activity
+          </button>
+        </div>
+
+        <h3>Add from Existing Activities</h3>
         <div className="add-list">
           {ACTIVITIES.map((a) => (
             <button
@@ -235,8 +354,12 @@ export default function EditActivities() {
           ))}
         </div>
 
-        <button className="submit-btn" onClick={saveAndSubmit}>
-          Submit Changes →
+        <button
+          className="submit-btn"
+          onClick={saveAndSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Submitting..." : "Submit Changes →"}
         </button>
 
       </div>

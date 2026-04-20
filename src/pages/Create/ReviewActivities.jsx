@@ -8,10 +8,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   subscribeToDraftActivities,
   approveActivities,
+  setEditor,
 } from "../../services/activityStore";
 
 import { loadIdentity } from "../../services/setupStorage";
 import { waitingRouteForRole } from "./waitingRoute";
+import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
 
 import "./ReviewActivities.css";
 
@@ -27,9 +30,13 @@ export default function ReviewActivities() {
     baseline: [],
     approvals: {},
     editor: null,
+    editTurn: null,
     players: [],
     roles: {},
   });
+  const [actionError, setActionError] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+  const [isProposingChanges, setIsProposingChanges] = useState(false);
 
   // -------------------------------------------------------
   // Subscribe to NEGOTIATION doc only
@@ -43,6 +50,7 @@ export default function ReviewActivities() {
         baseline: data.baseline || [], // (this is finalActivities)
         approvals: data.approvals || {},
         editor: data.editor || null,
+        editTurn: data.editTurn ?? null,
         players: data.players || [],
         roles: data.roles || {},
       });
@@ -51,7 +59,7 @@ export default function ReviewActivities() {
     return () => unsub();
   }, [gameId]);
 
-  const { draft, baseline, editor, roles } = state;
+  const { draft, baseline, approvals, editor, players, roles, editTurn } = state;
 
   // -------------------------------------------------------
   // DETERMINE ROLE
@@ -60,9 +68,36 @@ export default function ReviewActivities() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
   const waitingRoute = waitingRouteForRole(role, gameId);
+  const alreadyApproved = hasApprovedCurrentDraft({ approvals }, role);
+  const bothApproved = approvals.playerOne && approvals.playerTwo;
+  const proposalAuthorRole = approvals.playerOne && !approvals.playerTwo
+    ? "playerOne"
+    : approvals.playerTwo && !approvals.playerOne
+      ? "playerTwo"
+      : null;
+  const proposalAuthorName = proposalAuthorRole === "playerOne"
+    ? players[0]?.name || "Player One"
+    : proposalAuthorRole === "playerTwo"
+      ? players[1]?.name || "Player Two"
+      : "Your partner";
+  const proposalNote = String(approvals?.proposalNote || "").trim();
+  const shouldRedirectToSummary = !!(role && bothApproved);
   const shouldRedirectToWaiting = !!(
-    role && ((editor && editor !== myToken) || draft.length === 0)
+    role &&
+    !bothApproved &&
+    (
+      editTurn !== null ||
+      (editor && editor !== myToken) ||
+      draft.length === 0 ||
+      alreadyApproved
+    )
   );
+
+  useEffect(() => {
+    if (shouldRedirectToSummary) {
+      navigate(`/create/summary/${gameId}`, { replace: true });
+    }
+  }, [shouldRedirectToSummary, gameId, navigate]);
 
   useEffect(() => {
     if (shouldRedirectToWaiting && waitingRoute) {
@@ -76,6 +111,17 @@ export default function ReviewActivities() {
         <div className="review-card">
           <h2>Loading...</h2>
           <p>Verifying your identity.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldRedirectToSummary) {
+    return (
+      <div className="review-screen">
+        <div className="review-card">
+          <h2>Redirecting…</h2>
+          <p>Opening the summary screen.</p>
         </div>
       </div>
     );
@@ -147,13 +193,34 @@ export default function ReviewActivities() {
   // APPROVE
   // -------------------------------------------------------
   async function handleApprove() {
-    await approveActivities(gameId, myToken);
+    if (isApproving || isProposingChanges) return;
 
-    // After approval:
-    if (role === "playerTwo") {
-      navigate(`/create/waiting/player-two/${gameId}`);
-    } else {
-      navigate(`/create/waiting/player-one/${gameId}`);
+    setIsApproving(true);
+    setActionError("");
+
+    try {
+      await approveActivities(gameId, myToken);
+    } catch (error) {
+      console.error("Failed to approve activity changes:", error);
+      setActionError("Could not approve these changes. Please try again.");
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
+  async function handleProposeChanges() {
+    if (isApproving || isProposingChanges) return;
+
+    setIsProposingChanges(true);
+    setActionError("");
+
+    try {
+      await setEditor(gameId, myToken);
+      navigate(`/create/activities/${gameId}`, { replace: true });
+    } catch (error) {
+      console.error("Failed to reopen activity editing:", error);
+      setActionError("Could not reopen editing. Please try again.");
+      setIsProposingChanges(false);
     }
   }
 
@@ -164,7 +231,20 @@ export default function ReviewActivities() {
     <div className="review-screen">
       <div className="review-card">
         <h2>Review Your Activity List</h2>
-        <p>Please confirm the list below. Changes are highlighted.</p>
+        <p>Approve this proposal or make further changes. Changes are highlighted.</p>
+
+        {actionError && <div className="review-error">{actionError}</div>}
+
+        <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
+
+        {proposalNote && (
+          <div className="proposal-note-review">
+            <div className="proposal-note-title">
+              {proposalAuthorName}'s note
+            </div>
+            <div className="proposal-note-body">{proposalNote}</div>
+          </div>
+        )}
 
         <div className="review-flow-note">
           <strong>Before you approve</strong>
@@ -175,9 +255,23 @@ export default function ReviewActivities() {
           {draft.map((a, i) => renderRow(a, i))}
         </div>
 
-        <button className="approve-btn" onClick={handleApprove}>
-          Approve →
-        </button>
+        <div className="review-action-row">
+          <button
+            className="propose-btn"
+            onClick={handleProposeChanges}
+            disabled={isApproving || isProposingChanges}
+          >
+            {isProposingChanges ? "Opening Editor…" : "Propose Changes"}
+          </button>
+
+          <button
+            className="approve-btn"
+            onClick={handleApprove}
+            disabled={isApproving || isProposingChanges}
+          >
+            {isApproving ? "Approving…" : "Approve →"}
+          </button>
+        </div>
       </div>
     </div>
   );

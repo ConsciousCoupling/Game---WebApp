@@ -2,6 +2,7 @@
 
 import "./MovementCardAward.css";
 import "./MovementCard.css";
+import { describeMovementCard } from "../../../game/data/movementCards";
 
 export default function MovementCardAward({ card, onContinue }) {
   return (
@@ -15,7 +16,7 @@ export default function MovementCardAward({ card, onContinue }) {
         <div className="movement-card-body">
           <div className="movement-card-name">{card.name}</div>
           <div className="movement-card-effect">
-            {formatEffect(card.effect)}
+            {describeMovementCard(card.effect)}
           </div>
         </div>
 
@@ -26,21 +27,4 @@ export default function MovementCardAward({ card, onContinue }) {
       </div>
     </div>
   );
-}
-
-function formatEffect(effect) {
-  switch (effect) {
-    case "skip_prompt":
-      return "Skip the prompt entirely.";
-    case "reroll":
-      return "Throw away this prompt and roll again.";
-    case "double_reward":
-      return "Ask your partner to go deeper (award is doubled).";
-    case "reverse_prompt":
-      return "The other player answers instead of you.";
-    case "ama_bonus":
-      return "Ask anything — answering earns +10 tokens.";
-    default:
-      return "";
-  }
 }

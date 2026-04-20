@@ -46,3 +46,8 @@
   background: rgba(190, 255, 210, 0.10);
   box-shadow: 0 0 20px rgba(140, 255, 200, 0.35);
 }
+
+.phase-banner.reset-pause {
+  background: rgba(180, 220, 255, 0.12);
+  box-shadow: 0 0 20px rgba(140, 190, 255, 0.28);
+}

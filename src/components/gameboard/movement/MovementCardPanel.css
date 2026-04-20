@@ -53,6 +53,48 @@
   background: rgba(255, 200, 215, 0.35);
 }
 
+.movement-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.movement-title {
+  margin-bottom: 0;
+}
+
+.movement-empty {
+  color: rgba(255, 231, 239, 0.7);
+}
+
+.movement-card-label,
+.movement-card-status {
+  position: relative;
+  z-index: 2;
+}
+
+.movement-card-label {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.movement-card-status {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.movement-card.playable .movement-card-status {
+  color: #dbffe7;
+}
+
+.movement-card.locked .movement-card-status {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

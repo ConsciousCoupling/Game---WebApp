@@ -28,7 +28,25 @@
 .movement-modal-desc {
   font-size: 1rem;
   opacity: 0.9;
+  margin-bottom: 14px;
+}
+
+.movement-modal-status {
   margin-bottom: 22px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.movement-modal-status.ready {
+  background: rgba(120, 255, 190, 0.12);
+  color: #d5ffe7;
+}
+
+.movement-modal-status.locked {
+  background: rgba(255, 190, 210, 0.12);
+  color: #ffd8e5;
 }
 
 .movement-modal-actions {
@@ -43,6 +61,11 @@
   padding: 10px 16px;
   border-radius: 12px;
   cursor: pointer;
+}
+
+.use-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .cancel-btn {

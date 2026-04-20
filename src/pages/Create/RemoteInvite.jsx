@@ -1,10 +1,30 @@
 // src/pages/Create/RemoteInvite.jsx
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import ReconnectCodeCard from "../../components/ReconnectCodeCard";
+import { loadIdentity } from "../../services/setupStorage";
 import "./RemoteInvite.css";
 
 export default function RemoteInvite() {
   const navigate = useNavigate();
   const { gameId } = useParams();
+  const [searchParams] = useSearchParams();
+  const identity = loadIdentity(gameId);
+  const inviteMode = searchParams.get("mode");
+  const isSameDeviceMode = inviteMode === "same-device";
+
+  const title = isSameDeviceMode ? "Open Player Two in Another Window" : "Invite Your Partner";
+  const subtitle = isSameDeviceMode
+    ? "Use a second browser or an incognito window on this device so Player Two gets a separate session."
+    : "Share this code so Player Two can join from their device.";
+  const instructions = isSameDeviceMode
+    ? "Open IntimaDate in a second browser or incognito window, choose Join Game, and enter this code there."
+    : "Ask them to open IntimaDate, choose Join Game, and enter this code.";
+  const continueLabel = isSameDeviceMode
+    ? "Continue as Player One →"
+    : "Continue to Edit Activities →";
+  const waitingStatus = isSameDeviceMode
+    ? "Waiting for Player Two to join from the second window…"
+    : "Waiting for Player Two…";
 
   function copyCode() {
     navigator.clipboard.writeText(gameId);
@@ -13,11 +33,9 @@ export default function RemoteInvite() {
   return (
     <div className="waiting-screen">
       <div className="waiting-card">
-        <h1 className="waiting-title">Invite Your Partner</h1>
+        <h1 className="waiting-title">{title}</h1>
 
-        <p className="waiting-subtitle">
-          Share this code so Player Two can join from their device.
-        </p>
+        <p className="waiting-subtitle">{subtitle}</p>
 
         {/* Game Code Box */}
         <div className="invite-code-box">
@@ -25,18 +43,21 @@ export default function RemoteInvite() {
           <button className="copy-btn" onClick={copyCode}>Copy</button>
         </div>
 
-        <p className="instructions">
-          Ask them to open <strong>IntimaDate</strong> →
-          <em> Join Game </em> → enter the code.
-        </p>
+        <p className="instructions">{instructions}</p>
 
-        <p className="waiting-status">Waiting for Player Two…</p>
+        <ReconnectCodeCard
+          gameId={gameId}
+          role="playerOne"
+          token={identity?.token || null}
+        />
+
+        <p className="waiting-status">{waitingStatus}</p>
 
         <button
           className="waiting-btn"
           onClick={() => navigate(`/create/activities/${gameId}`)}
         >
-          Continue to Edit Activities →
+          {continueLabel}
         </button>
 
         <button className="back-btn" onClick={() => navigate("/create/player-one")}>

@@ -1,4 +1,3 @@
-// src/components/gameboard/activity/ActivityShop.jsx
 import "./ActivityShop.css";
 
 export default function ActivityShop({
@@ -8,15 +7,14 @@ export default function ActivityShop({
   currentPlayerName,
   isCurrentPlayer,
   onPurchase,
-  onEndTurn
+  onEndTurn,
 }) {
   return (
     <div className="activity-shop-container">
-
       <h2 className="shop-title">Activity Shop</h2>
 
       <p className="shop-message">
-        Choose something fun to try — or end your turn to save your tokens.
+        Choose something fun to try or end your turn to save your tokens.
       </p>
 
       <p className="shop-instruction-callout">
@@ -28,11 +26,10 @@ export default function ActivityShop({
       <p className="activity-shop-message">{message}</p>
 
       <div className="activity-grid">
-        
-        {/* ACTIVITY CARDS */}
         {activities.map((activity) => {
           const affordable = currentTokens >= activity.cost;
           const duration = activity.duration ? `${activity.duration} min` : "—";
+          const tokenGap = affordable ? 0 : activity.cost - currentTokens;
           const disabled = !affordable || !isCurrentPlayer;
 
           return (
@@ -40,22 +37,29 @@ export default function ActivityShop({
               key={activity.id}
               className={`activity-card ${disabled ? "disabled" : ""}`}
               disabled={disabled}
-              onClick={() => affordable && isCurrentPlayer && onPurchase(activity)}
+              onClick={() => {
+                if (!disabled) {
+                  onPurchase(activity);
+                }
+              }}
             >
               <div className="activity-card-title">{activity.name}</div>
 
-              <div className="activity-card-cost">
-                -{activity.cost} tokens
-              </div>
+              <div className="activity-card-cost">-{activity.cost} tokens</div>
 
               <p className="activity-card-description">
                 Duration: {duration}
               </p>
+
+              {!affordable && (
+                <p className="activity-card-warning">
+                  Need {tokenGap} more token{tokenGap === 1 ? "" : "s"}
+                </p>
+              )}
             </button>
           );
         })}
 
-        {/* END TURN CARD */}
         <button
           className={`activity-card end-turn-card ${!isCurrentPlayer ? "disabled" : ""}`}
           onClick={onEndTurn}
@@ -67,7 +71,6 @@ export default function ActivityShop({
             You can skip buying and preserve your balance.
           </p>
         </button>
-
       </div>
     </div>
   );

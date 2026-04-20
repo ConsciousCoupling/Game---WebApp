@@ -43,12 +43,12 @@ html, body, #root {
   box-sizing: border-box;
 }
 
-button {
+button,
+[class*="-btn"],
+.btn {
   font-family: var(--font-accent);
-}
-
-[class*="-btn"] {
-  font-family: var(--font-accent);
+  font-size: 1.08rem;
+  letter-spacing: 0.08em;
 }
 
 [class*="-label"],

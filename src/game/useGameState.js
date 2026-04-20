@@ -5,22 +5,22 @@
 import { useEffect, useState, useRef } from "react";
 
 import { subscribeToGameplay, gameplayActions } from "./gameplayStore";
-import { loadIdentity } from "../services/setupStorage";
 import { DiceEngine } from "./dice/DiceEngine";
 
 function log(...args) {
   console.log("%c[USE-GAMEPLAY]", "color:#ff22aa;font-weight:bold;", ...args);
 }
 
-export default function useGameplayState(gameId) {
+export default function useGameplayState(gameId, myToken) {
   const [state, setState] = useState(null);
-
-  // Identity token for THIS device/player
-  const identity = loadIdentity(gameId);
-  const myToken = identity?.token || null;
 
   // Dice engine (persistent)
   const engineRef = useRef(null);
+  const myTokenRef = useRef(myToken);
+
+  useEffect(() => {
+    myTokenRef.current = myToken;
+  }, [myToken]);
 
   // -----------------------------------------------------------------------
   // 1️⃣ Initialize DiceEngine ONCE with callback → gameplayStore handler
@@ -34,12 +34,12 @@ export default function useGameplayState(gameId) {
 
         setState((prev) => {
           if (!prev) return prev;
-          gameplayActions.handleDiceResult(gameId, prev, result, myToken);
+          gameplayActions.handleDiceResult(gameId, prev, result, myTokenRef.current);
           return prev;
         });
       });
     }
-  }, [gameId, myToken]);
+  }, [gameId]);
 
   // -----------------------------------------------------------------------
   // 2️⃣ Subscribe to Firestore gameplay document
@@ -56,7 +56,22 @@ export default function useGameplayState(gameId) {
   }, [gameId]);
 
   // -----------------------------------------------------------------------
-  // 3️⃣ ACTION WRAPPERS — token-gated, bound to current state
+  // 3️⃣ Recover abandoned rolls after reconnect / refresh
+  // -----------------------------------------------------------------------
+  useEffect(() => {
+    if (!state || !engineRef.current || state.phase !== "ROLLING") return;
+
+    const activeToken = state.players?.[state.currentPlayerId]?.token;
+    const isCurrentPlayer = !!(myToken && activeToken === myToken);
+
+    if (isCurrentPlayer && !engineRef.current.isRolling) {
+      log("Recovering abandoned roll for current player.");
+      engineRef.current.roll();
+    }
+  }, [state, myToken]);
+
+  // -----------------------------------------------------------------------
+  // 4️⃣ ACTION WRAPPERS — token-gated, bound to current state
   // -----------------------------------------------------------------------
   const actions = {
     rollDice: () => {
@@ -67,6 +82,11 @@ export default function useGameplayState(gameId) {
     beginAwardPhase: () => {
       if (!state) return;
       gameplayActions.beginAwardPhase(gameId, state, myToken);
+    },
+
+    submitPromptResponse: async (response) => {
+      if (!state) return false;
+      return gameplayActions.submitPromptResponse(gameId, state, response, myToken);
     },
 
     awardTokens: (val) => {
@@ -114,10 +134,15 @@ export default function useGameplayState(gameId) {
         engineRef.current
       );
     },
+
+    resumeResetPause: () => {
+      if (!state) return;
+      gameplayActions.resumeResetPause(gameId, state, myToken);
+    },
   };
 
   // -----------------------------------------------------------------------
-  // 4️⃣ EXPORT API — matches original: { state, actions, engine }
+  // 5️⃣ EXPORT API — matches original: { state, actions, engine }
   // -----------------------------------------------------------------------
   return {
     state,

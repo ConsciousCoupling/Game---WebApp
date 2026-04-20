@@ -1,39 +1,119 @@
 // -----------------------------------------------------------
-// JOIN EXISTING GAME — TWO-DOCUMENT, IDENTITY-SAFE EDITION
+// JOIN / RECONNECT EXISTING GAME
 // -----------------------------------------------------------
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { ensureIdentityForGame, saveSetup } from "../../services/setupStorage";
-import { db } from "../../services/firebase";
+import {
+  ensureIdentityForGame,
+  loadIdentity,
+  loadSetup,
+  saveReconnectCode,
+  saveSetup,
+  generateReconnectCode,
+} from "../../services/setupStorage";
+import { db, ensureAnonymousAuth } from "../../services/firebase";
 
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { getNegotiationRoute } from "../../services/negotiationRoute";
+import { reclaimPlayerSeat } from "../../services/sessionRecovery";
 
 import "./Join.css";
+
+function gameplayRef(gameId) {
+  return doc(db, "gameplay", gameId);
+}
+
+async function resolveNextRoute(gameId, gameData, token) {
+  const gameplaySnap = await getDoc(gameplayRef(gameId));
+  if (gameplaySnap.exists()) {
+    return `/game/${gameId}`;
+  }
+
+  return getNegotiationRoute(gameId, gameData, token)
+    || `/create/waiting/player-two/${gameId}`;
+}
 
 export default function Join() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  // Support URLs like /join?code=ROSE-123
   const prefill = (params.get("code") || "").trim().toUpperCase();
 
   const [code, setCode] = useState(prefill);
-  const [step, setStep] = useState(prefill ? 2 : 1);
+  const [step, setStep] = useState(1);
+  const [isResuming, setIsResuming] = useState(!prefill);
 
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3e8bff");
+  const [reconnectCode, setReconnectCode] = useState("");
+  const [gameData, setGameData] = useState(null);
+  const [isWorking, setIsWorking] = useState(false);
+
+  const setup = loadSetup();
+  const resumeGameId = setup?.gameId || null;
+  const resumeIdentity = resumeGameId ? loadIdentity(resumeGameId) : null;
 
   const colors = [
-    "#ff3e84", "#3e8bff", "#ffd34f", "#37d67a",
-    "#ff00cc", "#9b59ff", "#ff7a2f",
+    "#ff3e84",
+    "#3e8bff",
+    "#ffd34f",
+    "#37d67a",
+    "#ff00cc",
+    "#9b59ff",
+    "#ff7a2f",
   ];
 
-  // -----------------------------------------------------------
-  // STEP 1 — VALIDATE GAME CODE (Negotiation doc only)
-  // -----------------------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    async function tryResumeGame() {
+      if (!resumeGameId || !resumeIdentity?.token) {
+        if (!cancelled) setIsResuming(false);
+        return;
+      }
+
+      try {
+        const user = await ensureAnonymousAuth();
+        if (cancelled || user.uid !== resumeIdentity.token) {
+          if (!cancelled) setIsResuming(false);
+          return;
+        }
+
+        const snap = await getDoc(doc(db, "games", resumeGameId));
+        if (!snap.exists()) {
+          if (!cancelled) setIsResuming(false);
+          return;
+        }
+
+        const nextRoute = await resolveNextRoute(
+          resumeGameId,
+          snap.data(),
+          resumeIdentity.token
+        );
+
+        if (nextRoute) {
+          navigate(nextRoute, { replace: true });
+          return;
+        }
+      } catch (resumeError) {
+        console.error("Failed to resume joined game:", resumeError);
+      }
+
+      if (!cancelled) {
+        setIsResuming(false);
+      }
+    }
+
+    tryResumeGame();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, resumeGameId, resumeIdentity?.token]);
+
   async function handleCodeSubmit() {
     setError("");
 
@@ -43,8 +123,7 @@ export default function Join() {
       return;
     }
 
-    const ref = doc(db, "games", gameId);
-    const snap = await getDoc(ref);
+    const snap = await getDoc(doc(db, "games", gameId));
 
     if (!snap.exists()) {
       setError("Game not found.");
@@ -53,31 +132,22 @@ export default function Join() {
 
     const data = snap.data();
     const roles = data.roles || {};
-
-    // Ensure identity token uses Firebase Auth UID
     const identity = await ensureIdentityForGame(gameId);
     const localToken = identity?.token || null;
 
-    // If someone else already claimed PlayerTwo slot
-    const slotTaken =
-      roles.playerTwo &&
-      roles.playerTwo !== localToken;
+    setGameData(data);
 
-    if (slotTaken) {
-      setError("Player Two has already joined this game from another device.");
+    if (roles.playerOne === localToken || roles.playerTwo === localToken) {
+      saveSetup({ gameId, localPlay: false });
+      const nextRoute = await resolveNextRoute(gameId, data, localToken);
+      navigate(nextRoute, { replace: true });
       return;
     }
 
-    // At this point:
-    // - Either playerTwo is null → open
-    // - Or playerTwo === localToken → reclaim
-
-    setStep(2);
+    const playerTwoOpen = !roles.playerTwo;
+    setStep(playerTwoOpen ? 2 : 3);
   }
 
-  // -----------------------------------------------------------
-  // STEP 2 — JOIN AS PLAYER TWO (write only negotiation fields)
-  // -----------------------------------------------------------
   async function handleJoin() {
     const gameId = code.trim().toUpperCase();
 
@@ -86,105 +156,146 @@ export default function Join() {
       return;
     }
 
-    // Ensure this device has a token for this game
-    const identity = await ensureIdentityForGame(gameId);
-    const token = identity.token;
+    setIsWorking(true);
+    setError("");
 
-    // Store PlayerTwo local metadata for UI
-    saveSetup({
-      gameId,
-      playerTwoName: name,
-      playerTwoColor: color,
-      localPlay: false,
-    });
+    try {
+      const identity = await ensureIdentityForGame(gameId);
+      const token = identity.token;
 
-    // Load negotiation doc directly (DO NOT use loadGameFromCloud)
-    const ref = doc(db, "games", gameId);
-    const snap = await getDoc(ref);
+      saveSetup({
+        gameId,
+        playerTwoName: name,
+        playerTwoColor: color,
+        localPlay: false,
+      });
 
-    if (!snap.exists()) {
-      setError("Game not found.");
-      return;
+      const ref = doc(db, "games", gameId);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        setError("Game not found.");
+        return;
+      }
+
+      const data = snap.data();
+      const roles = data.roles || {};
+
+      if (roles.playerTwo && roles.playerTwo !== token) {
+        setStep(3);
+        setError("Player Two is already in this game. Use your reconnect code to rejoin.");
+        return;
+      }
+
+      const reconnectValue = data.players?.[1]?.reconnectCode || generateReconnectCode();
+      saveReconnectCode(gameId, "playerTwo", reconnectValue);
+
+      const p1 = data.players?.[0] || {
+        name: "",
+        color: "",
+        tokens: 0,
+        inventory: [],
+        token: roles.playerOne ?? null,
+        reconnectCode: data.players?.[0]?.reconnectCode || null,
+      };
+
+      const p2 = {
+        ...(data.players?.[1] || {}),
+        name,
+        color,
+        tokens: 0,
+        inventory: [],
+        token,
+        reconnectCode: reconnectValue,
+      };
+
+      const nextGameData = {
+        ...data,
+        roles: {
+          ...roles,
+          playerTwo: token,
+        },
+        players: [p1, p2],
+      };
+
+      await updateDoc(ref, {
+        roles: nextGameData.roles,
+        players: nextGameData.players,
+      });
+
+      const nextRoute = await resolveNextRoute(gameId, nextGameData, token);
+      navigate(nextRoute || `/create/waiting/player-two/${gameId}`);
+    } catch (joinError) {
+      console.error("Failed to join game:", joinError);
+      setError("Could not join this game. Please try again.");
+    } finally {
+      setIsWorking(false);
     }
-
-    const data = snap.data();
-    const roles = data.roles || {};
-
-    // Protect PlayerOne’s identity
-    const p1 = data.players?.[0] || {
-      name: "",
-      color: "",
-      tokens: 0,
-      inventory: [],
-      token: roles.playerOne ?? null,
-    };
-
-    // Prepare PlayerTwo entry
-    const p2 = {
-      name,
-      color,
-      tokens: 0,
-      inventory: [],
-      token,
-    };
-
-    // Apply negotiation-only update
-    await updateDoc(ref, {
-      roles: {
-        ...roles,
-        playerTwo: token,
-      },
-      players: [p1, p2],
-    });
-
-    // ----------------------------
-    // DETERMINE NEXT SCREEN
-    // ----------------------------
-    const draft = data.activityDraft || [];
-    const approvals = data.approvals || {};
-    const editor = data.editor || null;
-
-    // Case 1 — No draft yet or partner currently editing
-    if (draft.length === 0 || (editor && editor !== token)) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // Case 1b — This device already owns editor lock
-    if (editor === token) {
-      navigate(`/create/activities/${gameId}`);
-      return;
-    }
-
-    // Case 2 — P1 submitted draft but has NOT approved
-    if (approvals.playerOne === false) {
-      navigate(`/create/waiting/player-two/${gameId}`);
-      return;
-    }
-
-    // Case 3 — P1 approved → P2 must review
-    if (approvals.playerOne === true && !approvals.playerTwo) {
-      navigate(`/create/activities-review/${gameId}`);
-      return;
-    }
-
-    // Case 4 — Both approved → Summary
-    if (approvals.playerOne && approvals.playerTwo) {
-      navigate(`/create/summary/${gameId}`);
-      return;
-    }
-
-    // Fallback
-    navigate(`/create/waiting/player-two/${gameId}`);
   }
 
-  // -----------------------------------------------------------
-  // UI
-  // -----------------------------------------------------------
+  async function handleReconnect() {
+    const gameId = code.trim().toUpperCase();
+    const normalizedReconnectCode = reconnectCode.trim().toUpperCase();
+
+    if (!normalizedReconnectCode) {
+      setError("Please enter your reconnect code.");
+      return;
+    }
+
+    setIsWorking(true);
+    setError("");
+
+    try {
+      const identity = await ensureIdentityForGame(gameId);
+      const token = identity.token;
+      const result = await reclaimPlayerSeat(gameId, normalizedReconnectCode, token);
+      const playerIndex = result.role === "playerOne" ? 0 : 1;
+      const player = result.gameData.players?.[playerIndex] || {};
+
+      saveSetup({
+        gameId,
+        localPlay: false,
+        ...(result.role === "playerOne"
+          ? {
+              playerOneName: player.name || "",
+              playerOneColor: player.color || "",
+            }
+          : {
+              playerTwoName: player.name || "",
+              playerTwoColor: player.color || "",
+            }),
+      });
+
+      const nextRoute = result.gameplayExists
+        ? `/game/${gameId}`
+        : await resolveNextRoute(gameId, result.gameData, token);
+
+      navigate(nextRoute, { replace: true });
+    } catch (reconnectError) {
+      console.error("Failed to reconnect player:", reconnectError);
+      setError(
+        reconnectError?.message
+          || "Could not reconnect to this game. Check your reconnect code and try again."
+      );
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  if (isResuming) {
+    return (
+      <div className="join-page">
+        <div className="join-card">
+          <h2 className="join-title">Reconnecting…</h2>
+          <p className="join-subtitle">Restoring your current game.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="join-page">
       <div className="join-card">
-
         {step === 1 && (
           <>
             <h2 className="join-title">Join an Existing Game</h2>
@@ -199,7 +310,11 @@ export default function Join() {
 
             {error && <p className="join-error">{error}</p>}
 
-            <button className="join-btn join-caps-text" onClick={handleCodeSubmit}>
+            <button
+              className="join-btn join-caps-text"
+              onClick={handleCodeSubmit}
+              disabled={isWorking}
+            >
               Continue →
             </button>
 
@@ -251,9 +366,22 @@ export default function Join() {
             <button
               className={`join-btn join-caps-text ${!name.trim() ? "disabled" : ""}`}
               onClick={handleJoin}
+              disabled={isWorking || !name.trim()}
             >
-              Join Game →
+              {isWorking ? "Joining…" : "Join Game →"}
             </button>
+
+            {!!gameData?.players?.[0]?.reconnectCode && (
+              <button
+                className="join-secondary"
+                onClick={() => {
+                  setError("");
+                  setStep(3);
+                }}
+              >
+                I&apos;m returning to this game
+              </button>
+            )}
 
             <button className="join-back join-caps-text" onClick={() => setStep(1)}>
               ← Back
@@ -273,6 +401,43 @@ export default function Join() {
           </>
         )}
 
+        {step === 3 && (
+          <>
+            <h2 className="join-title">Reconnect to Game</h2>
+            <p className="join-subtitle">
+              Enter the reconnect code that was shown to you earlier.
+            </p>
+
+            <input
+              className="join-input"
+              placeholder="e.g. ABCD-EFGH"
+              value={reconnectCode}
+              onChange={(e) => setReconnectCode(e.target.value.toUpperCase())}
+            />
+
+            {error && <p className="join-error">{error}</p>}
+
+            <button className="join-btn" onClick={handleReconnect} disabled={isWorking}>
+              {isWorking ? "Reconnecting…" : "Reconnect →"}
+            </button>
+
+            <button
+              className="join-secondary"
+              onClick={() => {
+                setError("");
+                setStep(gameData?.roles?.playerTwo ? 1 : 2);
+              }}
+            >
+              {gameData?.roles?.playerTwo
+                ? "Use a different game code"
+                : "Join as Player Two Instead"}
+            </button>
+
+            <button className="join-back" onClick={() => setStep(1)}>
+              ← Back
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

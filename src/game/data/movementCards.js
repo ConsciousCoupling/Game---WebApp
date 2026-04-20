@@ -1,7 +1,5 @@
 // src/game/data/movementCards.js
 
-// src/game/data/movementCards.js
-
 export const MOVEMENT_CARDS = [
   {
     id: 95,
@@ -47,6 +45,35 @@ export const MOVEMENT_CARDS = [
   }
 ];
 
+export function describeMovementCard(effect) {
+  switch (effect) {
+    case "skip_prompt":
+      return "Skip the prompt after seeing it. No rating occurs.";
+    case "reverse_prompt":
+      return "The other player must answer the current prompt instead.";
+    case "reroll":
+      return "Throw away the current prompt and roll the die again.";
+    case "reset":
+      return "Pause the game for a reset or emotional check-in.";
+    case "ama_bonus":
+      return "Let your partner ask anything. Answering openly earns +10 bonus tokens.";
+    case "double_reward":
+      return "Request a deeper answer and double the reward for this prompt.";
+    default:
+      return "Special movement ability.";
+  }
+}
+
+function createMovementCardInstance(card) {
+  const fallbackId = `${card.effect}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  return {
+    ...card,
+    instanceId: globalThis.crypto?.randomUUID?.() || fallbackId,
+  };
+}
+
 export function getRandomMovementCard() {
-  return MOVEMENT_CARDS[Math.floor(Math.random() * MOVEMENT_CARDS.length)];
+  const baseCard = MOVEMENT_CARDS[Math.floor(Math.random() * MOVEMENT_CARDS.length)];
+  return createMovementCardInstance(baseCard);
 }
