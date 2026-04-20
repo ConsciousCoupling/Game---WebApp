@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { subscribeToDraftActivities } from "../../services/activityStore";
+import { setEditor, subscribeToDraftActivities } from "../../services/activityStore";
 import { isHotseatGame, loadIdentity, setHotseatActiveRole } from "../../services/setupStorage";
 import {
   ensureGameplayInitialized,
@@ -31,6 +31,8 @@ export default function Summary() {
     roles: {},
   });
   const [isStarting, setIsStarting] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [gameplayReady, setGameplayReady] = useState(false);
 
   useEffect(() => {
@@ -68,10 +70,11 @@ export default function Summary() {
   const playerTwoDisplay = players[1]?.name
     ? `${players[1].name} (Player Two)`
     : "Player Two";
+  const currentSeatLabel = role === "playerTwo" ? "Player Two" : "Player One";
 
   const waitingRoute = waitingRouteForRole(role, gameId);
   const shouldRedirectToWaiting = !!(
-    role && (!approvals.playerOne || !approvals.playerTwo)
+    !isReopening && role && (!approvals.playerOne || !approvals.playerTwo)
   );
   const shouldRedirectToGame = !!(role && gameplayReady);
 
@@ -94,6 +97,7 @@ export default function Summary() {
     shouldRedirectToWaiting,
     waitingRoute,
     navigate,
+    isReopening,
   ]);
 
   useEffect(() => {
@@ -147,14 +151,35 @@ export default function Summary() {
   }
 
   async function startGame() {
-    if (isStarting) return;
+    if (isStarting || isReopening) return;
 
+    setActionError("");
     setIsStarting(true);
     try {
       await ensureGameplayInitialized(gameId, players, finalActivities);
       navigate(`/game/${gameId}`);
     } finally {
       setIsStarting(false);
+    }
+  }
+
+  async function reopenNegotiation() {
+    if (!role || isStarting || isReopening) return;
+
+    setActionError("");
+    setIsReopening(true);
+
+    try {
+      if (hotseatMode) {
+        setHotseatActiveRole(gameId, role);
+      }
+
+      await setEditor(gameId, myToken);
+      navigate(`/create/activities/${gameId}`);
+    } catch (error) {
+      console.error("Failed to reopen negotiation:", error);
+      setActionError("Could not reopen the negotiation loop. Please try again.");
+      setIsReopening(false);
     }
   }
 
@@ -173,7 +198,12 @@ export default function Summary() {
               ? `${playerOneDisplay} should start the game from this screen when both players are ready. Starting the game creates the live turn tracker. Both players can return later with the same Game ID.`
               : `${playerOneDisplay} starts the game from this screen. ${playerTwoDisplay} should stay here, and gameplay will open automatically as soon as ${playerOneDisplay} starts it. Both players can return later with the same Game ID.`}
           </p>
+          <p className="summary-flow-note-followup">
+            If either player wants more changes, use Revisit Negotiation instead of starting the game.
+          </p>
         </div>
+
+        {actionError && <div className="summary-action-error">{actionError}</div>}
 
         <div className="summary-list" role="table" aria-label="Final activity list">
           <div className="summary-list-head" role="row">
@@ -191,17 +221,29 @@ export default function Summary() {
           ))}
         </div>
 
-        {role === "playerOne" ? (
+        <div className="summary-action-row">
           <button
-            className="start-game-btn"
-            onClick={startGame}
-            disabled={isStarting}
+            className="summary-secondary-btn"
+            onClick={reopenNegotiation}
+            disabled={isStarting || isReopening}
           >
-            {isStarting ? "Starting…" : "Player One: Start Game →"}
+            {isReopening
+              ? "Reopening…"
+              : `${currentSeatLabel}: Revisit Negotiation`}
           </button>
-        ) : (
-          <p>{`${playerTwoDisplay} should wait here while ${playerOneDisplay} starts the game.`}</p>
-        )}
+
+          {role === "playerOne" ? (
+            <button
+              className="start-game-btn"
+              onClick={startGame}
+              disabled={isStarting || isReopening}
+            >
+              {isStarting ? "Starting…" : "Player One: Start Game →"}
+            </button>
+          ) : (
+            <p className="summary-waiting-note">{`${playerTwoDisplay} should wait here while ${playerOneDisplay} starts the game, unless ${playerTwoDisplay} wants to reopen negotiation.`}</p>
+          )}
+        </div>
       </div>
     </div>
   );
