@@ -175,11 +175,18 @@ export default function Summary() {
           </p>
         </div>
 
-        <div className="summary-list">
+        <div className="summary-list" role="table" aria-label="Final activity list">
+          <div className="summary-list-head" role="row">
+            <div className="summary-col summary-col-name" role="columnheader">Activity</div>
+            <div className="summary-col summary-col-duration" role="columnheader">Duration</div>
+            <div className="summary-col summary-col-cost" role="columnheader">Cost</div>
+          </div>
+
           {finalActivities.map((activity) => (
-            <div className="summary-item" key={activity.id}>
-              <div className="summary-name">{activity.name}</div>
-              <div className="summary-cost">{activity.cost} tokens</div>
+            <div className="summary-item" key={activity.id} role="row">
+              <div className="summary-col summary-col-name" role="cell">{activity.name}</div>
+              <div className="summary-col summary-col-duration" role="cell">{activity.duration || "—"}</div>
+              <div className="summary-col summary-col-cost" role="cell">{activity.cost} tokens</div>
             </div>
           ))}
         </div>

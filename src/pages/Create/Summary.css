@@ -12,8 +12,7 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 40px;
-  width: 90%;
-  max-width: 420px;
+  width: min(92vw, 760px);
   text-align: center;
   backdrop-filter: blur(18px);
   box-shadow: 0 0 40px rgba(255, 0, 128, 0.25);
@@ -50,7 +49,7 @@
 }
 
 .changed-field {
-  background: rgba(255, 215, 0, 0.15); /* soft gold highlight */
+  background: rgba(255, 215, 0, 0.15);
   padding: 2px 4px;
   border-radius: 4px;
 }
@@ -75,8 +74,98 @@
   margin: 0;
 }
 
+.summary-list {
+  margin: 22px 0 28px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.summary-list-head,
+.summary-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) 130px 120px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+}
+
+.summary-list-head {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.summary-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-col {
+  min-width: 0;
+  color: #f6eef3;
+}
+
+.summary-col-name {
+  text-align: left;
+}
+
+.summary-col-duration,
+.summary-col-cost {
+  text-align: center;
+}
+
+.summary-list-head .summary-col {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.summary-item .summary-col-name {
+  font-size: 1.02rem;
+  color: #ffffff;
+}
+
+.summary-item .summary-col-duration {
+  color: #d8f9f3;
+}
+
+.summary-item .summary-col-cost {
+  color: #ffd6ea;
+  font-weight: 600;
+}
+
 .change-marker {
   color: #f7d14c;
   font-weight: bold;
   margin-left: 4px;
+}
+
+@media (max-width: 640px) {
+  .summary-card {
+    padding: 28px 20px;
+    width: min(94vw, 520px);
+  }
+
+  .summary-list-head,
+  .summary-item {
+    grid-template-columns: minmax(0, 1.5fr) 92px 88px;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .summary-list-head .summary-col {
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+  }
+
+  .summary-item .summary-col-name,
+  .summary-item .summary-col-duration,
+  .summary-item .summary-col-cost {
+    font-size: 0.92rem;
+  }
 }
