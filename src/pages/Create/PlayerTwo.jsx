@@ -131,6 +131,16 @@ export default function PlayerTwo() {
         <h1 className="create-title">Player Two</h1>
         <p className="create-subtitle">Enter your name and choose your color.</p>
 
+        <div className="create-flow-card">
+          <strong>One-device negotiation flow</strong>
+          <p>
+            Player One edits the activity list first. Then pass the device to
+            Player Two to review it. If the reviewer wants more changes, that
+            reviewer becomes the next editor. When both players approve, the
+            summary opens automatically.
+          </p>
+        </div>
+
         <input
           className="create-input"
           placeholder="Your name..."

@@ -41,6 +41,26 @@
   margin-bottom: 28px;
 }
 
+.create-flow-card {
+  margin: -8px 0 24px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(79, 246, 231, 0.08);
+  border: 1px solid rgba(79, 246, 231, 0.24);
+}
+
+.create-flow-card strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #4ff6e7;
+}
+
+.create-flow-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  line-height: 1.55;
+}
+
 /* ================================
    Input
 ================================ */

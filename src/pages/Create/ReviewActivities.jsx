@@ -11,7 +11,7 @@ import {
   setEditor,
 } from "../../services/activityStore";
 
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame, loadIdentity } from "../../services/setupStorage";
 import { waitingRouteForRole } from "./waitingRoute";
 import { hasApprovedCurrentDraft } from "../../services/negotiationRoute";
 import ReconnectCodeCard from "../../components/ReconnectCodeCard";
@@ -24,6 +24,7 @@ export default function ReviewActivities() {
 
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const [state, setState] = useState({
     draft: [],
@@ -67,6 +68,23 @@ export default function ReviewActivities() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+
+  const playerOneDisplay = players[0]?.name
+    ? `${players[0].name} (Player One)`
+    : "Player One";
+  const playerTwoDisplay = players[1]?.name
+    ? `${players[1].name} (Player Two)`
+    : "Player Two";
+  const currentSeatLabel = role === "playerOne"
+    ? "Player One"
+    : role === "playerTwo"
+      ? "Player Two"
+      : "Current Player";
+  const currentActorLabel = role === "playerOne"
+    ? playerOneDisplay
+    : role === "playerTwo"
+      ? playerTwoDisplay
+      : "Current player";
   const waitingRoute = waitingRouteForRole(role, gameId);
   const alreadyApproved = hasApprovedCurrentDraft({ approvals }, role);
   const bothApproved = approvals.playerOne && approvals.playerTwo;
@@ -230,8 +248,12 @@ export default function ReviewActivities() {
   return (
     <div className="review-screen">
       <div className="review-card">
-        <h2>Review Your Activity List</h2>
-        <p>Approve this proposal or make further changes. Changes are highlighted.</p>
+        <h2>{hotseatMode ? `${currentSeatLabel}: Review Activity List` : "Review Your Activity List"}</h2>
+        <p>
+          {hotseatMode
+            ? `${currentActorLabel} should review the latest draft on this screen.`
+            : "Approve this proposal or make further changes. Changes are highlighted."}
+        </p>
 
         {actionError && <div className="review-error">{actionError}</div>}
 
@@ -247,8 +269,12 @@ export default function ReviewActivities() {
         )}
 
         <div className="review-flow-note">
-          <strong>Before you approve</strong>
-          <p>Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Approving confirms this draft and advances both players.</p>
+          <strong>{hotseatMode ? "Who acts now" : "Before you approve"}</strong>
+          <p>
+            {hotseatMode
+              ? `${currentActorLabel} is the reviewer for this round. Tap Approve and Open Summary if this version is ready. Tap Take Over Editing if ${currentSeatLabel} wants to make the next round of changes on this device.`
+              : "Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Approving confirms this draft and advances both players."}
+          </p>
         </div>
 
         <div className="review-table">
@@ -261,7 +287,11 @@ export default function ReviewActivities() {
             onClick={handleProposeChanges}
             disabled={isApproving || isProposingChanges}
           >
-            {isProposingChanges ? "Opening Editor…" : "Propose Changes"}
+            {isProposingChanges
+              ? "Opening Editor…"
+              : hotseatMode
+                ? "Take Over Editing"
+                : "Propose Changes"}
           </button>
 
           <button
@@ -269,7 +299,11 @@ export default function ReviewActivities() {
             onClick={handleApprove}
             disabled={isApproving || isProposingChanges}
           >
-            {isApproving ? "Approving…" : "Approve →"}
+            {isApproving
+              ? "Approving…"
+              : hotseatMode
+                ? "Approve and Open Summary →"
+                : "Approve →"}
           </button>
         </div>
       </div>

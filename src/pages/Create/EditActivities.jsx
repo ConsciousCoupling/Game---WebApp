@@ -11,7 +11,7 @@ import {
   setEditor,
 } from "../../services/activityStore";
 
-import { loadIdentity } from "../../services/setupStorage";
+import { isHotseatGame, loadIdentity } from "../../services/setupStorage";
 import { ACTIVITIES } from "../../game/data/activityList";
 import { waitingRouteForRole } from "./waitingRoute";
 import ReconnectCodeCard from "../../components/ReconnectCodeCard";
@@ -25,6 +25,7 @@ export default function EditActivities() {
   // Identity token for this device
   const identity = loadIdentity(gameId);
   const myToken = identity?.token || null;
+  const hotseatMode = isHotseatGame(gameId);
 
   const [state, setState] = useState({
     draft: [],
@@ -78,6 +79,25 @@ export default function EditActivities() {
   let role = null;
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
+
+  const playerOneDisplay = state.players[0]?.name
+    ? `${state.players[0].name} (Player One)`
+    : "Player One";
+  const playerTwoDisplay = state.players[1]?.name
+    ? `${state.players[1].name} (Player Two)`
+    : "Player Two";
+  const currentSeatLabel = role === "playerOne"
+    ? "Player One"
+    : role === "playerTwo"
+      ? "Player Two"
+      : "Current Player";
+  const partnerSeatLabel = role === "playerOne" ? "Player Two" : "Player One";
+  const currentActorLabel = role === "playerOne"
+    ? playerOneDisplay
+    : role === "playerTwo"
+      ? playerTwoDisplay
+      : "Current player";
+  const partnerActorLabel = role === "playerOne" ? playerTwoDisplay : playerOneDisplay;
   const waitingRoute = waitingRouteForRole(role, gameId);
   const hasApprovedCurrentDraft = !!(role && approvals?.[role]);
   const canEdit = !!(
@@ -272,28 +292,40 @@ export default function EditActivities() {
   return (
     <div className="edit-screen">
       <div className="edit-card">
-        <h2>Edit Activity List</h2>
-        <p>Modify, remove, or add activities below.</p>
+        <h2>{hotseatMode ? `${currentSeatLabel}: Edit Activity List` : "Edit Activity List"}</h2>
+        <p>
+          {hotseatMode
+            ? `${currentActorLabel} should make the next set of changes on this screen.`
+            : "Modify, remove, or add activities below."}
+        </p>
         {submitError && <div className="submit-error">{submitError}</div>}
 
         <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
         <div className="proposal-note-card">
           <label className="proposal-note-label" htmlFor="proposal-note">
-            Optional note for your partner
+            {hotseatMode ? `Optional note for ${partnerSeatLabel}` : "Optional note for your partner"}
           </label>
           <textarea
             id="proposal-note"
             className="proposal-note-input"
             value={localProposalNote}
             onChange={(e) => setLocalProposalNote(e.target.value)}
-            placeholder="Explain why you want these changes."
+            placeholder={
+              hotseatMode
+                ? `Tell ${partnerActorLabel} what changed or what to focus on.`
+                : "Explain why you want these changes."
+            }
           />
         </div>
 
         <div className="flow-note">
-          <strong>How this step works</strong>
-          <p>Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review.</p>
+          <strong>{hotseatMode ? "Who acts now" : "How this step works"}</strong>
+          <p>
+            {hotseatMode
+              ? `${currentActorLabel} is the editor right now. Make the changes on this screen, then tap Submit for ${partnerSeatLabel} Review. Next, pass the device to ${partnerActorLabel} so they can review and either approve or reopen editing.`
+              : "Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review."}
+          </p>
         </div>
 
         <div className="activity-list">
@@ -359,7 +391,11 @@ export default function EditActivities() {
           onClick={saveAndSubmit}
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Submitting..." : "Submit Changes →"}
+          {isSubmitting
+            ? "Submitting..."
+            : hotseatMode
+              ? `Submit for ${partnerSeatLabel} Review →`
+              : "Submit Changes →"}
         </button>
 
       </div>
