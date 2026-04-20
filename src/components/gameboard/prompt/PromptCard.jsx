@@ -222,7 +222,7 @@ export default function PromptCard({
           </>
         ) : isResponder ? (
           <>
-            <strong>You&apos;re answering this one.</strong> Type a reply, record a voice note,
+            <strong>{responderName}</strong> is answering this one. Type a reply, record a voice note,
             or answer live, then send it to <strong>{reviewerName}</strong> for rating.
           </>
         ) : (
