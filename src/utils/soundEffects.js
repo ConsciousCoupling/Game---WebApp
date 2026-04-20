@@ -1,6 +1,65 @@
 let audioContext = null;
 let noiseBuffer = null;
 
+const SAMPLE_SOUND_PATHS = {
+  dice: "/sounds/dice-roll.mp3",
+  coin: "/sounds/coin-flip.mp3",
+};
+
+const sampleTemplates = new Map();
+const activeSamplePlayers = new Set();
+
+function getSampleTemplate(effect) {
+  if (typeof window === "undefined" || typeof Audio === "undefined") return null;
+
+  if (!sampleTemplates.has(effect)) {
+    const src = SAMPLE_SOUND_PATHS[effect];
+    if (!src) return null;
+
+    const audio = new Audio(src);
+    audio.preload = "auto";
+    sampleTemplates.set(effect, audio);
+  }
+
+  return sampleTemplates.get(effect) || null;
+}
+
+function warmSampleAudio() {
+  Object.keys(SAMPLE_SOUND_PATHS).forEach((effect) => {
+    const audio = getSampleTemplate(effect);
+    if (audio && audio.readyState === 0) {
+      audio.load();
+    }
+  });
+}
+
+function playSampleAudio(effect, fallback) {
+  const template = getSampleTemplate(effect);
+  if (!template?.src) {
+    fallback();
+    return;
+  }
+
+  const player = new Audio(template.src);
+  player.preload = "auto";
+
+  const cleanup = () => {
+    activeSamplePlayers.delete(player);
+  };
+
+  player.addEventListener("ended", cleanup, { once: true });
+  player.addEventListener("error", cleanup, { once: true });
+  activeSamplePlayers.add(player);
+
+  const playPromise = player.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      cleanup();
+      fallback();
+    });
+  }
+}
+
 function getAudioContext() {
   if (typeof window === "undefined") return null;
 
@@ -67,57 +126,7 @@ function playTone({
   oscillator.stop(startTime + attack + decay + 0.05);
 }
 
-export function primeGameAudio() {
-  const context = getAudioContext();
-  if (!context) return;
-
-  if (context.state === "suspended") {
-    context.resume().catch(() => {});
-  }
-}
-
-export function playTurnAlertSound() {
-  const context = getAudioContext();
-  if (!context) return;
-
-  if (context.state === "suspended") {
-    context.resume().catch(() => {});
-  }
-
-  const now = context.currentTime + 0.01;
-
-  playTone({
-    type: "sine",
-    frequency: 660,
-    frequencyEnd: 760,
-    startTime: now,
-    attack: 0.01,
-    decay: 0.16,
-    volume: 0.05,
-  });
-
-  playTone({
-    type: "sine",
-    frequency: 880,
-    frequencyEnd: 980,
-    startTime: now + 0.14,
-    attack: 0.01,
-    decay: 0.18,
-    volume: 0.05,
-  });
-
-  playTone({
-    type: "triangle",
-    frequency: 1175,
-    frequencyEnd: 1319,
-    startTime: now + 0.3,
-    attack: 0.01,
-    decay: 0.26,
-    volume: 0.045,
-  });
-}
-
-export function playCoinFlipSound() {
+function playCoinFlipFallback() {
   const context = getAudioContext();
   if (!context) return;
 
@@ -148,7 +157,7 @@ export function playCoinFlipSound() {
   });
 }
 
-export function playDiceRollSound() {
+function playDiceRollFallback() {
   const context = getAudioContext();
   if (!context) return;
 
@@ -197,4 +206,66 @@ export function playDiceRollSound() {
     decay: 0.1,
     volume: 0.01,
   });
+}
+
+export function primeGameAudio() {
+  const context = getAudioContext();
+  if (context && context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
+
+  warmSampleAudio();
+}
+
+export function playTurnAlertSound() {
+  const context = getAudioContext();
+  if (!context) return;
+
+  if (context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
+
+  const now = context.currentTime + 0.01;
+
+  playTone({
+    type: "sine",
+    frequency: 660,
+    frequencyEnd: 760,
+    startTime: now,
+    attack: 0.01,
+    decay: 0.16,
+    volume: 0.05,
+  });
+
+  playTone({
+    type: "sine",
+    frequency: 880,
+    frequencyEnd: 980,
+    startTime: now + 0.14,
+    attack: 0.01,
+    decay: 0.18,
+    volume: 0.05,
+  });
+
+  playTone({
+    type: "triangle",
+    frequency: 1175,
+    frequencyEnd: 1319,
+    startTime: now + 0.3,
+    attack: 0.01,
+    decay: 0.26,
+    volume: 0.045,
+  });
+}
+
+export function playCoinFlipSound() {
+  playSampleAudio("coin", playCoinFlipFallback);
+}
+
+export function playDiceRollSound() {
+  playSampleAudio("dice", playDiceRollFallback);
+}
+
+if (typeof window !== "undefined") {
+  warmSampleAudio();
 }
