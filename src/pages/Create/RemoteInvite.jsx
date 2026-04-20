@@ -20,11 +20,14 @@ export default function RemoteInvite() {
     ? "Open IntimaDate in a second browser or incognito window, choose Join Game, and enter this code there."
     : "Ask them to open IntimaDate, choose Join Game, and enter this code.";
   const continueLabel = isSameDeviceMode
-    ? "Continue as Player One →"
-    : "Continue to Edit Activities →";
+    ? "Player One: Continue as Player One →"
+    : "Player One: Continue to Edit Activities →";
   const waitingStatus = isSameDeviceMode
     ? "Waiting for Player Two to join from the second window…"
     : "Waiting for Player Two…";
+  const nextStepNote = isSameDeviceMode
+    ? "Player One edits the first activity draft after the next screen opens. Player Two joins from the second window and then reviews or edits the same list."
+    : "Player One edits the first activity draft after this step. Player Two joins with the code above and then reviews or edits the same list.";
 
   function copyCode() {
     navigator.clipboard.writeText(gameId);
@@ -44,6 +47,7 @@ export default function RemoteInvite() {
         </div>
 
         <p className="instructions">{instructions}</p>
+        <p className="instructions">{nextStepNote}</p>
 
         <ReconnectCodeCard
           gameId={gameId}

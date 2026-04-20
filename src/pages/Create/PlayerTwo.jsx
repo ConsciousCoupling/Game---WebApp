@@ -132,12 +132,19 @@ export default function PlayerTwo() {
         <p className="create-subtitle">Enter your name and choose your color.</p>
 
         <div className="create-flow-card">
-          <strong>One-device negotiation flow</strong>
+          <strong>How these activities work</strong>
           <p>
-            Player One edits the activity list first. Then pass the device to
-            Player Two to review it. If the reviewer wants more changes, that
-            reviewer becomes the next editor. When both players approve, the
-            summary opens automatically.
+            These activities appear in the Activity Shop during gameplay. When a
+            player rolls a 6, that player can spend tokens on one activity and then
+            flip a coin to decide who performs it.
+          </p>
+
+          <strong className="create-flow-card-heading">One-device negotiation flow</strong>
+          <p>
+            Player One edits the first draft on this device. Then pass the device to
+            Player Two to review it. If Player Two wants more changes, Player Two
+            takes over editing for the next round. The game starts only after both
+            players approve the same activity list.
           </p>
         </div>
 
@@ -167,7 +174,7 @@ export default function PlayerTwo() {
           className={`presence-btn ${!name.trim() ? "disabled" : ""}`}
           onClick={handleJoinLocal}
         >
-          Join Game →
+          Player Two: Join Game →
         </button>
       </div>
     </div>

@@ -53,6 +53,17 @@ export default function PlayerOneWaitingRoom() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
 
+  const playerOneDisplay = players[0]?.name
+    ? `${players[0].name} (Player One)`
+    : "Player One";
+  const playerTwoDisplay = players[1]?.name
+    ? `${players[1].name} (Player Two)`
+    : "Player Two";
+  const currentSeatLabel = role === "playerTwo" ? "Player Two" : "Player One";
+  const currentActorLabel = role === "playerTwo" ? playerTwoDisplay : playerOneDisplay;
+  const partnerSeatLabel = role === "playerTwo" ? "Player One" : "Player Two";
+  const partnerActorLabel = role === "playerTwo" ? playerOneDisplay : playerTwoDisplay;
+
   const bothApproved = approvals.playerOne && approvals.playerTwo;
   const alreadyApproved = hasApprovedCurrentDraft({ approvals }, role);
   const shouldRedirectToSummary = !!(role && bothApproved);
@@ -115,8 +126,6 @@ export default function PlayerOneWaitingRoom() {
     );
   }
 
-  const partnerName = players[1]?.name || "your partner";
-
   if (shouldRedirectToSummary || shouldRedirectToActivities || shouldRedirectToReview) {
     return (
       <div className="waiting-screen">
@@ -132,10 +141,10 @@ export default function PlayerOneWaitingRoom() {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
-          <h2>Waiting for {partnerName}…</h2>
-          <p>Your partner is reviewing or editing the activity list.</p>
+          <h2>Waiting for {partnerActorLabel}…</h2>
+          <p>{partnerActorLabel} is reviewing or editing the activity list.</p>
           <div className="waiting-next-step">
-            You&apos;ll move forward automatically when they submit or approve the draft.
+            {currentSeatLabel} should wait on this screen. It will advance automatically when {partnerSeatLabel} submits or approves the draft.
           </div>
           <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
@@ -147,10 +156,10 @@ export default function PlayerOneWaitingRoom() {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
-          <h2>Waiting for {partnerName}…</h2>
-          <p>Your partner is updating the activity list.</p>
+          <h2>Waiting for {partnerActorLabel}…</h2>
+          <p>{partnerActorLabel} is updating the activity list.</p>
           <div className="waiting-next-step">
-            Once both of you approve, this screen will advance to the summary automatically.
+            {currentSeatLabel} should wait here. This screen moves to the summary automatically after both players approve the same list.
           </div>
           <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
@@ -162,10 +171,10 @@ export default function PlayerOneWaitingRoom() {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
-          <h2>Waiting for {partnerName}…</h2>
-          <p>Your latest proposal is ready for review.</p>
+          <h2>Waiting for {partnerActorLabel}…</h2>
+          <p>{currentActorLabel} has already approved the latest draft.</p>
           <div className="waiting-next-step">
-            Stay on this page. You&apos;ll move to the summary as soon as both players approve.
+            {partnerActorLabel} is reviewing it now. {currentSeatLabel} should stay on this page until both players approve and the summary opens.
           </div>
           <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
         </div>
@@ -177,9 +186,9 @@ export default function PlayerOneWaitingRoom() {
     <div className="waiting-screen">
       <div className="waiting-card">
         <h2>Waiting…</h2>
-        <p>The game is syncing. You will continue automatically.</p>
+        <p>{currentActorLabel} should wait on this screen while the shared activity draft syncs.</p>
         <div className="waiting-next-step">
-          Stay on this page. No refresh is needed.
+          No refresh is needed. This screen will continue automatically.
         </div>
         <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
       </div>

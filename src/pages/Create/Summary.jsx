@@ -62,6 +62,13 @@ export default function Summary() {
   if (roles.playerOne === myToken) role = "playerOne";
   if (roles.playerTwo === myToken) role = "playerTwo";
 
+  const playerOneDisplay = players[0]?.name
+    ? `${players[0].name} (Player One)`
+    : "Player One";
+  const playerTwoDisplay = players[1]?.name
+    ? `${players[1].name} (Player Two)`
+    : "Player Two";
+
   const waitingRoute = waitingRouteForRole(role, gameId);
   const shouldRedirectToWaiting = !!(
     role && (!approvals.playerOne || !approvals.playerTwo)
@@ -155,15 +162,16 @@ export default function Summary() {
     <div className="summary-screen">
       <div className="summary-card">
         <h2>Final Activity List</h2>
-        <p>This is the list you will use in the game.</p>
+        <p>These are the Activity Shop options that appear when a player rolls a 6.</p>
 
         <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
         <div className="summary-flow-note">
           <strong>Next step</strong>
           <p>
-            Starting the game creates the live turn tracker. Both players can return later
-            with the same Game ID.
+            {role === "playerOne"
+              ? `${playerOneDisplay} should start the game from this screen when both players are ready. Starting the game creates the live turn tracker. Both players can return later with the same Game ID.`
+              : `${playerOneDisplay} starts the game from this screen. ${playerTwoDisplay} should stay here, and gameplay will open automatically as soon as ${playerOneDisplay} starts it. Both players can return later with the same Game ID.`}
           </p>
         </div>
 
@@ -182,10 +190,10 @@ export default function Summary() {
             onClick={startGame}
             disabled={isStarting}
           >
-            {isStarting ? "Starting…" : "Start Game →"}
+            {isStarting ? "Starting…" : "Player One: Start Game →"}
           </button>
         ) : (
-          <p>Waiting for Player One to start the game.</p>
+          <p>{`${playerTwoDisplay} should wait here while ${playerOneDisplay} starts the game.`}</p>
         )}
       </div>
     </div>

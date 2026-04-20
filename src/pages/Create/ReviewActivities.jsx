@@ -286,10 +286,19 @@ export default function ReviewActivities() {
         )}
 
         <div className="review-flow-note">
+          <strong>How these activities are used</strong>
+          <p>
+            This approved list becomes the Activity Shop used when a player rolls a 6
+            during gameplay. The active player can spend tokens on one activity,
+            then the coin toss decides who performs it.
+          </p>
+        </div>
+
+        <div className="review-flow-note">
           <strong>{hotseatMode ? "Who acts now" : "Before you approve"}</strong>
           <p>
             {hotseatMode
-              ? `${currentActorLabel} is the reviewer for this round. Read any row note attached to a change, addition, or deletion before you decide. Tap Approve and Open Summary if this version is ready. Tap Take Over Editing if ${currentSeatLabel} wants to make the next round of changes on this device.`
+              ? `${currentActorLabel} is the reviewer for this round. Read any row note attached to a change, addition, or deletion before you decide. Tap ${currentSeatLabel}: Approve and Open Summary if this version is ready. Tap ${currentSeatLabel}: Take Over Editing if ${currentSeatLabel} wants to make the next round of changes on this device.`
               : "Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Any note shown under a row explains that specific addition, edit, or deletion. Approving confirms this draft and advances both players."}
           </p>
         </div>
@@ -307,7 +316,7 @@ export default function ReviewActivities() {
             {isProposingChanges
               ? "Opening Editor…"
               : hotseatMode
-                ? "Take Over Editing"
+                ? `${currentSeatLabel}: Take Over Editing`
                 : "Propose Changes"}
           </button>
 
@@ -319,7 +328,7 @@ export default function ReviewActivities() {
             {isApproving
               ? "Approving…"
               : hotseatMode
-                ? "Approve and Open Summary →"
+                ? `${currentSeatLabel}: Approve and Open Summary →`
                 : "Approve →"}
           </button>
         </div>

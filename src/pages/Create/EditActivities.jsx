@@ -345,6 +345,15 @@ export default function EditActivities() {
 
         <ReconnectCodeCard gameId={gameId} role={role} token={myToken} />
 
+        <div className="flow-note">
+          <strong>How these activities are used</strong>
+          <p>
+            These activities appear in the Activity Shop whenever a player rolls a 6
+            during gameplay. The active player can spend tokens on one activity,
+            then flip a coin to decide who performs it.
+          </p>
+        </div>
+
         <div className="proposal-note-card">
           <label className="proposal-note-label" htmlFor="proposal-note">
             {hotseatMode ? `Optional note for ${partnerSeatLabel}` : "Optional note for your partner"}
@@ -363,11 +372,11 @@ export default function EditActivities() {
         </div>
 
         <div className="flow-note">
-          <strong>{hotseatMode ? "Who acts now" : "How this step works"}</strong>
+          <strong>{hotseatMode ? "Who edits this round" : "How negotiation works"}</strong>
           <p>
             {hotseatMode
-              ? `${currentActorLabel} is the editor right now. Make the changes on this screen, add an optional note under any changed, added, or deleted activity, then tap Submit for ${partnerSeatLabel} Review. Next, pass the device to ${partnerActorLabel} so they can review and either approve or reopen editing.`
-              : "Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review. You can also add an optional note to any changed row to explain that specific update."}
+              ? `${currentActorLabel} is the editor for this round. Make the changes on this screen, add an optional note under any changed, added, or deleted activity, then tap ${currentSeatLabel}: Submit for ${partnerSeatLabel} Review. Next, ${partnerActorLabel} reviews the draft and either approves it or takes over editing for the next round.`
+              : "Edit the list on this screen, then submit it for your partner to review. Your partner can approve it or send it back for another round of edits, and the game starts only after both players approve the same activity list."}
           </p>
         </div>
 
@@ -455,7 +464,7 @@ export default function EditActivities() {
           {isSubmitting
             ? "Submitting..."
             : hotseatMode
-              ? `Submit for ${partnerSeatLabel} Review →`
+              ? `${currentSeatLabel}: Submit for ${partnerSeatLabel} Review →`
               : "Submit Changes →"}
         </button>
 

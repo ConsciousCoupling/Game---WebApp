@@ -161,6 +161,22 @@ export default function PlayerOne() {
         <h1 className="create-title">Player One</h1>
         <p className="create-subtitle create-caps-text">Enter your name</p>
 
+        <div className="create-flow-card">
+          <strong>How these activities work</strong>
+          <p>
+            This list becomes the Activity Shop used during gameplay. When a player
+            rolls a 6, that player can spend tokens on one activity and then flip a
+            coin to decide who performs it.
+          </p>
+
+          <strong className="create-flow-card-heading">How negotiation works</strong>
+          <p>
+            Player One creates the first draft. Then Player Two reviews it, approves
+            it, or takes over editing for the next round. The game starts only after
+            both players approve the same activity list.
+          </p>
+        </div>
+
         <input
           className="create-input"
           placeholder="Your name..."
@@ -190,7 +206,7 @@ export default function PlayerOne() {
           </button>
 
           <p className="presence-btn-note">
-            One-device hotseat mode.
+            Player One edits the first draft on this device. Then Player Two reviews it here.
           </p>
 
           <button
