@@ -172,12 +172,13 @@ export default function EditActivities() {
   // -------------------------------------------------------
   function updateField(index, field, value) {
     const next = [...localDraft];
-    next[index][field] = field === "cost" ? Number(value || 0) : value;
+    const normalizedValue = field === "cost" ? Number(value || 0) : value;
+    next[index][field] = normalizedValue;
 
     // Mark changed field
     next[index].changedFields = {
       ...(next[index].changedFields || {}),
-      [field]: true,
+      [field]: field === "changeNote" ? !!String(value || "").trim() : true,
     };
 
     setLocalDraft(next);
@@ -201,10 +202,12 @@ export default function EditActivities() {
       {
         ...activity,
         id: createActivityId("template"),
+        changeNote: "",
         changedFields: {
           name: true,
           cost: true,
           duration: true,
+          changeNote: false,
         },
         added: true,
       },
@@ -221,6 +224,7 @@ export default function EditActivities() {
         duration: "",
         cost: 0,
         description: "",
+        changeNote: "",
         deleted: false,
         added: true,
         changedFields: {
@@ -228,6 +232,7 @@ export default function EditActivities() {
           cost: true,
           duration: true,
           description: true,
+          changeNote: false,
         },
       },
     ];
@@ -255,6 +260,44 @@ export default function EditActivities() {
     }
 
     return "Each activity must have a valid token cost of 0 or more.";
+  }
+
+  function shouldShowChangeNote(activity) {
+    const changedFields = activity?.changedFields || {};
+    return !!(
+      activity?.added ||
+      activity?.deleted ||
+      changedFields.name ||
+      changedFields.duration ||
+      changedFields.cost ||
+      changedFields.description ||
+      changedFields.changeNote ||
+      String(activity?.changeNote || "").trim()
+    );
+  }
+
+  function getActivityChangeNoteLabel(activity) {
+    if (activity.deleted) return "Optional note about deleting this activity";
+    if (activity.added) return "Optional note about adding this activity";
+    return "Optional note about this proposed change";
+  }
+
+  function getActivityChangeNotePlaceholder(activity) {
+    if (activity.deleted) {
+      return hotseatMode
+        ? `Explain to ${partnerActorLabel} why this activity should be removed.`
+        : "Explain why this activity should be removed.";
+    }
+
+    if (activity.added) {
+      return hotseatMode
+        ? `Explain to ${partnerActorLabel} why this activity should be added.`
+        : "Explain why this activity should be added.";
+    }
+
+    return hotseatMode
+      ? `Explain to ${partnerActorLabel} why this activity changed.`
+      : "Explain why this activity changed.";
   }
 
   // -------------------------------------------------------
@@ -323,8 +366,8 @@ export default function EditActivities() {
           <strong>{hotseatMode ? "Who acts now" : "How this step works"}</strong>
           <p>
             {hotseatMode
-              ? `${currentActorLabel} is the editor right now. Make the changes on this screen, then tap Submit for ${partnerSeatLabel} Review. Next, pass the device to ${partnerActorLabel} so they can review and either approve or reopen editing.`
-              : "Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review."}
+              ? `${currentActorLabel} is the editor right now. Make the changes on this screen, add an optional note under any changed, added, or deleted activity, then tap Submit for ${partnerSeatLabel} Review. Next, pass the device to ${partnerActorLabel} so they can review and either approve or reopen editing.`
+              : "Adjust names, durations, or costs here. Deleted rows stay visible until you submit, and submitting hands the list to your partner for review. You can also add an optional note to any changed row to explain that specific update."}
           </p>
         </div>
 
@@ -363,6 +406,24 @@ export default function EditActivities() {
               )}
 
               {a.deleted && <span className="deleted-tag">Deleted</span>}
+
+              {shouldShowChangeNote(a) && (
+                <div className="activity-change-note-block">
+                  <label
+                    className="activity-change-note-label"
+                    htmlFor={`activity-note-${a.id}`}
+                  >
+                    {getActivityChangeNoteLabel(a)}
+                  </label>
+                  <textarea
+                    id={`activity-note-${a.id}`}
+                    className={`activity-change-note-input ${a.changedFields?.changeNote ? "changed" : ""}`}
+                    value={a.changeNote || ""}
+                    onChange={(e) => updateField(i, "changeNote", e.target.value)}
+                    placeholder={getActivityChangeNotePlaceholder(a)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

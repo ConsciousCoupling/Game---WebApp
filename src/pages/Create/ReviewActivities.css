@@ -147,7 +147,9 @@
 
 .review-row {
   display: grid;
-  grid-template-columns: 1.3fr 0.7fr 0.7fr;
+  grid-template-columns: 1.3fr 0.7fr 0.7fr auto auto;
+  gap: 12px;
+  row-gap: 10px;
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid #1e1e1e;
@@ -311,6 +313,33 @@
   color: green;
   font-weight: bold;
   margin-left: 8px;
+}
+
+.review-change-note {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(74, 127, 255, 0.12);
+  border: 1px solid rgba(74, 127, 255, 0.24);
+}
+
+.review-change-note.changed-note {
+  box-shadow: 0 0 0 1px rgba(74, 127, 255, 0.18) inset;
+}
+
+.review-change-note-title {
+  margin-bottom: 6px;
+  color: #dce6ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.review-change-note-body {
+  color: #eef2ff;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 720px) {

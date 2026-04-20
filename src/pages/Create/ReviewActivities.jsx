@@ -171,15 +171,23 @@ export default function ReviewActivities() {
       name: activity.name !== baselineActivity.name,
       duration: activity.duration !== baselineActivity.duration,
       cost: activity.cost !== baselineActivity.cost,
+      changeNote: String(activity.changeNote || "") !== String(baselineActivity.changeNote || ""),
       deleted: !!activity.deleted,
     };
 
     return changes;
   }
 
+  function getRowChangeNoteLabel(activity, status) {
+    if (status.deleted || activity.deleted) return "Deletion note";
+    if (status.added || activity.added) return "Addition note";
+    return "Change note";
+  }
+
   function renderRow(a, index) {
     const base = baseline[index];
     const status = getChangeStatus(a, base);
+    const trimmedChangeNote = String(a.changeNote || "").trim();
 
     const rowClass = `
       review-row
@@ -203,6 +211,15 @@ export default function ReviewActivities() {
 
         {status.deleted && <div className="review-deleted-flag">DELETED</div>}
         {status.added && <div className="review-added-flag">NEW</div>}
+
+        {trimmedChangeNote && (
+          <div className={`review-change-note ${status.changeNote ? "changed-note" : ""}`}>
+            <div className="review-change-note-title">
+              {getRowChangeNoteLabel(a, status)}
+            </div>
+            <div className="review-change-note-body">{trimmedChangeNote}</div>
+          </div>
+        )}
       </div>
     );
   }
@@ -272,8 +289,8 @@ export default function ReviewActivities() {
           <strong>{hotseatMode ? "Who acts now" : "Before you approve"}</strong>
           <p>
             {hotseatMode
-              ? `${currentActorLabel} is the reviewer for this round. Tap Approve and Open Summary if this version is ready. Tap Take Over Editing if ${currentSeatLabel} wants to make the next round of changes on this device.`
-              : "Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Approving confirms this draft and advances both players."}
+              ? `${currentActorLabel} is the reviewer for this round. Read any row note attached to a change, addition, or deletion before you decide. Tap Approve and Open Summary if this version is ready. Tap Take Over Editing if ${currentSeatLabel} wants to make the next round of changes on this device.`
+              : "Yellow fields changed, green rows are newly added, and red rows are marked for deletion. Any note shown under a row explains that specific addition, edit, or deletion. Approving confirms this draft and advances both players."}
           </p>
         </div>
 

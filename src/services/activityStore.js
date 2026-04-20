@@ -59,6 +59,7 @@ function normalizeActivity(a) {
     duration: a.duration ?? "",
     cost: Number(a.cost || 0),
     description: a.description || "",
+    changeNote: String(a.changeNote || "").trim(),
     deleted: !!a.deleted,
     added: !!a.added,
     changedFields: {
@@ -66,8 +67,66 @@ function normalizeActivity(a) {
       duration: !!(a.changedFields?.duration),
       cost: !!(a.changedFields?.cost),
       description: !!(a.changedFields?.description),
+      changeNote: !!(a.changedFields?.changeNote),
     },
   };
+}
+
+function clearActivityProposalNotes(draft = []) {
+  return draft.map((activity) => {
+    const normalized = normalizeActivity(activity);
+
+    return {
+      ...normalized,
+      changeNote: "",
+      changedFields: {
+        ...normalized.changedFields,
+        changeNote: false,
+      },
+    };
+  });
+}
+
+function activityHasCoreChange(activity, baselineActivity) {
+  if (!baselineActivity) {
+    return true;
+  }
+
+  return (
+    activity.name !== baselineActivity.name ||
+    activity.duration !== baselineActivity.duration ||
+    activity.cost !== baselineActivity.cost ||
+    activity.description !== baselineActivity.description ||
+    !!activity.deleted !== !!baselineActivity.deleted ||
+    !!activity.added !== !!baselineActivity.added
+  );
+}
+
+function normalizeDraftForSubmission(draft = [], previousDraft = []) {
+  const previousById = new Map(
+    previousDraft.map((activity) => {
+      const normalized = normalizeActivity(activity);
+      return [normalized.id, normalized];
+    })
+  );
+
+  return draft.map((activity) => {
+    const normalized = normalizeActivity(activity);
+    const baseline = previousById.get(normalized.id) || null;
+
+    if (normalized.changeNote && !activityHasCoreChange(normalized, baseline)) {
+      return {
+        ...normalized,
+        changeNote: "",
+        changedFields: {
+          ...normalized.changedFields,
+          changeNote: false,
+        },
+      };
+    }
+
+    return normalized;
+  });
 }
 
 function buildFinalActivities(draft = []) {
@@ -172,7 +231,10 @@ export async function setEditor(gameId, editorToken) {
   const role = getRoleFromIdentity(snap.data().roles || {}, editorToken);
   if (!role) return;
 
+  const sanitizedDraft = clearActivityProposalNotes(snap.data().activityDraft || []);
+
   await safeUpdateAsIdentity(gameId, {
+    activityDraft: sanitizedDraft,
     editor: editorToken,
     editTurn: role,
     approvals: {
@@ -267,10 +329,10 @@ export async function submitDraftActivities(
     throw new Error("Identity mismatch during activity submission.");
   }
 
-  const normalized = draft.map((a) => normalizeActivity(a));
   const previousDraft = (existing.activityDraft || []).map((activity) =>
     normalizeActivity(activity)
   );
+  const normalized = normalizeDraftForSubmission(draft, previousDraft);
   const normalizedProposalNote = String(proposalNote || "").trim();
 
   await safeUpdateAsIdentity(gameId, {
