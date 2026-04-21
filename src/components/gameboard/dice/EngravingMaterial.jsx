@@ -4,31 +4,33 @@ export default function EngravingMaterial({
   texture,
   color = "#ffffff",
   accent = "#ffffff",
-  opacity = 0.8,
+  opacity = 0.92,
+  materialRef,
 }) {
   return (
     <meshPhysicalMaterial
+      ref={materialRef}
       map={texture}
       color={color}
       transparent
       opacity={opacity}
-      transmission={0.58}
-      thickness={0.62}
-      roughness={0.16}
+      transmission={0.32}
+      thickness={0.42}
+      roughness={0.1}
       metalness={0}
       clearcoat={1}
-      clearcoatRoughness={0.03}
-      ior={1.2}
-      iridescence={0.24}
-      iridescenceIOR={1.18}
-      specularIntensity={0.95}
+      clearcoatRoughness={0.02}
+      ior={1.14}
+      iridescence={0.12}
+      iridescenceIOR={1.1}
+      specularIntensity={1}
       specularColor={accent}
       emissive={accent}
-      emissiveIntensity={0.18}
+      emissiveIntensity={0.08}
       emissiveMap={texture}
       attenuationColor={color}
-      attenuationDistance={0.42}
-      alphaTest={0.08}
+      attenuationDistance={0.32}
+      alphaTest={0.12}
       depthWrite={false}
       side={THREE.DoubleSide}
       toneMapped={false}
