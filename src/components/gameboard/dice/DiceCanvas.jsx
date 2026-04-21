@@ -68,8 +68,8 @@ export default function DiceCanvas({ engine, backdropStyle }) {
         <OrbitControls
           enablePan={false}
           enableZoom={false}
-          maxPolarAngle={Math.PI / 2.2}
-          minPolarAngle={Math.PI / 3}
+          maxPolarAngle={Math.PI - 0.18}
+          minPolarAngle={0.18}
           rotateSpeed={0.4}
         />
       </Canvas>
