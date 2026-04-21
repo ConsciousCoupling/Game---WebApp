@@ -33,11 +33,11 @@ const SHADOW_INSET = 0.12;
 const SHADOW_SIZE = 1.12;
 const FACE_WASH_INSET = 0.2;
 const FACE_WASH_SIZE = 1.01;
-const BLOOM_INSET = 0.1;
+const BLOOM_INSET = 0.085;
 const BLOOM_SIZE = 1.22;
-const ETCH_INSET = 0.075;
+const ETCH_INSET = 0.06;
 const ETCH_SIZE = 1.18;
-const PAINT_INSET = 0.055;
+const PAINT_INSET = 0.04;
 const PAINT_SIZE = 1.17;
 const LIGHT_INSET = 0.24;
 const LIGHT_DISTANCE = 1.55;
@@ -138,12 +138,12 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
 
     washMaterialRefs.forEach(({ current: material }) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.015, 0.03, settle);
+      material.opacity = THREE.MathUtils.lerp(0.02, 0.038, settle);
     });
 
     bloomMaterialRefs.forEach(({ current: material }) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.04, 0.09, settle);
+      material.opacity = THREE.MathUtils.lerp(0.055, 0.115, settle);
     });
 
     shadowMaterialRefs.forEach(({ current: material }) => {
@@ -161,12 +161,12 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
       material.opacity = THREE.MathUtils.lerp(0.76, 0.98, settle);
       material.transmission = THREE.MathUtils.lerp(0.2, 0.3, settle);
       material.thickness = THREE.MathUtils.lerp(0.34, 0.42, settle);
-      material.emissiveIntensity = THREE.MathUtils.lerp(0.04, 0.08, settle);
+      material.emissiveIntensity = THREE.MathUtils.lerp(0.05, 0.1, settle);
     });
 
     pointLightRefs.forEach(({ current: light }) => {
       if (!light) return;
-      light.intensity = THREE.MathUtils.lerp(0.03, 0.065, settle);
+      light.intensity = THREE.MathUtils.lerp(0.04, 0.08, settle);
     });
   });
 
@@ -185,7 +185,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 ref={washMaterialRefs[index]}
                 color={face.accent}
                 transparent
-                opacity={0.03}
+                opacity={0.038}
                 blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
@@ -204,7 +204,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 map={face.texture}
                 color={face.accent}
                 transparent
-                opacity={0.09}
+                opacity={0.115}
                 blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
@@ -252,7 +252,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
               ref={pointLightRefs[index]}
               position={insetFacePosition(face.position, LIGHT_INSET)}
               color={face.paint}
-              intensity={0.065}
+              intensity={0.08}
               distance={LIGHT_DISTANCE}
               decay={2}
             />
