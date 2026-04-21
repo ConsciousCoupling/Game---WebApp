@@ -64,8 +64,8 @@ const FACE_CONFIGS = [
   {
     key: "right",
     texture: EngravingTextures[5],
-    paint: "#2678ff",
-    accent: "#6fe7ff",
+    paint: "#6a4dff",
+    accent: "#c59bff",
     position: [FACE_OFFSET, 0, 0],
     rotation: [0, -Math.PI / 2, 0],
   },
