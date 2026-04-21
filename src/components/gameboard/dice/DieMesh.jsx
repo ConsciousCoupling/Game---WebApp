@@ -36,9 +36,9 @@ const FACE_WASH_SIZE = 1.01;
 const BLOOM_INSET = 0.085;
 const BLOOM_SIZE = 1.22;
 const ETCH_INSET = 0.06;
-const ETCH_SIZE = 1.18;
+const ETCH_SIZE = 1.2;
 const PAINT_INSET = 0.04;
-const PAINT_SIZE = 1.17;
+const PAINT_SIZE = 1.145;
 const LIGHT_INSET = 0.24;
 const LIGHT_DISTANCE = 1.55;
 const INNER_CORE_SCALE = 0.985;
@@ -64,8 +64,8 @@ const FACE_CONFIGS = [
   {
     key: "right",
     texture: EngravingTextures[5],
-    paint: "#6a4dff",
-    accent: "#c59bff",
+    paint: "#8f46ff",
+    accent: "#efb1ff",
     position: [FACE_OFFSET, 0, 0],
     rotation: [0, -Math.PI / 2, 0],
   },
@@ -148,12 +148,12 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
 
     shadowMaterialRefs.forEach(({ current: material }) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.28, 0.5, settle);
+      material.opacity = THREE.MathUtils.lerp(0.34, 0.58, settle);
     });
 
     etchMaterialRefs.forEach(({ current: material }) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.1, 0.28, settle);
+      material.opacity = THREE.MathUtils.lerp(0.14, 0.36, settle);
     });
 
     paintMaterialRefs.forEach(({ current: material }) => {
@@ -223,7 +223,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 map={face.texture}
                 color="#030408"
                 transparent
-                opacity={0.5}
+                opacity={0.58}
                 side={THREE.DoubleSide}
                 depthWrite={false}
                 toneMapped={false}
@@ -241,7 +241,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 map={face.texture}
                 color="#f7fbff"
                 transparent
-                opacity={0.28}
+                opacity={0.36}
                 side={THREE.DoubleSide}
                 depthWrite={false}
                 toneMapped={false}
