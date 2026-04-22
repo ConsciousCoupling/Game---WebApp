@@ -35,6 +35,8 @@ const FACE_WASH_INSET = 0.2;
 const FACE_WASH_SIZE = 1.01;
 const BLOOM_INSET = 0.085;
 const BLOOM_SIZE = 1.22;
+const RECESS_INSET = 0.095;
+const RECESS_SIZE = 1.17;
 const ETCH_INSET = 0.06;
 const ETCH_SIZE = 1.2;
 const STAIN_INSET = 0.05;
@@ -52,14 +54,15 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[1],
     paint: "#ff365f",
     accent: "#ffd9b0",
-    washBoost: 1.14,
-    bloomBoost: 1.16,
-    shadowBoost: 1.08,
-    etchBoost: 1.22,
-    stainBoost: 1.38,
-    paintBoost: 1.12,
+    washBoost: 0.82,
+    bloomBoost: 0.9,
+    recessBoost: 1.42,
+    shadowBoost: 1.18,
+    etchBoost: 0.72,
+    stainBoost: 1.52,
+    paintBoost: 1.16,
     emissiveBoost: 1.14,
-    lightBoost: 1.16,
+    lightBoost: 1.14,
     position: [0, FACE_OFFSET, 0],
     rotation: [-Math.PI / 2, 0, 0],
   },
@@ -68,14 +71,15 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[6],
     paint: "#ff9e2c",
     accent: "#ffe37a",
-    washBoost: 1.08,
-    bloomBoost: 1.12,
-    shadowBoost: 1.06,
-    etchBoost: 1.16,
-    stainBoost: 1.24,
-    paintBoost: 1.08,
+    washBoost: 0.88,
+    bloomBoost: 0.94,
+    recessBoost: 1.3,
+    shadowBoost: 1.14,
+    etchBoost: 0.78,
+    stainBoost: 1.36,
+    paintBoost: 1.1,
     emissiveBoost: 1.1,
-    lightBoost: 1.12,
+    lightBoost: 1.1,
     position: [0, -FACE_OFFSET, 0],
     rotation: [Math.PI / 2, 0, 0],
   },
@@ -100,14 +104,15 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[3],
     paint: "#2ecc71",
     accent: "#a8ff87",
-    washBoost: 1.08,
-    bloomBoost: 1.1,
-    shadowBoost: 1.06,
-    etchBoost: 1.14,
-    stainBoost: 1.2,
-    paintBoost: 1.07,
+    washBoost: 0.9,
+    bloomBoost: 0.95,
+    recessBoost: 1.24,
+    shadowBoost: 1.12,
+    etchBoost: 0.82,
+    stainBoost: 1.3,
+    paintBoost: 1.1,
     emissiveBoost: 1.08,
-    lightBoost: 1.1,
+    lightBoost: 1.08,
     position: [0, 0, FACE_OFFSET],
     rotation: [0, 0, 0],
   },
@@ -116,14 +121,15 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[4],
     paint: "#f542bd",
     accent: "#ff9d5c",
-    washBoost: 1.08,
-    bloomBoost: 1.1,
-    shadowBoost: 1.06,
-    etchBoost: 1.16,
-    stainBoost: 1.24,
-    paintBoost: 1.08,
+    washBoost: 0.88,
+    bloomBoost: 0.94,
+    recessBoost: 1.28,
+    shadowBoost: 1.14,
+    etchBoost: 0.8,
+    stainBoost: 1.34,
+    paintBoost: 1.12,
     emissiveBoost: 1.1,
-    lightBoost: 1.12,
+    lightBoost: 1.1,
     position: [0, 0, -FACE_OFFSET],
     rotation: [0, Math.PI, 0],
   },
@@ -141,6 +147,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
   const settleProgressRef = useRef(1);
   const washMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const bloomMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
+  const recessMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const shadowMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const etchMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const stainMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
@@ -181,6 +188,12 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
       if (!material) return;
       const boost = FACE_CONFIGS[index].bloomBoost ?? 1;
       material.opacity = THREE.MathUtils.lerp(0.07, 0.155, settle) * boost;
+    });
+
+    recessMaterialRefs.forEach(({ current: material }, index) => {
+      if (!material) return;
+      const boost = FACE_CONFIGS[index].recessBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.16, 0.34, settle) * boost;
     });
 
     shadowMaterialRefs.forEach(({ current: material }, index) => {
@@ -254,6 +267,24 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 transparent
                 opacity={0.155}
                 blending={THREE.AdditiveBlending}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+
+            <mesh
+              position={insetFacePosition(face.position, RECESS_INSET)}
+              rotation={face.rotation}
+              renderOrder={2.5}
+            >
+              <planeGeometry args={[RECESS_SIZE, RECESS_SIZE]} />
+              <meshBasicMaterial
+                ref={recessMaterialRefs[index]}
+                map={face.texture}
+                color="#090b12"
+                transparent
+                opacity={0.34}
                 side={THREE.DoubleSide}
                 depthWrite={false}
                 toneMapped={false}
