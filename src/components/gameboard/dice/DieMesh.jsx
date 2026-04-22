@@ -37,6 +37,8 @@ const BLOOM_INSET = 0.085;
 const BLOOM_SIZE = 1.22;
 const ETCH_INSET = 0.06;
 const ETCH_SIZE = 1.2;
+const STAIN_INSET = 0.05;
+const STAIN_SIZE = 1.155;
 const PAINT_INSET = 0.04;
 const PAINT_SIZE = 1.145;
 const LIGHT_INSET = 0.24;
@@ -109,6 +111,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
   const bloomMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const shadowMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const etchMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
+  const stainMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const paintMaterialRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
   const pointLightRefs = useMemo(() => FACE_CONFIGS.map(() => createRef()), []);
 
@@ -153,7 +156,12 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
 
     etchMaterialRefs.forEach(({ current: material }) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.14, 0.36, settle);
+      material.opacity = THREE.MathUtils.lerp(0.12, 0.3, settle);
+    });
+
+    stainMaterialRefs.forEach(({ current: material }) => {
+      if (!material) return;
+      material.opacity = THREE.MathUtils.lerp(0.14, 0.3, settle);
     });
 
     paintMaterialRefs.forEach(({ current: material }) => {
@@ -241,7 +249,25 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
                 map={face.texture}
                 color="#f7fbff"
                 transparent
-                opacity={0.36}
+                opacity={0.3}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+
+            <mesh
+              position={insetFacePosition(face.position, STAIN_INSET)}
+              rotation={face.rotation}
+              renderOrder={5}
+            >
+              <planeGeometry args={[STAIN_SIZE, STAIN_SIZE]} />
+              <meshBasicMaterial
+                ref={stainMaterialRefs[index]}
+                map={face.texture}
+                color={face.paint}
+                transparent
+                opacity={0.3}
                 side={THREE.DoubleSide}
                 depthWrite={false}
                 toneMapped={false}
@@ -275,7 +301,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
         ))}
       </group>
 
-      <mesh geometry={baseGeometry} scale={INNER_CORE_SCALE} renderOrder={5}>
+      <mesh geometry={baseGeometry} scale={INNER_CORE_SCALE} renderOrder={6}>
         <meshPhysicalMaterial
           transparent
           opacity={0.16}
@@ -297,7 +323,7 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
         scale={OUTER_SHELL_SCALE}
         castShadow
         receiveShadow
-        renderOrder={6}
+        renderOrder={7}
       >
         <meshPhysicalMaterial
           transparent
