@@ -50,8 +50,16 @@ const FACE_CONFIGS = [
   {
     key: "top",
     texture: EngravingTextures[1],
-    paint: "#ff4b5b",
-    accent: "#ffbf62",
+    paint: "#ff365f",
+    accent: "#ffd9b0",
+    washBoost: 1.14,
+    bloomBoost: 1.16,
+    shadowBoost: 1.08,
+    etchBoost: 1.22,
+    stainBoost: 1.38,
+    paintBoost: 1.12,
+    emissiveBoost: 1.14,
+    lightBoost: 1.16,
     position: [0, FACE_OFFSET, 0],
     rotation: [-Math.PI / 2, 0, 0],
   },
@@ -60,6 +68,14 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[6],
     paint: "#ff9e2c",
     accent: "#ffe37a",
+    washBoost: 1.08,
+    bloomBoost: 1.12,
+    shadowBoost: 1.06,
+    etchBoost: 1.16,
+    stainBoost: 1.24,
+    paintBoost: 1.08,
+    emissiveBoost: 1.1,
+    lightBoost: 1.12,
     position: [0, -FACE_OFFSET, 0],
     rotation: [Math.PI / 2, 0, 0],
   },
@@ -84,6 +100,14 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[3],
     paint: "#2ecc71",
     accent: "#a8ff87",
+    washBoost: 1.08,
+    bloomBoost: 1.1,
+    shadowBoost: 1.06,
+    etchBoost: 1.14,
+    stainBoost: 1.2,
+    paintBoost: 1.07,
+    emissiveBoost: 1.08,
+    lightBoost: 1.1,
     position: [0, 0, FACE_OFFSET],
     rotation: [0, 0, 0],
   },
@@ -92,6 +116,14 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[4],
     paint: "#f542bd",
     accent: "#ff9d5c",
+    washBoost: 1.08,
+    bloomBoost: 1.1,
+    shadowBoost: 1.06,
+    etchBoost: 1.16,
+    stainBoost: 1.24,
+    paintBoost: 1.08,
+    emissiveBoost: 1.1,
+    lightBoost: 1.12,
     position: [0, 0, -FACE_OFFSET],
     rotation: [0, Math.PI, 0],
   },
@@ -139,42 +171,50 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
 
     const settle = settleProgressRef.current;
 
-    washMaterialRefs.forEach(({ current: material }) => {
+    washMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.022, 0.048, settle);
+      const boost = FACE_CONFIGS[index].washBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.022, 0.048, settle) * boost;
     });
 
-    bloomMaterialRefs.forEach(({ current: material }) => {
+    bloomMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.07, 0.155, settle);
+      const boost = FACE_CONFIGS[index].bloomBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.07, 0.155, settle) * boost;
     });
 
-    shadowMaterialRefs.forEach(({ current: material }) => {
+    shadowMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.34, 0.58, settle);
+      const boost = FACE_CONFIGS[index].shadowBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.34, 0.58, settle) * boost;
     });
 
-    etchMaterialRefs.forEach(({ current: material }) => {
+    etchMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.12, 0.3, settle);
+      const boost = FACE_CONFIGS[index].etchBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.12, 0.3, settle) * boost;
     });
 
-    stainMaterialRefs.forEach(({ current: material }) => {
+    stainMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.14, 0.3, settle);
+      const boost = FACE_CONFIGS[index].stainBoost ?? 1;
+      material.opacity = THREE.MathUtils.lerp(0.14, 0.3, settle) * boost;
     });
 
-    paintMaterialRefs.forEach(({ current: material }) => {
+    paintMaterialRefs.forEach(({ current: material }, index) => {
       if (!material) return;
-      material.opacity = THREE.MathUtils.lerp(0.82, 1, settle);
+      const paintBoost = FACE_CONFIGS[index].paintBoost ?? 1;
+      const emissiveBoost = FACE_CONFIGS[index].emissiveBoost ?? 1;
+      material.opacity = Math.min(1, THREE.MathUtils.lerp(0.82, 1, settle) * paintBoost);
       material.transmission = THREE.MathUtils.lerp(0.22, 0.36, settle);
       material.thickness = THREE.MathUtils.lerp(0.36, 0.46, settle);
-      material.emissiveIntensity = THREE.MathUtils.lerp(0.06, 0.14, settle);
+      material.emissiveIntensity = THREE.MathUtils.lerp(0.06, 0.14, settle) * emissiveBoost;
     });
 
-    pointLightRefs.forEach(({ current: light }) => {
+    pointLightRefs.forEach(({ current: light }, index) => {
       if (!light) return;
-      light.intensity = THREE.MathUtils.lerp(0.05, 0.11, settle);
+      const boost = FACE_CONFIGS[index].lightBoost ?? 1;
+      light.intensity = THREE.MathUtils.lerp(0.05, 0.11, settle) * boost;
     });
   });
 
