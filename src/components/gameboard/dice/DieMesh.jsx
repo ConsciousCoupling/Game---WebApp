@@ -54,15 +54,17 @@ const FACE_CONFIGS = [
     texture: EngravingTextures[1],
     paint: "#ff365f",
     accent: "#ffd9b0",
-    washBoost: 0.56,
-    bloomBoost: 0.62,
-    recessBoost: 1.7,
-    shadowBoost: 1.28,
-    etchBoost: 0.46,
-    stainBoost: 1.72,
-    paintBoost: 1.22,
-    emissiveBoost: 1.18,
-    lightBoost: 1.16,
+    washBoost: 0.3,
+    bloomBoost: 0.34,
+    recessBoost: 1.95,
+    shadowBoost: 1.4,
+    etchBoost: 0.22,
+    stainBoost: 1.94,
+    paintBoost: 1.3,
+    emissiveBoost: 1.02,
+    lightBoost: 0.94,
+    transmissionScale: 0.48,
+    thicknessScale: 0.78,
     position: [0, FACE_OFFSET, 0],
     rotation: [-Math.PI / 2, 0, 0],
   },
@@ -218,9 +220,11 @@ const DieMesh = forwardRef(function DieMesh({ engine }, ref) {
       if (!material) return;
       const paintBoost = FACE_CONFIGS[index].paintBoost ?? 1;
       const emissiveBoost = FACE_CONFIGS[index].emissiveBoost ?? 1;
+      const transmissionScale = FACE_CONFIGS[index].transmissionScale ?? 1;
+      const thicknessScale = FACE_CONFIGS[index].thicknessScale ?? 1;
       material.opacity = Math.min(1, THREE.MathUtils.lerp(0.82, 1, settle) * paintBoost);
-      material.transmission = THREE.MathUtils.lerp(0.22, 0.36, settle);
-      material.thickness = THREE.MathUtils.lerp(0.36, 0.46, settle);
+      material.transmission = THREE.MathUtils.lerp(0.22, 0.36, settle) * transmissionScale;
+      material.thickness = THREE.MathUtils.lerp(0.36, 0.46, settle) * thicknessScale;
       material.emissiveIntensity = THREE.MathUtils.lerp(0.06, 0.14, settle) * emissiveBoost;
     });
 

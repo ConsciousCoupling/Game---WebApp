@@ -22,8 +22,8 @@ export default function DiceCanvas({ engine, backdropStyle }) {
         <ambientLight intensity={0.26} color="#f7fbff" />
 
         <directionalLight
-          position={[5, 7, 5]}
-          intensity={1.35}
+          position={[4.6, 5.25, 6.1]}
+          intensity={1.08}
           color="#ffffff"
           castShadow
           shadow-mapSize-width={1024}
@@ -33,14 +33,14 @@ export default function DiceCanvas({ engine, backdropStyle }) {
 
         <pointLight
           position={[-2.8, 2.4, 2.6]}
-          intensity={0.6}
+          intensity={0.68}
           distance={8}
           color="#9feaff"
         />
 
         <pointLight
           position={[2.7, 1.1, -2.8]}
-          intensity={0.52}
+          intensity={0.58}
           distance={7.5}
           color="#ffc18f"
         />
